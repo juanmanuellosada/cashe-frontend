@@ -9,10 +9,9 @@ interface WidgetBalanceProps {
   period: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetBalance({ spreadsheetId, accessToken, period, visible, onToggle, refreshKey }: WidgetBalanceProps) {
+export function WidgetBalance({ spreadsheetId, accessToken, period, visible, onToggle }: WidgetBalanceProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -35,9 +34,8 @@ export function WidgetBalance({ spreadsheetId, accessToken, period, visible, onT
         <CardHeader>
           <CardTitle>{t("balance_mensual")}</CardTitle>
           <CardDescription>{t("ingresos_vs_gastos_tiempo")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MonthlyBalanceChart period={period} spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+        </CardHeader>        <CardContent>
+          <MonthlyBalanceChart spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>

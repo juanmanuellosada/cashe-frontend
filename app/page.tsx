@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { findSheet, createSheet } from "@/lib/googleApi"; // Import helper functions
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -17,7 +18,7 @@ export default function Home() {
   const [isAPIsDisabledError, setIsAPIsDisabledError] = useState<boolean>(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const { t } = useTranslation();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { globalRefreshKey } = useRefresh();
 
   // Extraer la función fuera del useEffect y usar useCallback
   const initializeSheet = useCallback(async () => {
@@ -165,7 +166,7 @@ export default function Home() {
       
       {/* Solo mostramos el Dashboard si tenemos un spreadsheetId */}
       {spreadsheetId ? (
-        <Dashboard spreadsheetId={spreadsheetId} accessToken={session?.accessToken} refreshKey={refreshKey} setRefreshKey={setRefreshKey} />
+        <Dashboard spreadsheetId={spreadsheetId} accessToken={session?.accessToken} />
       ) : !isLoadingSheet && !error && !isAPIsDisabledError ? (
         <div className="p-4 border rounded-md bg-yellow-50 my-4">
           <p>{t("esperando_inicializacion")}</p>

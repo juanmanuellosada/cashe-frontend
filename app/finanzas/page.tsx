@@ -1,3 +1,5 @@
+"use client"
+
 import { AppLayout } from "@/components/app-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -41,7 +43,7 @@ export default function FinanzasPage() {
                   <CardDescription>Historial de movimientos financieros</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecentTransactions spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={globalRefreshKey} />
+                  <RecentTransactions spreadsheetId={spreadsheetId} accessToken={accessToken} />
                 </CardContent>
               </Card>
               <Card>
@@ -50,7 +52,7 @@ export default function FinanzasPage() {
                   <CardDescription>Progreso mensual</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BudgetProgress spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={globalRefreshKey} />
+                  <BudgetProgress spreadsheetId={spreadsheetId} accessToken={accessToken} />
                 </CardContent>
               </Card>
             </div>
@@ -62,7 +64,7 @@ export default function FinanzasPage() {
                 <CardDescription>Vista mensual de tus gastos</CardDescription>
               </CardHeader>
               <CardContent>
-                <CalendarView spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={globalRefreshKey} />
+                <CalendarView spreadsheetId={spreadsheetId} accessToken={accessToken} />
               </CardContent>
             </Card>
           </TabsContent>

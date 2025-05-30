@@ -8,10 +8,9 @@ interface WidgetCalendarioProps {
   accessToken: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetCalendario({ spreadsheetId, accessToken, visible, onToggle, refreshKey }: WidgetCalendarioProps) {
+export function WidgetCalendario({ spreadsheetId, accessToken, visible, onToggle }: WidgetCalendarioProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -36,7 +35,7 @@ export function WidgetCalendario({ spreadsheetId, accessToken, visible, onToggle
           <CardDescription>{t("vista_mensual_gastos")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <CalendarView spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+          <CalendarView spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>

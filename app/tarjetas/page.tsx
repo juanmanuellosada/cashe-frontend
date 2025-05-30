@@ -1,3 +1,5 @@
+"use client"
+
 import { AppLayout } from "@/components/app-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,13 +11,14 @@ import { getSheetData } from "@/lib/googleApi"
 import { AddCardForm } from "@/components/AddCardForm"
 import { EditCardForm } from "@/components/EditCardForm"
 import { DeleteCardButton } from "@/components/DeleteCardButton"
+import { useRefresh } from "@/contexts/RefreshContext"
 
 export default function TarjetasPage() {
   const { spreadsheetId, accessToken, isLoading, error } = useGoogleApi();
+  const { globalRefreshKey } = useRefresh();
   const [cards, setCards] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
   const [cardsError, setCardsError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -48,20 +51,17 @@ export default function TarjetasPage() {
       }
     };
     fetchCards();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   // Funciones para actualizar el estado localmente
   const handleCardAdded = (newCard: any) => {
     setCards((prev: any[]) => [...prev, newCard]);
-    setRefreshKey(k => k + 1);
   };
   const handleCardUpdated = (updatedCard: any) => {
     setCards((prev: any[]) => prev.map(card => card.id === updatedCard.id ? updatedCard : card));
-    setRefreshKey(k => k + 1);
   };
   const handleCardDeleted = (deletedId: string) => {
     setCards((prev: any[]) => prev.filter(card => card.id !== deletedId));
-    setRefreshKey(k => k + 1);
   };
 
   if (isLoading || loadingCards) {

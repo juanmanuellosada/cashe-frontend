@@ -13,13 +13,13 @@ import { es } from 'date-fns/locale';
 import { EditTransactionForm } from "./EditTransactionForm";
 import { DeleteTransactionButton } from "./DeleteTransactionButton";
 import { useTranslation } from "react-i18next";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 // Define props interface
 interface RecentTransactionsProps {
   spreadsheetId: string;
   accessToken: string;
   onTransactionAdded?: (newTransaction: any) => void;
-  refreshKey?: number;
 }
 
 type Transaction = {
@@ -57,12 +57,13 @@ const getIconForCategory = (category: string): LucideIcon => {
   return categoryIcons[category] || categoryIcons.default;
 };
 
-export function RecentTransactions({ spreadsheetId, accessToken, onTransactionAdded, refreshKey }: RecentTransactionsProps) {
+export function RecentTransactions({ spreadsheetId, accessToken, onTransactionAdded }: RecentTransactionsProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { globalRefreshKey } = useRefresh();
 
   // Funciones para actualizar el estado localmente
   const handleTransactionAdded = (newTransaction: any) => {
@@ -82,7 +83,7 @@ export function RecentTransactions({ spreadsheetId, accessToken, onTransactionAd
       setIsLoading(true);
       setError(null);
       setTransactions([]); // Limpiar estado antes de fetch
-      console.log('Refetch transacciones', refreshKey);
+      console.log('Refetch transacciones', globalRefreshKey);
       await new Promise(res => setTimeout(res, 1000));
       try {
         const range = "Transactions!A2:F100";
@@ -134,7 +135,7 @@ export function RecentTransactions({ spreadsheetId, accessToken, onTransactionAd
       }
     };
     fetchData();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   const filteredTransactions = transactions.filter(
     (transaction) =>

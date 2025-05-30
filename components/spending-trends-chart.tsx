@@ -22,12 +22,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
+import { useRefresh } from "@/contexts/RefreshContext"
 
 // Define props interface
 interface SpendingTrendsChartProps {
   spreadsheetId: string
   accessToken: string
-  refreshKey: number
 }
 
 // Estructura para los datos transformados para Recharts LineChart con múltiples líneas
@@ -40,13 +40,14 @@ interface RechartsTrendDataPoint {
 const LINE_COLORS_LIGHT = ["#2563eb", "#db2777", "#ea580c", "#65a30d", "#7c3aed", "#ca8a04", "#059669", "#e11d48"]
 const LINE_COLORS_DARK = ["#3b82f6", "#ec4899", "#f97316", "#84cc16", "#8b5cf6", "#eab308", "#10b981", "#f43f5e"]
 
-export function SpendingTrendsChart({ spreadsheetId, accessToken, refreshKey }: SpendingTrendsChartProps) {
+export function SpendingTrendsChart({ spreadsheetId, accessToken }: SpendingTrendsChartProps) {
   const { theme } = useTheme()
   const [processedData, setProcessedData] = useState<ProcessedTrendsData | null>(null)
   const [rechartsData, setRechartsData] = useState<RechartsTrendDataPoint[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { t } = useTranslation()
+  const { globalRefreshKey } = useRefresh()
 
   const [currentPeriod, setCurrentPeriod] = useState<"month" | "year" | "week">("year")
   const [availableCategories, setAvailableCategories] = useState<string[]>([])
@@ -62,7 +63,7 @@ export function SpendingTrendsChart({ spreadsheetId, accessToken, refreshKey }: 
       }
       setIsLoading(true)
       setError(null)
-      console.log('Refetch tendencias para Recharts', refreshKey, currentPeriod)
+      console.log('Refetch tendencias para Recharts', globalRefreshKey, currentPeriod)
       await new Promise(res => setTimeout(res, 1000))
 
       try {
@@ -92,7 +93,7 @@ export function SpendingTrendsChart({ spreadsheetId, accessToken, refreshKey }: 
     }
 
     fetchData()
-  }, [currentPeriod, spreadsheetId, accessToken, refreshKey, t])
+  }, [currentPeriod, spreadsheetId, accessToken, globalRefreshKey, t])
 
   // Efecto para transformar los datos procesados a formato Recharts cuando cambian los datos o las categorías seleccionadas
   useEffect(() => {

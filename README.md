@@ -1,254 +1,261 @@
 # Cashé 💰
 
-A modern personal finance management application built with React/Next.js and integrated with Google Sheets for data storage.
+Una aplicación moderna de gestión de finanzas personales construida con React/Next.js e integrada con Google Sheets para el almacenamiento de datos.
 
-## ✨ Features
+## ✨ Características
 
-- **Dashboard Overview**: Get a comprehensive view of your financial health with interactive charts and insights
-- **Transaction Management**: Add, edit, and categorize your income and expenses
-- **Google Sheets Integration**: Seamless data synchronization with Google Sheets for data persistence
-- **Real-time Data Refresh**: Automatic UI updates when new transactions are added
-- **Budget Tracking**: Monitor your spending against set budgets
-- **Expense Categories**: Organize transactions by customizable categories
-- **Financial Insights**: AI-powered insights and spending trend analysis
-- **Responsive Design**: Works perfectly on desktop and mobile devices
-- **Dark/Light Theme**: Toggle between dark and light modes
-- **Multi-language Support**: Available in multiple languages (i18n)
+- **Panel de Control**: Obtén una vista integral de tu salud financiera con gráficos interactivos e insights
+- **Gestión de Transacciones**: Agrega, edita y categoriza tus ingresos y gastos
+- **Integración con Google Sheets**: Sincronización perfecta de datos con Google Sheets para persistencia
+- **Actualización de Datos en Tiempo Real**: Actualizaciones automáticas de la interfaz cuando se agregan nuevas transacciones
+- **Seguimiento de Presupuestos**: Monitorea tus gastos contra los presupuestos establecidos
+- **Categorías de Gastos**: Organiza las transacciones por categorías personalizables
+- **Insights Financieros**: Análisis de tendencias de gasto e insights potenciados por IA
+- **Diseño Responsivo**: Funciona perfectamente en dispositivos de escritorio y móviles
+- **Tema Oscuro/Claro**: Alterna entre modos oscuro y claro
+- **Soporte Multiidioma**: Disponible en múltiples idiomas (i18n)
 
-## 🚀 Tech Stack
+## 🚀 Stack Tecnológico
 
 - **Frontend**: Next.js 15, React 19, TypeScript
-- **Authentication**: NextAuth.js with Google OAuth
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Charts**: Chart.js and Recharts for data visualization
-- **Forms**: React Hook Form with Zod validation
-- **Data Storage**: Google Sheets API integration
-- **State Management**: React Context API with custom hooks
-- **Icons**: Lucide React
-- **Internationalization**: i18next
+- **Autenticación**: NextAuth.js con Google OAuth
+- **Estilos**: Tailwind CSS con componentes shadcn/ui
+- **Gráficos**: Chart.js y Recharts para visualización de datos
+- **Formularios**: React Hook Form con validación Zod
+- **Almacenamiento de Datos**: Integración con API de Google Sheets
+- **Gestión de Estado**: React Context API con hooks personalizados
+- **Iconos**: Lucide React
+- **Internacionalización**: i18next
 
-## 📋 Prerequisites
+## 📋 Prerrequisitos
 
-Before running this project, make sure you have:
+Antes de ejecutar este proyecto, asegúrate de tener:
 
-- Node.js 18+ installed
-- A Google Cloud Console project with Sheets API enabled
-- Google OAuth credentials configured
-- Git installed
+- Node.js 18+ instalado
+- Un proyecto de Google Cloud Console con la API de Sheets habilitada
+- Credenciales de Google OAuth configuradas
+- Git instalado
 
-## 🛠️ Installation
+## 🛠️ Instalación
 
-1. **Clone the repository**
+1. **Clonar el repositorio**
+
    ```bash
    git clone https://github.com/juanmanuellosada/cashe-frontend.git
    cd cashe-frontend
    ```
 
-2. **Install dependencies**
+2. **Instalar dependencias**
+
    ```bash
    npm install
-   # or
+   # o
    yarn install
-   # or
+   # o
    pnpm install
    ```
 
-3. **Environment Setup**
-   
-   Create a `.env.local` file in the root directory with the following variables:
+3. **Configuración del Entorno**
+
+   Crea un archivo `.env.local` en el directorio raíz con las siguientes variables:
+
    ```env
-   # NextAuth Configuration
+   # Configuración de NextAuth
    NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your-nextauth-secret-here
-   
+   NEXTAUTH_SECRET=tu-nextauth-secret-aqui
+
    # Google OAuth
-   GOOGLE_CLIENT_ID=your-google-client-id
-   GOOGLE_CLIENT_SECRET=your-google-client-secret
-   
+   GOOGLE_CLIENT_ID=tu-google-client-id
+   GOOGLE_CLIENT_SECRET=tu-google-client-secret
+
    # Google Sheets
-   GOOGLE_SHEETS_PRIVATE_KEY=your-google-sheets-private-key
-   GOOGLE_SHEETS_CLIENT_EMAIL=your-google-sheets-client-email
-   GOOGLE_SPREADSHEET_ID=your-google-spreadsheet-id
+   GOOGLE_SHEETS_PRIVATE_KEY=tu-google-sheets-private-key
+   GOOGLE_SHEETS_CLIENT_EMAIL=tu-google-sheets-client-email
+   GOOGLE_SPREADSHEET_ID=tu-google-spreadsheet-id
    ```
 
-4. **Google Sheets Setup**
-   
-   - Create a new Google Spreadsheet
-   - Set up the following sheets with proper column headers:
+4. **Configuración de Google Sheets**
+
+   - Crea una nueva hoja de cálculo de Google
+   - Configura las siguientes hojas con los encabezados de columna apropiados:
      - `Transactions`: Date, Amount, Category, Description, Type
      - `Categories`: Name, Type, Color
      - `Budgets`: Category, Amount, Period
-   - Share the spreadsheet with your service account email
-   - Copy the spreadsheet ID to your environment variables
+   - Comparte la hoja de cálculo con el email de tu cuenta de servicio
+   - Copia el ID de la hoja de cálculo a tus variables de entorno
 
-5. **Run the development server**
+5. **Ejecutar el servidor de desarrollo**
+
    ```bash
    npm run dev
-   # or
+   # o
    yarn dev
-   # or
+   # o
    pnpm dev
    ```
 
-6. **Open your browser**
-   
-   Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
+6. **Abrir tu navegador**
 
-## 📁 Project Structure
+   Navega a [http://localhost:3000](http://localhost:3000) para ver la aplicación.
+
+## 📁 Estructura del Proyecto
 
 ```
 cashe-frontend/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── auth/              # Authentication pages
-│   ├── dashboard/         # Dashboard pages
-│   └── page.tsx           # Home page
-├── components/            # Reusable components
-│   ├── ui/               # Base UI components (shadcn/ui)
-│   ├── charts/           # Chart components
-│   ├── forms/            # Form components
-│   └── layout/           # Layout components
-├── hooks/                # Custom React hooks
+├── app/                    # Directorio de Next.js app
+│   ├── api/               # Rutas de API
+│   ├── auth/              # Páginas de autenticación
+│   ├── dashboard/         # Páginas de panel de control
+│   └── page.tsx           # Página de inicio
+├── components/            # Componentes reutilizables
+│   ├── ui/               # Componentes base de UI (shadcn/ui)
+│   ├── charts/           # Componentes de gráficos
+│   ├── forms/            # Componentes de formularios
+│   └── layout/           # Componentes de diseño
+├── hooks/                # Hooks personalizados de React
 │   ├── data-refresh-context.tsx
-│   └── use-*.ts          # Various custom hooks
-├── lib/                  # Utility libraries
-│   ├── auth.ts           # NextAuth configuration
-│   ├── google-sheets.ts  # Google Sheets API
-│   └── utils.ts          # General utilities
-├── contexts/             # React contexts
-├── public/               # Static assets
-├── styles/               # Global styles
-└── types/                # TypeScript type definitions
+│   └── use-*.ts          # Varios hooks personalizados
+├── lib/                  # Librerías de utilidades
+│   ├── auth.ts           # Configuración de NextAuth
+│   ├── google-sheets.ts  # API de Google Sheets
+│   └── utils.ts          # Utilidades generales
+├── contexts/             # Contextos de React
+├── public/               # Activos estáticos
+├── styles/               # Estilos globales
+└── types/                # Definiciones de tipos TypeScript
 ```
 
-## 🔧 Key Features Implementation
+## 🔧 Implementación de Características Clave
 
-### Data Refresh System
-The application includes a sophisticated data refresh system that automatically updates all components when new data is added:
+### Sistema de Actualización de Datos
+
+La aplicación incluye un sistema sofisticado de actualización de datos que actualiza automáticamente todos los componentes cuando se agregan nuevos datos:
 
 ```typescript
-// Custom hook for global data refresh
+// Hook personalizado para actualización global de datos
 const { triggerRefresh } = useDataRefresh();
 
-// Automatically refresh data after adding transactions
+// Actualiza automáticamente los datos después de agregar transacciones
 const onSubmit = async (data) => {
   await saveTransaction(data);
-  triggerRefresh(); // Updates all connected components
+  triggerRefresh(); // Actualiza todos los componentes conectados
 };
 ```
 
-### Google Sheets Integration
-Seamless integration with Google Sheets for data persistence:
+### Integración con Google Sheets
+
+Integración perfecta con Google Sheets para persistencia de datos:
 
 ```typescript
-// Real-time data synchronization
+// Sincronización de datos en tiempo real
 const syncWithSheets = async () => {
   const data = await fetchFromGoogleSheets();
   updateLocalState(data);
 };
 ```
 
-### Responsive Design
-Built with mobile-first approach using Tailwind CSS:
+### Diseño Responsivo
 
-- Adaptive layouts for all screen sizes
-- Touch-friendly interactions
-- Optimized performance on mobile devices
+Construido con enfoque mobile-first usando Tailwind CSS:
 
-## 🎨 UI Components
+- Diseños adaptativos para todos los tamaños de pantalla
+- Interacciones amigables al tacto
+- Rendimiento optimizado en dispositivos móviles
 
-The application uses shadcn/ui components for a consistent and beautiful interface:
+## 🎨 Componentes de UI
 
-- **Charts**: Interactive financial charts and graphs
-- **Forms**: Elegant form components with validation
-- **Navigation**: Intuitive sidebar and navigation
-- **Modals**: Smooth dialog and modal interactions
-- **Themes**: Dark/light mode support
+La aplicación usa componentes shadcn/ui para una interfaz consistente y hermosa:
 
-## 🔐 Authentication
+- **Gráficos**: Gráficos financieros interactivos
+- **Formularios**: Componentes de formulario elegantes con validación
+- **Navegación**: Barra lateral y navegación intuitiva
+- **Modales**: Interacciones suaves de diálogos y modales
+- **Temas**: Soporte de modo oscuro/claro
 
-Secure authentication powered by NextAuth.js:
+## 🔐 Autenticación
 
-- Google OAuth integration
-- Session management
-- Automatic token refresh
-- Secure API route protection
+Autenticación segura potenciada por NextAuth.js:
 
-## 📊 Data Visualization
+- Integración con Google OAuth
+- Gestión de sesiones
+- Actualización automática de tokens
+- Protección segura de rutas de API
 
-Rich data visualization with multiple chart types:
+## 📊 Visualización de Datos
 
-- **Monthly Balance**: Track account balance over time
-- **Expense Categories**: Pie charts for expense breakdown
-- **Spending Trends**: Line charts for spending patterns
-- **Budget Progress**: Progress bars for budget tracking
+Visualización rica de datos con múltiples tipos de gráficos:
 
-## 🌍 Internationalization
+- **Balance Mensual**: Rastrea el balance de cuenta a lo largo del tiempo
+- **Categorías de Gastos**: Gráficos de pastel para desglose de gastos
+- **Tendencias de Gasto**: Gráficos de líneas para patrones de gasto
+- **Progreso de Presupuesto**: Barras de progreso para seguimiento de presupuesto
 
-Multi-language support using i18next:
+## 🌍 Internacionalización
 
-- English and Spanish support
-- Dynamic language switching
-- Localized date and number formats
+Soporte multiidioma usando i18next:
 
-## 🚀 Deployment
+- Soporte para inglés y español
+- Cambio dinámico de idioma
+- Formatos localizados de fecha y números
 
-### Vercel (Recommended)
+## 🚀 Despliegue
 
-1. **Connect your GitHub repository to Vercel**
-2. **Configure environment variables** in Vercel dashboard
-3. **Deploy** - Vercel will automatically build and deploy your app
+### Vercel (Recomendado)
 
-### Other Platforms
+1. **Conecta tu repositorio de GitHub a Vercel**
+2. **Configura las variables de entorno** en el panel de Vercel
+3. **Despliega** - Vercel construirá y desplegará automáticamente tu aplicación
 
-The app can be deployed on any platform that supports Next.js:
+### Otras Plataformas
+
+La aplicación puede desplegarse en cualquier plataforma que soporte Next.js:
 
 - Netlify
 - Railway
 - AWS Amplify
 - Google Cloud Platform
 
-## 🤝 Contributing
+## 🤝 Contribuir
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Haz fork del repositorio
+2. Crea una rama de característica (`git checkout -b feature/CaracteristicaIncreible`)
+3. Confirma tus cambios (`git commit -m 'Agregar alguna CaracteristicaIncreible'`)
+4. Sube a la rama (`git push origin feature/CaracteristicaIncreible`)
+5. Abre un Pull Request
 
-## 📝 License
+## 📝 Licencia
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-## 🐛 Known Issues
+## 🐛 Problemas Conocidos
 
-- Toast notifications may not appear consistently (working on fix)
-- Docker Desktop dependency for development environment
+- Las notificaciones toast pueden no aparecer consistentemente (trabajando en la solución)
+- Dependencia de Docker Desktop para el entorno de desarrollo
 
-## 🔮 Roadmap
+## 🔮 Hoja de Ruta
 
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics and reporting
-- [ ] Bank account integration
-- [ ] Investment tracking
-- [ ] Bill reminders and automation
-- [ ] Export functionality (PDF, CSV)
-- [ ] Multiple currency support
+- [ ] Aplicación móvil (React Native)
+- [ ] Análisis avanzado y reportes
+- [ ] Integración con cuentas bancarias
+- [ ] Seguimiento de inversiones
+- [ ] Recordatorios de facturas y automatización
+- [ ] Funcionalidad de exportación (PDF, CSV)
+- [ ] Soporte para múltiples monedas
 
-## 💡 Support
+## 💡 Soporte
 
-If you have any questions or need help:
+Si tienes alguna pregunta o necesitas ayuda:
 
-- Open an issue on GitHub
-- Contact the maintainer: Juan Manuel Losada
+- Abre un issue en GitHub
+- Contacta al mantenedor: Juan Manuel Losada
 
-## 🙏 Acknowledgments
+## 🙏 Reconocimientos
 
-- [shadcn/ui](https://ui.shadcn.com/) for the beautiful component library
-- [Next.js](https://nextjs.org/) for the amazing React framework
-- [Google Sheets API](https://developers.google.com/sheets/api) for data storage
-- [Vercel](https://vercel.com/) for hosting and deployment
+- [shadcn/ui](https://ui.shadcn.com/) por la hermosa librería de componentes
+- [Next.js](https://nextjs.org/) por el increíble framework de React
+- [Google Sheets API](https://developers.google.com/sheets/api) por el almacenamiento de datos
+- [Vercel](https://vercel.com/) por el hosting y despliegue
 
 ---
 
-Made with ❤️ by [Juan Manuel Losada](https://github.com/juanmanuellosada)
+Hecho con ❤️ por [Juan Manuel Losada](https://github.com/juanmanuellosada)

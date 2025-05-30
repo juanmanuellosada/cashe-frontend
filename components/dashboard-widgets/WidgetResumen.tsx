@@ -7,10 +7,9 @@ interface WidgetResumenProps {
   accessToken: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetResumen({ spreadsheetId, accessToken, visible, onToggle, refreshKey }: WidgetResumenProps) {
+export function WidgetResumen({ spreadsheetId, accessToken, visible, onToggle }: WidgetResumenProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -29,7 +28,7 @@ export function WidgetResumen({ spreadsheetId, accessToken, visible, onToggle, r
       >
         <X size={18} />
       </button>
-      <AccountSummary spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+      <AccountSummary spreadsheetId={spreadsheetId} accessToken={accessToken} />
     </div>
   );
 } 

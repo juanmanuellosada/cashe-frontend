@@ -8,10 +8,9 @@ interface WidgetPresupuestosProps {
   accessToken: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetPresupuestos({ spreadsheetId, accessToken, visible, onToggle, refreshKey }: WidgetPresupuestosProps) {
+export function WidgetPresupuestos({ spreadsheetId, accessToken, visible, onToggle }: WidgetPresupuestosProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -36,7 +35,7 @@ export function WidgetPresupuestos({ spreadsheetId, accessToken, visible, onTogg
           <CardDescription>{t("progreso_mensual")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <BudgetProgress spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+          <BudgetProgress spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>

@@ -8,10 +8,9 @@ interface WidgetInsightsProps {
   accessToken: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetInsights({ spreadsheetId, accessToken, visible, onToggle, refreshKey }: WidgetInsightsProps) {
+export function WidgetInsights({ spreadsheetId, accessToken, visible, onToggle }: WidgetInsightsProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -36,7 +35,7 @@ export function WidgetInsights({ spreadsheetId, accessToken, visible, onToggle, 
           <CardDescription>{t("recomendaciones_personalizadas")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <FinancialInsights spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+          <FinancialInsights spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>

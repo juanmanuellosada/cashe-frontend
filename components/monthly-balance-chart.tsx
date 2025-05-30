@@ -17,11 +17,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { processMonthlyBalanceData } from "@/lib/dataProcessing";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 interface MonthlyBalanceChartProps {
   spreadsheetId: string;
   accessToken: string;
-  refreshKey: number;
 }
 
 // Estructura de datos para Recharts BarChart
@@ -37,13 +37,14 @@ const INGRESO_COLOR_DARK = "#22c55e"; // verde más oscuro
 const GASTO_COLOR_LIGHT = "#f87171"; // rojo claro
 const GASTO_COLOR_DARK = "#ef4444"; // rojo más oscuro
 
-export function MonthlyBalanceChart({ spreadsheetId, accessToken, refreshKey }: MonthlyBalanceChartProps) {
+export function MonthlyBalanceChart({ spreadsheetId, accessToken }: MonthlyBalanceChartProps) {
   const { theme } = useTheme();
   const [chartData, setChartData] = useState<RechartsBalanceDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
-  const [currentPeriod, setCurrentPeriod] = useState<"month" | "year" | "week">("month"); // Añadido "week"
+  const [currentPeriod, setCurrentPeriod] = useState<"month" | "year" | "week">("month");
+  const { globalRefreshKey } = useRefresh();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +56,7 @@ export function MonthlyBalanceChart({ spreadsheetId, accessToken, refreshKey }: 
       }
       setIsLoading(true);
       setError(null);
-      console.log('Refetch balance para Recharts', refreshKey, currentPeriod);
+      console.log('Refetch balance para Recharts', globalRefreshKey, currentPeriod);
       await new Promise(res => setTimeout(res, 1000));
 
       try {
@@ -85,7 +86,7 @@ export function MonthlyBalanceChart({ spreadsheetId, accessToken, refreshKey }: 
     };
 
     fetchData();
-  }, [currentPeriod, spreadsheetId, accessToken, refreshKey, t]);
+  }, [currentPeriod, spreadsheetId, accessToken, globalRefreshKey, t]);
 
   const ingresoColor = theme === 'dark' ? INGRESO_COLOR_DARK : INGRESO_COLOR_LIGHT;
   const gastoColor = theme === 'dark' ? GASTO_COLOR_DARK : GASTO_COLOR_LIGHT;

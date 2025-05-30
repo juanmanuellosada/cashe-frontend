@@ -8,19 +8,20 @@ import { getSheetData } from "@/lib/googleApi" // Added
 import { Skeleton } from "@/components/ui/skeleton" // Added
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns" // Added
 import { es } from "date-fns/locale" // Added locale
+import { useRefresh } from "@/contexts/RefreshContext";
 
 // Define props interface
 interface CalendarViewProps {
   spreadsheetId: string;
   accessToken: string;
-  refreshKey?: number;
 }
 
-export function CalendarView({ spreadsheetId, accessToken, refreshKey }: CalendarViewProps) {
+export function CalendarView({ spreadsheetId, accessToken }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { globalRefreshKey } = useRefresh();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,7 +29,7 @@ export function CalendarView({ spreadsheetId, accessToken, refreshKey }: Calenda
       setIsLoading(true);
       setError(null);
       setExpensesByDay({}); // Limpiar estado antes de fetch
-      console.log('Refetch calendar', refreshKey);
+      console.log('Refetch calendar', globalRefreshKey);
       await new Promise(res => setTimeout(res, 1000));
       try {
         // Get transaction data for the current month
@@ -81,7 +82,7 @@ export function CalendarView({ spreadsheetId, accessToken, refreshKey }: Calenda
     };
     
     fetchData();
-  }, [spreadsheetId, accessToken, currentMonth, refreshKey]); // Agrega refreshKey
+  }, [spreadsheetId, accessToken, currentMonth, globalRefreshKey]); // Agrega globalRefreshKey
 
   // Helper functions
   const getDaysInMonth = (year: number, month: number) => {

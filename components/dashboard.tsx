@@ -24,11 +24,9 @@ import { useTranslation } from "react-i18next"
 interface DashboardProps {
   spreadsheetId: string | null;
   accessToken: string | undefined;
-  refreshKey?: number;
-  setRefreshKey?: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKey }: DashboardProps) {
+export function Dashboard({ spreadsheetId, accessToken }: DashboardProps) {
   const [period, setPeriod] = useState("month")
   // Estado de visibilidad de widgets
   const [visibleWidgets, setVisibleWidgets] = useState({
@@ -70,7 +68,6 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
         accessToken={accessToken}
         visible={visibleWidgets.resumen}
         onToggle={() => handleToggle("resumen")}
-        refreshKey={refreshKey}
       />
 
       <div className="grid gap-6 md:grid-cols-1">
@@ -81,7 +78,6 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
             period={period}
             visible={visibleWidgets.balance}
             onToggle={() => handleToggle("balance")}
-            refreshKey={refreshKey}
           />
         </div>
         <div className="w-full">
@@ -91,7 +87,6 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
             period={period}
             visible={visibleWidgets.categorias}
             onToggle={() => handleToggle("categorias")}
-            refreshKey={refreshKey}
           />
         </div>
       </div>
@@ -103,7 +98,6 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
             accessToken={accessToken}
             visible={visibleWidgets.transacciones}
             onToggle={() => handleToggle("transacciones")}
-            refreshKey={refreshKey}
           />
         </div>
         <div className="w-full">
@@ -112,7 +106,6 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
             accessToken={accessToken}
             visible={visibleWidgets.presupuestos}
             onToggle={() => handleToggle("presupuestos")}
-            refreshKey={refreshKey}
           />
         </div>
       </div>
@@ -123,14 +116,12 @@ export function Dashboard({ spreadsheetId, accessToken, refreshKey, setRefreshKe
           accessToken={accessToken}
           visible={visibleWidgets.calendario}
           onToggle={() => handleToggle("calendario")}
-          refreshKey={refreshKey}
         />
         <WidgetInsights
           spreadsheetId={spreadsheetId}
           accessToken={accessToken}
           visible={visibleWidgets.insights}
           onToggle={() => handleToggle("insights")}
-          refreshKey={refreshKey}
         />
       </div>
     </div>

@@ -6,6 +6,7 @@ import { TrendingDown, TrendingUp, Lightbulb, LucideIcon } from "lucide-react"; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getSheetData } from "@/lib/googleApi"; // Added
 import { Skeleton } from "@/components/ui/skeleton"; // Added
+import { useRefresh } from "@/contexts/RefreshContext";
 // Assume a processing function exists or will be created
 // import { generateFinancialInsights } from "@/lib/dataProcessing";
 
@@ -13,7 +14,6 @@ import { Skeleton } from "@/components/ui/skeleton"; // Added
 interface FinancialInsightsProps {
   spreadsheetId: string;
   accessToken: string;
-  refreshKey: number;
 }
 
 interface Insight {
@@ -24,10 +24,11 @@ interface Insight {
   icon: React.ElementType; // Asumo que es un componente de icono
 }
 
-export function FinancialInsights({ spreadsheetId, accessToken, refreshKey }: FinancialInsightsProps) { // Accept props
+export function FinancialInsights({ spreadsheetId, accessToken }: FinancialInsightsProps) { // Accept props
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { globalRefreshKey } = useRefresh();
 
    useEffect(() => {
     const fetchInsightsData = async () => {
@@ -71,7 +72,7 @@ export function FinancialInsights({ spreadsheetId, accessToken, refreshKey }: Fi
     };
 
     fetchInsightsData();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   if (isLoading) {
     return (

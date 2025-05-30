@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -8,15 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGoogleApi } from "@/hooks/useGoogleApi";
 import { getSheetData, appendSheetData, updateSheetData } from "@/lib/googleApi";
 import { ExpensesByCategoryChart } from "@/components/expenses-by-category-chart";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 export default function CategoriasPage() {
   const { spreadsheetId, accessToken, isLoading, error } = useGoogleApi();
+  const { globalRefreshKey } = useRefresh();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<any | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -42,10 +45,9 @@ export default function CategoriasPage() {
         setFormError(err.message || "Error al cargar categorías");
       } finally {
         setLoading(false);
-      }
-    };
+      }    };
     fetchCategories();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   // Agregar o editar categoría
   const handleSaveCategory = async (data: any) => {
@@ -68,11 +70,9 @@ export default function CategoriasPage() {
         const id = `cat-${Date.now()}`;
         const values = [[data.name, data.type, data.parent, data.budget, id]];
         await appendSheetData(accessToken, spreadsheetId, "Categories!A2:E", values);
-        setCategories((prev) => [...prev, { ...data, id }]);
-      }
+        setCategories((prev) => [...prev, { ...data, id }]);      }
       setFormOpen(false);
       setEditCategory(null);
-      setRefreshKey(k => k + 1);
     } catch (err: any) {
       setFormError(err.message || "Error al guardar la categoría");
     } finally {
@@ -117,10 +117,8 @@ export default function CategoriasPage() {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(deleteRequest),
-      });
+        body: JSON.stringify(deleteRequest),      });
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
-      setRefreshKey(k => k + 1);
     } catch (err: any) {
       setFormError(err.message || "Error al eliminar la categoría");
     } finally {
@@ -179,13 +177,10 @@ export default function CategoriasPage() {
           <CardHeader>
             <CardTitle>Gráfico por categorías</CardTitle>
             <CardDescription>Visualiza la distribución de tus gastos e ingresos por categoría</CardDescription>
-          </CardHeader>
-          <CardContent>
+          </CardHeader>          <CardContent>
             <ExpensesByCategoryChart
-              period="month"
               spreadsheetId={spreadsheetId ?? ""}
               accessToken={accessToken ?? ""}
-              refreshKey={refreshKey}
             />
           </CardContent>
         </Card>

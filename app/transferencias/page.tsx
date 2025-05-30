@@ -1,3 +1,5 @@
+"use client"
+
 import { AppLayout } from "@/components/app-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,12 +11,10 @@ import { useState } from "react"
 
 export default function TransferenciasPage() {
   const [transfers, setTransfers] = useState<any[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // Función para agregar transferencia localmente
   const handleTransferAdded = (newTransfer: any) => {
     setTransfers((prev: any[]) => [...prev, newTransfer]);
-    setRefreshKey(k => k + 1);
   };
 
   return (
@@ -22,7 +22,7 @@ export default function TransferenciasPage() {
       <div className="space-y-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight">Transferencias</h1>
-          <AddTransferForm onTransferAdded={handleTransferAdded} refreshKey={refreshKey} setRefreshKey={setRefreshKey} />
+          <AddTransferForm onTransferAdded={handleTransferAdded} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -32,7 +32,7 @@ export default function TransferenciasPage() {
               <CardDescription>Mueve dinero entre tus cuentas</CardDescription>
             </CardHeader>
             <CardContent>
-              <TransferForm refreshKey={refreshKey} setRefreshKey={setRefreshKey} />
+              <TransferForm />
             </CardContent>
           </Card>
 
@@ -42,7 +42,7 @@ export default function TransferenciasPage() {
               <CardDescription>Historial de movimientos entre cuentas</CardDescription>
             </CardHeader>
             <CardContent>
-              <RecentTransfers onTransferAdded={handleTransferAdded} refreshKey={refreshKey} setRefreshKey={setRefreshKey} />
+              <RecentTransfers onTransferAdded={handleTransferAdded} />
             </CardContent>
           </Card>
         </div>

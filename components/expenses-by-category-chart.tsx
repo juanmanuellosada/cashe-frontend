@@ -17,13 +17,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { processExpensesByCategoryData } from "@/lib/dataProcessing";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Para los filtros
+import { useRefresh } from "@/contexts/RefreshContext";
 
 // Define props interface
 interface ExpensesByCategoryChartProps {
   // period: "month" | "year"; // El periodo se manejará localmente ahora
   spreadsheetId: string;
   accessToken: string;
-  refreshKey: number;
 }
 
 // Ajustado para Recharts: array de objetos
@@ -54,13 +54,14 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-export function ExpensesByCategoryChart({ spreadsheetId, accessToken, refreshKey }: ExpensesByCategoryChartProps) {
+export function ExpensesByCategoryChart({ spreadsheetId, accessToken }: ExpensesByCategoryChartProps) {
   const { theme } = useTheme();
   // Estado para los datos formateados para Recharts
   const [chartData, setChartData] = useState<RechartsCategoryDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { globalRefreshKey } = useRefresh();
 
   // Estados para los filtros
   const [currentPeriod, setCurrentPeriod] = useState<"month" | "year">("month");
@@ -73,7 +74,7 @@ export function ExpensesByCategoryChart({ spreadsheetId, accessToken, refreshKey
       setIsLoading(true);
       setError(null);
       // setChartData(null); // No se está limpiando chartData, considerar si es necesario
-      console.log('Refetch expenses chart', refreshKey);
+      console.log('Refetch expenses chart', globalRefreshKey);
       await new Promise(res => setTimeout(res, 1000)); // <--- CAMBIO AQUÍ
       try {
         const range = "Transactions!A2:E"; // Asumiendo columnas: Date (A), Type (B), Category (D), Amount (E)
@@ -112,7 +113,7 @@ export function ExpensesByCategoryChart({ spreadsheetId, accessToken, refreshKey
     let currentPeriodChanged = false; // Pequeña lógica para detectar cambio de periodo
 
     fetchData();
-  }, [currentPeriod, spreadsheetId, accessToken, refreshKey]); // Dependencias actualizadas
+  }, [currentPeriod, spreadsheetId, accessToken, globalRefreshKey]); // Dependencias actualizadas
 
 
   // Lógica para filtrar datos si se selecciona una categoría específica

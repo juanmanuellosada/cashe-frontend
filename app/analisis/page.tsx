@@ -19,7 +19,6 @@ export default function AnalisisPage() {
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [isLoadingSheet, setIsLoadingSheet] = useState<boolean>(true); // Start loading
   const [error, setError] = useState<string | null>(null);
-  const [localRefreshKey, setLocalRefreshKey] = useState(0); // Renombrado para claridad
 
   useEffect(() => {
     const initializeSheet = async () => {
@@ -52,13 +51,6 @@ export default function AnalisisPage() {
         initializeSheet();
     }
   }, [session, status]);
-
-  // Nuevo useEffect para actualizar localRefreshKey cuando globalRefreshKey cambie
-  useEffect(() => {
-    if (globalRefreshKey > 0) { // Opcional: solo refrescar si ha habido un cambio real
-      setLocalRefreshKey(prevKey => prevKey + 1);
-    }
-  }, [globalRefreshKey]);
 
   // Handle loading and error states for the whole page based on sheet access
   if (status === "loading" || isLoadingSheet) {
@@ -110,7 +102,7 @@ export default function AnalisisPage() {
                   <CardDescription>Distribución de gastos</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ExpensesByCategoryChart period="month" spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} refreshKey={localRefreshKey} />
+                  <ExpensesByCategoryChart spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} />
                 </CardContent>
               </Card>
               <Card>
@@ -119,7 +111,7 @@ export default function AnalisisPage() {
                   <CardDescription>Ingresos vs gastos</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <MonthlyBalanceChart period="month" spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} refreshKey={localRefreshKey} />
+                  <MonthlyBalanceChart spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} />
                 </CardContent>
               </Card>
             </div>
@@ -129,7 +121,7 @@ export default function AnalisisPage() {
                 <CardDescription>Evolución por categoría</CardDescription>
               </CardHeader>
               <CardContent>
-                <SpendingTrendsChart spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} refreshKey={localRefreshKey} />
+                <SpendingTrendsChart spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -140,7 +132,7 @@ export default function AnalisisPage() {
                 <CardDescription>Recomendaciones personalizadas basadas en tus datos</CardDescription>
               </CardHeader>
               <CardContent>
-                <FinancialInsights spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} refreshKey={localRefreshKey} />
+                <FinancialInsights spreadsheetId={spreadsheetId!} accessToken={session!.accessToken!} />
               </CardContent>
             </Card>
           </TabsContent>

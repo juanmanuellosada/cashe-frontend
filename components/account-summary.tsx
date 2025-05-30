@@ -7,12 +7,12 @@ import { Progress } from "@/components/ui/progress"
 import { getSheetData, updateSheetData } from "@/lib/googleApi"; 
 import { Skeleton } from "@/components/ui/skeleton"; 
 import { useTranslation } from "react-i18next";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 // Define props interface
 interface AccountSummaryProps {
   spreadsheetId: string;
   accessToken: string;
-  refreshKey?: number;
 }
 
 // Define structure for summary data
@@ -23,11 +23,12 @@ interface SummaryData {
   savingsRate: number;
 }
 
-export function AccountSummary({ spreadsheetId, accessToken, refreshKey }: AccountSummaryProps) {
+export function AccountSummary({ spreadsheetId, accessToken }: AccountSummaryProps) {
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { globalRefreshKey } = useRefresh();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +40,7 @@ export function AccountSummary({ spreadsheetId, accessToken, refreshKey }: Accou
       setIsLoading(true);
       setError(null);
       setSummaryData(null); // Limpiar estado antes de fetch
-      console.log('Refetch resumen', refreshKey);
+      console.log('Refetch resumen', globalRefreshKey);
       await new Promise(res => setTimeout(res, 1000));
       try {
         console.log("Fetching summary data using spreadsheetId:", spreadsheetId);
@@ -156,7 +157,7 @@ export function AccountSummary({ spreadsheetId, accessToken, refreshKey }: Accou
     };
 
     fetchData();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   // --- Render Loading State --- 
   if (isLoading) {

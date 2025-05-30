@@ -8,10 +8,9 @@ interface WidgetTransaccionesProps {
   accessToken: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetTransacciones({ spreadsheetId, accessToken, visible, onToggle, refreshKey }: WidgetTransaccionesProps) {
+export function WidgetTransacciones({ spreadsheetId, accessToken, visible, onToggle }: WidgetTransaccionesProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -36,7 +35,7 @@ export function WidgetTransacciones({ spreadsheetId, accessToken, visible, onTog
           <CardDescription>{t("ultimos_movimientos_financieros")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <RecentTransactions spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+          <RecentTransactions spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>

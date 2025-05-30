@@ -5,12 +5,12 @@ import { Progress } from "@/components/ui/progress"
 import { getSheetData } from "@/lib/googleApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { useRefresh } from "@/contexts/RefreshContext";
 
 // Define props interface
 interface BudgetProgressProps {
   spreadsheetId: string;
   accessToken: string;
-  refreshKey?: number;
 }
 
 type Budget = {
@@ -20,11 +20,12 @@ type Budget = {
 }
 
 // Accept props
-export function BudgetProgress({ spreadsheetId, accessToken, refreshKey }: BudgetProgressProps) {
+export function BudgetProgress({ spreadsheetId, accessToken }: BudgetProgressProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { globalRefreshKey } = useRefresh();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,7 +33,7 @@ export function BudgetProgress({ spreadsheetId, accessToken, refreshKey }: Budge
       setIsLoading(true);
       setError(null);
       setBudgets([]); // Limpiar estado antes de fetch
-      console.log('Refetch presupuestos', refreshKey);
+      console.log('Refetch presupuestos', globalRefreshKey);
       await new Promise(res => setTimeout(res, 150));
       try {
         // Fetch budget data (e.g., from a 'Budgets' sheet)
@@ -67,7 +68,7 @@ export function BudgetProgress({ spreadsheetId, accessToken, refreshKey }: Budge
     };
 
     fetchData();
-  }, [spreadsheetId, accessToken, refreshKey]);
+  }, [spreadsheetId, accessToken, globalRefreshKey]);
 
   if (isLoading) {
     return (

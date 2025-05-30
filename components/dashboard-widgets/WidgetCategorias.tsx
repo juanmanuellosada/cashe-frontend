@@ -9,10 +9,9 @@ interface WidgetCategoriasProps {
   period: string;
   visible: boolean;
   onToggle: () => void;
-  refreshKey?: number;
 }
 
-export function WidgetCategorias({ spreadsheetId, accessToken, period, visible, onToggle, refreshKey }: WidgetCategoriasProps) {
+export function WidgetCategorias({ spreadsheetId, accessToken, period, visible, onToggle }: WidgetCategoriasProps) {
   const { t } = useTranslation();
   if (!visible) {
     return (
@@ -35,9 +34,8 @@ export function WidgetCategorias({ spreadsheetId, accessToken, period, visible, 
         <CardHeader>
           <CardTitle>{t("gastos_por_categoria")}</CardTitle>
           <CardDescription>{t("distribucion_gastos")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ExpensesByCategoryChart period={period} spreadsheetId={spreadsheetId} accessToken={accessToken} refreshKey={refreshKey} />
+        </CardHeader>        <CardContent>
+          <ExpensesByCategoryChart spreadsheetId={spreadsheetId} accessToken={accessToken} />
         </CardContent>
       </Card>
     </div>
