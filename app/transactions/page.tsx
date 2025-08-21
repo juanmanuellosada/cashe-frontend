@@ -579,23 +579,23 @@ export default function TransactionsPage() {
               {/* Fila de totales - Solo mostrar si hay transacciones filtradas */}
               {filteredTransactions.length > 0 && (
                 <div className="border-t pt-4 mt-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border-2 border-dashed">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-full bg-primary/10 text-primary">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg bg-muted/30 border-2 border-dashed gap-3 sm:gap-4">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
                         <DollarSign className="h-4 w-4" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0 flex-1">
                         <p className="font-semibold">Total Filtrado</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{filteredTransactions.length} transacciones</span>
-                          <span>•</span>
-                          <span>Ingresos: {formatCurrency(totalIncome)}</span>
-                          <span>•</span>
-                          <span>Gastos: {formatCurrency(totalExpenses)}</span>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm text-muted-foreground">
+                          <span className="flex-shrink-0">{filteredTransactions.length} transacciones</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex-shrink-0">Ingresos: {formatCurrency(totalIncome)}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex-shrink-0">Gastos: {formatCurrency(totalExpenses)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right flex-shrink-0">
                       <p className={`text-xl font-bold ${balance >= 0 ? "text-secondary" : "text-primary"}`}>
                         {balance >= 0 ? "+" : ""}
                         {formatCurrency(Math.abs(balance))}
