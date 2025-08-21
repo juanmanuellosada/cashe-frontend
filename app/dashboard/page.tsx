@@ -653,11 +653,11 @@ export default function DashboardPage() {
           {/* Controles */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-secondary/10 hover:!border-orange-500 hover:!bg-secondary/10 border-secondary/20 transition-all duration-200 [&>*]:hover:!text-secondary dark:[&>*]:hover:!text-secondary"
+                className="text-xs flex-shrink-0 bg-secondary/10 hover:!border-orange-500 hover:!bg-secondary/10 border-secondary/20 transition-all duration-200 [&>*]:hover:!text-secondary dark:[&>*]:hover:!text-secondary"
                 onClick={() => setTransactionModal({ isOpen: true, type: "income" })}
               >
                 <ArrowUpRight className="h-4 w-4 text-secondary mr-1" />
@@ -666,7 +666,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-primary/10 hover:!border-orange-500 hover:!bg-primary/10 border-primary/20 transition-all duration-200 [&>*]:hover:!text-primary dark:[&>*]:hover:!text-primary"
+                className="text-xs flex-shrink-0 bg-primary/10 hover:!border-orange-500 hover:!bg-primary/10 border-primary/20 transition-all duration-200 [&>*]:hover:!text-primary dark:[&>*]:hover:!text-primary"
                 onClick={() => setTransactionModal({ isOpen: true, type: "expense" })}
               >
                 <ArrowDownRight className="h-4 w-4 text-primary mr-1" />
@@ -675,7 +675,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-accent/10 hover:!border-orange-500 hover:!bg-accent/10 border-accent/20 transition-all duration-200 [&>*]:hover:!text-accent dark:[&>*]:hover:!text-accent"
+                className="text-xs flex-shrink-0 bg-accent/10 hover:!border-orange-500 hover:!bg-accent/10 border-accent/20 transition-all duration-200 [&>*]:hover:!text-accent dark:[&>*]:hover:!text-accent"
                 onClick={() => setTransferModalOpen(true)}
               >
                 <ArrowRightLeft className="h-4 w-4 text-accent mr-1" />
@@ -684,7 +684,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-muted/10 hover:!border-orange-500 hover:!bg-muted/10 border-muted/20 transition-all duration-200 [&>*]:hover:!text-muted-foreground dark:[&>*]:hover:!text-muted-foreground"
+                className="text-xs flex-shrink-0 bg-muted/10 hover:!border-orange-500 hover:!bg-muted/10 border-muted/20 transition-all duration-200 [&>*]:hover:!text-muted-foreground dark:[&>*]:hover:!text-muted-foreground"
                 onClick={() => setAccountModalOpen(true)}
               >
                 <Plus className="h-4 w-4 text-muted-foreground mr-1" />
@@ -693,7 +693,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-yellow-500/10 hover:!border-orange-500 hover:!bg-yellow-500/10 border-yellow-500/20 transition-all duration-200 [&>*]:hover:!text-yellow-600 dark:[&>*]:hover:!text-yellow-400"
+                className="text-xs flex-shrink-0 bg-yellow-500/10 hover:!border-orange-500 hover:!bg-yellow-500/10 border-yellow-500/20 transition-all duration-200 [&>*]:hover:!text-yellow-600 dark:[&>*]:hover:!text-yellow-400"
                 onClick={() => setCategoryModalOpen(true)}
               >
                 <Tag className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-1" />
