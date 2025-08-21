@@ -16,7 +16,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   CalendarIcon,
-  Download,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -275,10 +274,6 @@ export default function TransactionsPage() {
             <p className="text-muted-foreground">Registra y gestiona tus ingresos y gastos</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
             <Button
               onClick={() => setTransactionModal({ isOpen: true, type: "expense" })}
               variant="outline"
