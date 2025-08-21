@@ -539,7 +539,7 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="balance">Saldo inicial *</Label>
               <Input
@@ -610,11 +610,11 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
             <Label htmlFor="isActive">Cuenta activa</Label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90">
+            <Button type="submit" className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               {account ? "Actualizar" : "Crear"} Cuenta
             </Button>
           </div>
