@@ -33,10 +33,57 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-      {/* Efectos de fondo */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-slate-500/5 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/3 rounded-full blur-3xl"></div>
+      {/* Grid Background Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+      
+      {/* Animated Gradient Orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/8 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Large floating elements */}
+        <div className="absolute top-20 left-20 w-2 h-2 bg-orange-400/20 rounded-full animate-float"></div>
+        <div className="absolute top-32 right-32 w-3 h-3 bg-blue-400/15 rounded-full animate-float-slow" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-40 left-40 w-2 h-2 bg-purple-400/20 rounded-full animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-20 right-20 w-4 h-4 bg-orange-300/10 rounded-full animate-float-slow" style={{animationDelay: '3s'}}></div>
+        
+        {/* Medium floating elements */}
+        <div className="absolute top-3/4 left-1/6 w-1.5 h-1.5 bg-yellow-400/15 rounded-full animate-float" style={{animationDelay: '4s'}}></div>
+        <div className="absolute top-1/6 right-2/3 w-2.5 h-2.5 bg-indigo-400/10 rounded-full animate-float-slow" style={{animationDelay: '5s'}}></div>
+        
+        {/* Small scattered dots */}
+        <div className="absolute top-1/3 left-1/5 w-1 h-1 bg-white/10 rounded-full animate-pulse"></div>
+        <div className="absolute top-2/3 right-1/3 w-1 h-1 bg-white/15 rounded-full animate-pulse" style={{animationDelay: '1.5s'}}></div>
+        <div className="absolute bottom-1/3 left-2/3 w-1 h-1 bg-white/10 rounded-full animate-pulse" style={{animationDelay: '3s'}}></div>
+        <div className="absolute top-1/2 right-1/4 w-1 h-1 bg-white/20 rounded-full animate-pulse" style={{animationDelay: '2.5s'}}></div>
+        <div className="absolute top-1/5 left-3/4 w-1 h-1 bg-orange-300/20 rounded-full animate-pulse" style={{animationDelay: '4s'}}></div>
+        <div className="absolute bottom-1/5 right-1/5 w-1 h-1 bg-blue-300/15 rounded-full animate-pulse" style={{animationDelay: '5.5s'}}></div>
+        
+        {/* Geometric shapes */}
+        <div className="absolute top-16 right-16 w-6 h-6 border border-orange-400/10 rotate-45 animate-spin" style={{animationDuration: '20s'}}></div>
+        <div className="absolute bottom-16 left-16 w-8 h-8 border border-blue-400/8 rotate-12 animate-spin" style={{animationDuration: '25s', animationDirection: 'reverse'}}></div>
+        <div className="absolute top-2/3 left-1/3 w-4 h-4 border border-purple-400/12 animate-spin" style={{animationDuration: '15s'}}></div>
+        
+        {/* Additional decorative elements */}
+        <div className="absolute top-1/4 right-1/3 w-3 h-0.5 bg-gradient-to-r from-orange-400/20 to-transparent rotate-45 animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-1/4 left-1/4 w-3 h-0.5 bg-gradient-to-r from-blue-400/15 to-transparent rotate-12 animate-pulse" style={{animationDelay: '3.5s'}}></div>
+      </div>
+      
+      {/* Dynamic Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-500/[0.02] to-transparent animate-gradient-shift opacity-80"></div>
+      <div className="absolute inset-0 bg-gradient-to-l from-transparent via-purple-500/[0.015] to-transparent animate-gradient-shift opacity-60" style={{animationDelay: '4s'}}></div>
+      
+      {/* Radial gradient spotlight effect */}
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full h-full bg-gradient-radial from-orange-500/5 via-transparent to-transparent opacity-60"></div>
+      
+      {/* Animated mesh gradient */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-1/3 left-1/3 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-yellow-400/10 rounded-full blur-xl animate-float"></div>
+        <div className="absolute bottom-1/3 right-1/3 w-40 h-40 bg-gradient-to-br from-purple-400/15 to-blue-400/10 rounded-full blur-xl animate-float-slow" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-2/3 right-1/4 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-indigo-400/10 rounded-full blur-xl animate-float" style={{animationDelay: '1s'}}></div>
+      </div>
       
       {/* Navegación */}
       <nav className="relative z-20 flex items-center justify-between p-4 sm:p-6 lg:px-8">
