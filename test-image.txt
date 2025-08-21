@@ -1,0 +1,1 @@
+Esta es una imagen de prueba para verificar que la funcionalidad de carga funciona
