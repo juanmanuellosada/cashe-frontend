@@ -281,12 +281,12 @@ export default function TransfersPage() {
               </div>
 
               {/* Segunda fila: Cuentas origen y destino */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Cuenta origen */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cuenta origen</label>
                   <Select value={fromAccount} onValueChange={setFromAccount}>
-                    <SelectTrigger className="hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white">
+                    <SelectTrigger className="w-full hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -307,7 +307,7 @@ export default function TransfersPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cuenta destino</label>
                   <Select value={toAccount} onValueChange={setToAccount}>
-                    <SelectTrigger className="hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white">
+                    <SelectTrigger className="w-full hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
