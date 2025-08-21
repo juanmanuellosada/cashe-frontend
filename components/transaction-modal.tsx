@@ -185,7 +185,7 @@ export function TransactionModal({
             </Tabs>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Monto */}
             <div className="space-y-2">
               <Label htmlFor="amount">Monto *</Label>
@@ -211,7 +211,7 @@ export function TransactionModal({
                     className="w-full justify-start text-left font-normal bg-card text-card-foreground hover:border-orange-400 hover:text-card-foreground dark:hover:border-orange-400 dark:hover:text-white"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, "PPP", { locale: es })}
+                    <span className="truncate">{format(selectedDate, "PPP", { locale: es })}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
@@ -242,7 +242,7 @@ export function TransactionModal({
             {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Categoría */}
             <div className="space-y-2">
               <Label htmlFor="category">Categoría *</Label>
@@ -298,11 +298,11 @@ export function TransactionModal({
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               {transaction ? "Guardar cambios" : "Crear transacción"}
             </Button>
           </div>
