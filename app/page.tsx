@@ -39,24 +39,35 @@ export default function LandingPage() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/3 rounded-full blur-3xl"></div>
       
       {/* Navegación */}
-      <nav className="relative z-20 flex items-center justify-between p-6 lg:px-8">
-        <div className="flex items-center space-x-3">
+      <nav className="relative z-20 flex items-center justify-between p-4 sm:p-6 lg:px-8">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
           <Image
             src="/cashe-logo.png"
             alt="Cashé Logo"
-            width={40}
-            height={40}
-            className="rounded-lg"
+            width={32}
+            height={32}
+            className="rounded-lg sm:w-10 sm:h-10 flex-shrink-0"
           />
-          <span className="text-2xl font-bold text-white">Cashé</span>
+          <span className="text-xl sm:text-2xl font-bold text-white truncate">Cashé</span>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => setShowAuth(true)}>
-            Iniciar Sesión
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-white hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-4" 
+            onClick={() => setShowAuth(true)}
+          >
+            <span className="hidden sm:inline">Iniciar Sesión</span>
+            <span className="sm:hidden">Entrar</span>
           </Button>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={() => setShowAuth(true)}>
-            Registrarse
+          <Button 
+            size="sm"
+            className="bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm px-2 sm:px-4" 
+            onClick={() => setShowAuth(true)}
+          >
+            <span className="hidden sm:inline">Registrarse</span>
+            <span className="sm:hidden">Registro</span>
           </Button>
         </div>
       </nav>
