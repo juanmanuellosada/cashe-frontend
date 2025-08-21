@@ -522,31 +522,31 @@ export default function TransactionsPage() {
                 return (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors gap-3 sm:gap-4"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
                       <div
-                        className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                        className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: categoryData.color }}
                       >
                         <IconComponent className="h-5 w-5 text-white" />
                       </div>
-                      <div className="space-y-1">
-                        <p className="font-medium">{transaction.description}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Badge variant="outline" className="text-xs">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <p className="font-medium truncate">{transaction.description}</p>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm text-muted-foreground">
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
                             {transaction.category}
                           </Badge>
-                          <span>•</span>
-                          <span>{transaction.account}</span>
-                          <span>•</span>
-                          <span>{format(new Date(transaction.date), "dd/MM/yyyy", { locale: es })}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="truncate">{transaction.account}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex-shrink-0">{format(new Date(transaction.date), "dd/MM/yyyy", { locale: es })}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3">
+                      <div className="text-left sm:text-right">
                         <p
                           className={`text-lg font-semibold ${
                             transaction.type === "income" ? "text-secondary" : "text-primary"
@@ -559,7 +559,7 @@ export default function TransactionsPage() {
                           {format(new Date(transaction.createdAt), "HH:mm", { locale: es })}
                         </p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"

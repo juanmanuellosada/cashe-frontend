@@ -374,24 +374,24 @@ export default function TransfersPage() {
               {filteredTransfers.map((transfer) => (
                 <div
                   key={transfer.id}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors gap-3 sm:gap-4"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-full bg-accent/10 text-accent">
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="p-2 rounded-full bg-accent/10 text-accent flex-shrink-0">
                       <ArrowLeftRight className="h-5 w-5" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="font-medium">{transfer.description}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{transfer.fromAccount}</span>
-                        <ArrowLeftRight className="h-3 w-3" />
-                        <span>{transfer.toAccount}</span>
-                        <span>•</span>
-                        <span>{format(new Date(transfer.date), "dd/MM/yyyy", { locale: es })}</span>
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <p className="font-medium truncate">{transfer.description}</p>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm text-muted-foreground">
+                        <span className="truncate">{transfer.fromAccount}</span>
+                        <ArrowLeftRight className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{transfer.toAccount}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="flex-shrink-0">{format(new Date(transfer.date), "dd/MM/yyyy", { locale: es })}</span>
                       </div>
                       {transfer.fromCurrency !== transfer.toCurrency && (
                         <div className="flex items-center gap-2 text-xs">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
                             Tasa: {transfer.exchangeRate} {transfer.fromCurrency}/{transfer.toCurrency}
                           </Badge>
                         </div>
@@ -399,8 +399,8 @@ export default function TransfersPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                    <div className="text-left sm:text-right">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">-</span>
                         <span className="font-semibold text-primary">
@@ -414,7 +414,7 @@ export default function TransfersPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       <Button variant="ghost" size="sm" onClick={() => setTransferModal({ isOpen: true, transfer })}>
                         <Edit className="h-4 w-4" />
                       </Button>

@@ -250,11 +250,11 @@ export default function CategoriesPage() {
                     return (
                       <div
                         key={category.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors gap-3"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           {category.image ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm">
+                            <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm flex-shrink-0">
                               <img
                                 src={category.image}
                                 alt={`Ícono de ${category.name}`}
@@ -263,23 +263,23 @@ export default function CategoriesPage() {
                             </div>
                           ) : (
                             <div
-                              className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                              className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center flex-shrink-0"
                               style={{ backgroundColor: category.color }}
                             >
                               <IconComponent className="h-4 w-4 text-white" />
                             </div>
                           )}
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium">{category.name}</p>
+                              <p className="font-medium truncate">{category.name}</p>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{category.transactionCount} transacciones</span>
-                              <span>{formatCurrency(category.totalAmount, "ARS")}</span>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                              <span className="flex-shrink-0">{category.transactionCount} transacciones</span>
+                              <span className="flex-shrink-0">{formatCurrency(category.totalAmount, "ARS")}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-end flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -308,11 +308,11 @@ export default function CategoriesPage() {
                     return (
                       <div
                         key={category.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors gap-3"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           {category.image ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm">
+                            <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm flex-shrink-0">
                               <img
                                 src={category.image}
                                 alt={`Ícono de ${category.name}`}
@@ -321,23 +321,23 @@ export default function CategoriesPage() {
                             </div>
                           ) : (
                             <div
-                              className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                              className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center flex-shrink-0"
                               style={{ backgroundColor: category.color }}
                             >
                               <IconComponent className="h-4 w-4 text-white" />
                             </div>
                           )}
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium">{category.name}</p>
+                              <p className="font-medium truncate">{category.name}</p>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{category.transactionCount} transacciones</span>
-                              <span>{formatCurrency(category.totalAmount, "ARS")}</span>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                              <span className="flex-shrink-0">{category.transactionCount} transacciones</span>
+                              <span className="flex-shrink-0">{formatCurrency(category.totalAmount, "ARS")}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-end flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="sm"
