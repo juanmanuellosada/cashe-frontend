@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, TrendingUp, TrendingDown, PieChart, LineChart, Target } from "lucide-react"
+import { Download, TrendingUp, TrendingDown, PieChart, LineChart, Target, FileSpreadsheet } from "lucide-react"
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -217,6 +217,70 @@ export default function ReportsPage() {
       })
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const exportToCSV = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error('No hay transacciones para exportar')
+      return
+    }
+
+    try {
+      // Crear encabezados del CSV
+      const headers = [
+        'Fecha',
+        'Descripción',
+        'Categoría',
+        'Cuenta',
+        'Tipo',
+        'Monto',
+        'Moneda'
+      ]
+
+      // Convertir transacciones a formato CSV
+      const csvData = filteredTransactions.map(transaction => {
+        const account = accounts.find(a => a.id === transaction.accountId)
+        const category = categories.find(c => c.id === transaction.categoryId)
+        
+        return [
+          format(new Date(transaction.date), 'dd/MM/yyyy'),
+          `"${transaction.description}"`,
+          `"${category?.name || 'Sin categoría'}"`,
+          `"${account?.name || 'Cuenta desconocida'}"`,
+          transaction.type === 'income' ? 'Ingreso' : 'Gasto',
+          Math.abs(transaction.amount).toFixed(2),
+          account?.currency || 'USD'
+        ]
+      })
+
+      // Combinar encabezados y datos
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n')
+
+      // Agregar BOM para soporte de caracteres especiales
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      })
+
+      // Crear enlace de descarga
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `transacciones-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`${filteredTransactions.length} transacciones exportadas a CSV`)
+    } catch (error) {
+      console.error('Error al exportar CSV:', error)
+      toast.error('Error al exportar las transacciones')
     }
   }
 
@@ -544,12 +608,18 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
-          <Button onClick={exportToPDF} disabled={isExporting}>
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting ? 'Generando PDF...' : 'Exportar PDF'}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={exportToCSV} variant="outline" className="w-full sm:w-auto">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
+            <Button onClick={exportToPDF} disabled={isExporting} className="w-full sm:w-auto">
+              <Download className="mr-2 h-4 w-4" />
+              {isExporting ? 'Generando PDF...' : 'Exportar PDF'}
+            </Button>
+          </div>
         </div>
 
         <div ref={reportRef}>
