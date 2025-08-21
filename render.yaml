@@ -1,0 +1,11 @@
+# Build command
+npm run build
+
+# Start command  
+npm start
+
+# Node version
+18.17.0
+
+# Environment
+NODE_ENV=production
