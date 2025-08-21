@@ -664,39 +664,44 @@ export default function ReportsPage() {
 
         {/* Gráficos */}
         <Tabs defaultValue="timeline" className="space-y-4 mt-12">
-          <TabsList>
-            <TabsTrigger value="timeline">
-              <LineChart className="w-4 h-4 mr-2" />
-              Tendencia
-            </TabsTrigger>
-            <TabsTrigger value="income-categories">
-              <PieChart className="w-4 h-4 mr-2" />
-              Ingresos por Categoría
-            </TabsTrigger>
-            <TabsTrigger value="expense-categories">
-              <PieChart className="w-4 h-4 mr-2" />
-              Gastos por Categoría
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full sm:w-auto">
+              <TabsTrigger value="timeline" className="text-xs sm:text-sm">
+                <LineChart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Tendencia</span>
+                <span className="sm:hidden">Línea</span>
+              </TabsTrigger>
+              <TabsTrigger value="income-categories" className="text-xs sm:text-sm">
+                <PieChart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Ingresos por Categoría</span>
+                <span className="sm:hidden">Ingresos</span>
+              </TabsTrigger>
+              <TabsTrigger value="expense-categories" className="text-xs sm:text-sm">
+                <PieChart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Gastos por Categoría</span>
+                <span className="sm:hidden">Gastos</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="timeline" className="space-y-4">
             <Card data-export="chart">
               <CardHeader>
-                <CardTitle>Evolución de Ingresos y Gastos</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Evolución de Ingresos y Gastos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px]" data-chart="timeline">
+                <div className="h-[250px] sm:h-[400px]" data-chart="timeline">
                   <Line data={timelineData} options={lineChartOptions} />
                 </div>
                 {/* Custom Legend */}
-                <div className="flex items-center justify-center gap-6 pt-4">
+                <div className="flex items-center justify-center gap-4 sm:gap-6 pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#43A047]"></div>
-                    <span className="text-sm text-muted-foreground">Ingresos</span>
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-[#43A047]"></div>
+                    <span className="text-xs sm:text-sm text-muted-foreground">Ingresos</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#F57C00]"></div>
-                    <span className="text-sm text-muted-foreground">Gastos</span>
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-[#F57C00]"></div>
+                    <span className="text-xs sm:text-sm text-muted-foreground">Gastos</span>
                   </div>
                 </div>
               </CardContent>
@@ -706,28 +711,28 @@ export default function ReportsPage() {
           <TabsContent value="income-categories" className="space-y-4">
             <Card data-export="chart">
               <CardHeader>
-                <CardTitle>Distribución de Ingresos por Categoría</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <CardTitle className="text-lg sm:text-xl">Distribución de Ingresos por Categoría</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Total: {formatCurrency(Array.from(categoryAnalysis.incomeByCategory.values()).reduce((sum, val) => sum + val, 0))}
                 </p>
               </CardHeader>
               <CardContent>
                 {incomeChartData.labels.length > 0 ? (
                   <>
-                    <div className="h-[200px] w-full" data-chart="income">
+                    <div className="h-[250px] sm:h-[300px] w-full" data-chart="income">
                       <Pie data={incomeChartData} options={pieChartOptions} />
                     </div>
                     <div className="mt-4 space-y-2">
                       {incomeChartData.labels.map((label, index) => (
-                        <div key={index} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
+                        <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div
-                              className="w-3 h-3 rounded-full"
+                              className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: incomeChartData.datasets[0].backgroundColor[index] }}
                             />
                             <span className="truncate text-card-foreground">{label}</span>
                           </div>
-                          <span className="font-medium ml-2 text-card-foreground">
+                          <span className="font-medium ml-2 text-card-foreground flex-shrink-0">
                             {formatCurrency(incomeChartData.datasets[0].data[index])}
                           </span>
                         </div>
@@ -735,7 +740,7 @@ export default function ReportsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-muted-foreground text-sm">
                     No hay datos de ingresos para mostrar
                   </div>
                 )}
@@ -746,28 +751,28 @@ export default function ReportsPage() {
           <TabsContent value="expense-categories" className="space-y-4">
             <Card data-export="chart">
               <CardHeader>
-                <CardTitle>Distribución de Gastos por Categoría</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <CardTitle className="text-lg sm:text-xl">Distribución de Gastos por Categoría</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Total: {formatCurrency(Array.from(categoryAnalysis.expensesByCategory.values()).reduce((sum, val) => sum + val, 0))}
                 </p>
               </CardHeader>
               <CardContent>
                 {expensesChartData.labels.length > 0 ? (
                   <>
-                    <div className="h-[200px] w-full" data-chart="expenses">
+                    <div className="h-[250px] sm:h-[300px] w-full" data-chart="expenses">
                       <Pie data={expensesChartData} options={pieChartOptions} />
                     </div>
                     <div className="mt-4 space-y-2">
                       {expensesChartData.labels.map((label, index) => (
-                        <div key={index} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
+                        <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div
-                              className="w-3 h-3 rounded-full"
+                              className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: expensesChartData.datasets[0].backgroundColor[index] }}
                             />
                             <span className="truncate text-card-foreground">{label}</span>
                           </div>
-                          <span className="font-medium ml-2 text-card-foreground">
+                          <span className="font-medium ml-2 text-card-foreground flex-shrink-0">
                             {formatCurrency(expensesChartData.datasets[0].data[index])}
                           </span>
                         </div>
@@ -775,7 +780,7 @@ export default function ReportsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-muted-foreground text-sm">
                     No hay datos de gastos para mostrar
                   </div>
                 )}
