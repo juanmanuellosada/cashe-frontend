@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: false,
+    unoptimized: true,
     domains: [],
   },
   serverExternalPackages: ['puppeteer', 'canvas'],
@@ -15,6 +14,9 @@ const nextConfig: NextConfig = {
       config.externals.push('canvas');
     }
     return config;
+  },
+  experimental: {
+    serverComponentsExternalPackages: ['puppeteer', 'canvas']
   }
 };
 

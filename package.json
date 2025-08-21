@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node -e \"try { require('puppeteer') } catch(e) { console.log('Puppeteer not available in production') }\""
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
