@@ -200,7 +200,7 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Cuenta origen */}
             <div className="space-y-2">
               <Label htmlFor="fromAccount">Cuenta de origen *</Label>
@@ -217,9 +217,9 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
                           {renderAccountIcon(account)}
-                          <span>{account.name}</span>
+                          <span className="truncate">{account.name}</span>
                         </div>
-                        <span className="text-sm text-muted-foreground ml-2">
+                        <span className="text-sm text-muted-foreground ml-2 flex-shrink-0">
                           {formatCurrency(account.balance, account.currency)}
                         </span>
                       </div>
@@ -248,9 +248,9 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
                             {renderAccountIcon(account)}
-                            <span>{account.name}</span>
+                            <span className="truncate">{account.name}</span>
                           </div>
-                          <span className="text-sm text-muted-foreground ml-2">
+                          <span className="text-sm text-muted-foreground ml-2 flex-shrink-0">
                             {formatCurrency(account.balance, account.currency)}
                           </span>
                         </div>
@@ -262,7 +262,7 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Monto */}
             <div className="space-y-2">
               <Label htmlFor="amount">Monto a transferir *</Label>
@@ -288,7 +288,7 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
                     className="w-full justify-start text-left font-normal bg-card hover:bg-muted/50"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, "PPP", { locale: es })}
+                    <span className="truncate">{format(selectedDate, "PPP", { locale: es })}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
@@ -343,21 +343,21 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
           {formData.fromAccount && formData.toAccount && formData.amount && (
             <Card>
               <CardContent className="pt-4">
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Se debitará</p>
                     <p className="font-semibold text-primary">
                       {formatCurrency(calculatedAmounts.fromAmount, fromAccountData?.currency || "ARS")}
                     </p>
-                    <p className="text-xs text-muted-foreground">{formData.fromAccount}</p>
+                    <p className="text-xs text-muted-foreground truncate">{formData.fromAccount}</p>
                   </div>
-                  <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+                  <ArrowLeftRight className="h-5 w-5 text-muted-foreground rotate-90 sm:rotate-0" />
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Se acreditará</p>
                     <p className="font-semibold text-secondary">
                       {formatCurrency(calculatedAmounts.toAmount, toAccountData?.currency || "ARS")}
                     </p>
-                    <p className="text-xs text-muted-foreground">{formData.toAccount}</p>
+                    <p className="text-xs text-muted-foreground truncate">{formData.toAccount}</p>
                   </div>
                 </div>
               </CardContent>
@@ -375,11 +375,11 @@ export function TransferModal({ isOpen, transfer, onClose, onSave, accounts, exc
             </Alert>
           )}
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90">
+            <Button type="submit" className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               {transfer ? "Actualizar" : "Realizar"} Transferencia
             </Button>
           </div>
