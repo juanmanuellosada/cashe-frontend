@@ -49,6 +49,7 @@ import {
   ArcElement,
   Filler,
 } from "chart.js"
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Line, Pie } from "react-chartjs-2"
 import { formatCurrency } from "@/lib/currency"
 import { TransactionModal } from "@/components/transaction-modal"
@@ -60,16 +61,16 @@ import type { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, Filler)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, Filler, ChartDataLabels)
 
 // Mapeo de categorías a íconos y colores
 const categoryIconMapping = {
-  "Sueldo": { icon: Briefcase, color: "#43A047" },
+  "Sueldo": { icon: Briefcase, color: "#22C55E" },
   "Freelance": { icon: Laptop, color: "#81C784" },
   "Inversiones": { icon: TrendingUp, color: "#4CAF50" },
   "Trabajo Extra": { icon: Clock, color: "#66BB6A" },
   "Otros": { icon: MoreHorizontal, color: "#A5D6A7" },
-  "Alimentación": { icon: Utensils, color: "#F57C00" },
+  "Alimentación": { icon: Utensils, color: "#DC2626" },
   "Transporte": { icon: Car, color: "#FF9800" },
   "Entretenimiento": { icon: Gamepad2, color: "#FFB74D" },
   "Servicios": { icon: Zap, color: "#FFCC02" },
@@ -140,7 +141,7 @@ const recentTransactions = [
 ]
 
 const expensesByCategory = [
-  { name: "Alimentación", value: 12000, color: "#F57C00" }, // Changed to specific orange color
+  { name: "Alimentación", value: 12000, color: "#DC2626" }, // Changed to intense red color
   { name: "Transporte", value: 8500, color: "#FF9800" }, // Changed to specific amber color
   { name: "Entretenimiento", value: 4200, color: "#FF5722" }, // Changed to specific deep orange color
   { name: "Servicios", value: 5800, color: "#E91E63" }, // Changed to specific pink color
@@ -148,7 +149,7 @@ const expensesByCategory = [
 ]
 
 const incomesByCategory = [
-  { name: "Sueldo", value: 35000, color: "#43A047" }, // Changed to specific green color
+  { name: "Sueldo", value: 35000, color: "#22C55E" }, // Changed to vivid green color
   { name: "Freelance", value: 8000, color: "#66BB6A" }, // Changed to specific light green color
   { name: "Inversiones", value: 2000, color: "#81C784" }, // Changed to specific lighter green color
 ]
@@ -457,36 +458,94 @@ export default function DashboardPage() {
   const activeFiltersCount = getActiveFiltersCount()
   const periodComparison = getPeriodComparison()
 
+  // Función para crear gradientes dinámicos
+  const createGradient = (ctx: CanvasRenderingContext2D, color: string) => {
+    const gradient = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.7, color + 'CC'); // Más opaco en el centro
+    gradient.addColorStop(1, color + '80'); // Más transparente en el borde
+    return gradient;
+  }
+
+  // Función para generar colores con gradientes
+  const generateGradientColors = (canvas: HTMLCanvasElement | null, colors: string[]) => {
+    if (!canvas) return colors;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return colors;
+    
+    return colors.map(color => createGradient(ctx, color));
+  }
+
   const lineChartData = {
     labels: convertedMonthlyTrend.map((item) => item.month),
     datasets: [
       {
         label: "Ingresos",
         data: convertedMonthlyTrend.map((item) => item.income),
-        borderColor: "#43A047", // Green color for income
-        backgroundColor: "rgba(67, 160, 71, 0.1)",
+        borderColor: "#22C55E", // Verde más vívido para ingresos
+        backgroundColor: (context: any) => {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return 'rgba(34, 197, 94, 0.1)';
+          
+          // Crear gradiente vertical
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, 'rgba(34, 197, 94, 0.4)');
+          gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.2)');
+          gradient.addColorStop(1, 'rgba(34, 197, 94, 0.05)');
+          return gradient;
+        },
         borderWidth: 4,
-        fill: false,
+        fill: true, // Área sombreada bajo la línea
         tension: 0.4,
-        pointBackgroundColor: "#43A047",
-        pointBorderColor: "#43A047",
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        pointBorderWidth: 2,
+        pointBackgroundColor: "#22C55E",
+        pointBorderColor: "#ffffff", // Border blanco para mejor contraste
+        pointRadius: 8,
+        pointHoverRadius: 12, // Hover gigante
+        pointBorderWidth: 4,
+        pointHoverBorderWidth: 6,
+        // Efectos de brillo en puntos
+        pointShadowOffsetX: 2,
+        pointShadowOffsetY: 2,
+        pointShadowBlur: 8,
+        pointShadowColor: 'rgba(34, 197, 94, 0.4)',
+        // Animación en puntos
+        pointHoverBackgroundColor: "#16A34A",
+        pointHoverBorderColor: "#ffffff",
       },
       {
         label: "Gastos",
         data: convertedMonthlyTrend.map((item) => item.expenses),
-        borderColor: "#F57C00", // Orange color for expenses
-        backgroundColor: "rgba(245, 124, 0, 0.1)",
+        borderColor: "#DC2626", // Rojo intenso para gastos
+        backgroundColor: (context: any) => {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return 'rgba(220, 38, 38, 0.1)';
+          
+          // Crear gradiente vertical
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, 'rgba(220, 38, 38, 0.4)');
+          gradient.addColorStop(0.5, 'rgba(220, 38, 38, 0.2)');
+          gradient.addColorStop(1, 'rgba(220, 38, 38, 0.05)');
+          return gradient;
+        },
         borderWidth: 4,
-        fill: false,
+        fill: true, // Área sombreada bajo la línea
         tension: 0.4,
-        pointBackgroundColor: "#F57C00",
-        pointBorderColor: "#F57C00",
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        pointBorderWidth: 2,
+        pointBackgroundColor: "#DC2626",
+        pointBorderColor: "#ffffff", // Border blanco para mejor contraste
+        pointRadius: 8,
+        pointHoverRadius: 12, // Hover gigante
+        pointBorderWidth: 4,
+        pointHoverBorderWidth: 6,
+        // Efectos de brillo en puntos
+        pointShadowOffsetX: 2,
+        pointShadowOffsetY: 2,
+        pointShadowBlur: 8,
+        pointShadowColor: 'rgba(220, 38, 38, 0.4)',
+        // Animación en puntos
+        pointHoverBackgroundColor: "#EF4444",
+        pointHoverBorderColor: "#ffffff",
       },
     ],
   }
@@ -527,31 +586,92 @@ export default function DashboardPage() {
     }
   }
 
+  // Función para obtener colores dinámicos de bordes según el tema
+  const getBorderColors = () => {
+    if (typeof window === "undefined") {
+      return {
+        borderColor: "#000000",
+        hoverBorderColor: "#000000",
+      }
+    }
+
+    const isDark = document.documentElement.classList.contains("dark")
+
+    return {
+      borderColor: isDark ? "#ffffff" : "#000000",
+      hoverBorderColor: isDark ? "#ffffff" : "#000000",
+    }
+  }
+
+  // Función para obtener colores dinámicos de datalabels según el tema
+  const getDataLabelColors = () => {
+    if (typeof window === "undefined") {
+      return {
+        color: "#000000",
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        borderColor: "rgba(0, 0, 0, 0.3)",
+        textShadowColor: "rgba(255, 255, 255, 0.8)",
+      }
+    }
+
+    const isDark = document.documentElement.classList.contains("dark")
+
+    return {
+      color: isDark ? "#ffffff" : "#000000",
+      backgroundColor: isDark ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.2)",
+      borderColor: isDark ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.3)",
+      textShadowColor: isDark ? "rgba(0, 0, 0, 0.8)" : "rgba(255, 255, 255, 0.8)",
+    }
+  }
+
   const lineChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    // Animaciones espectaculares
+    animation: {
+      duration: 2500,
+      easing: 'easeInOutQuart' as const,
+    },
+    // Interacciones avanzadas
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    },
     plugins: {
       legend: {
         display: false, // We'll show custom legend below
       },
+      datalabels: {
+        display: false, // Quitar los valores arriba de los puntos
+      },
+      // Tooltips elegantes personalizados
       tooltip: {
         backgroundColor: () => getTooltipColors().backgroundColor,
         titleColor: () => getTooltipColors().titleColor,
         bodyColor: () => getTooltipColors().bodyColor,
         borderColor: () => getTooltipColors().borderColor,
-        borderWidth: 1,
-        cornerRadius: 8,
+        borderWidth: 2,
+        cornerRadius: 12,
         displayColors: true,
         titleFont: {
-          size: 14,
+          size: 16,
           weight: "bold" as const,
         },
         bodyFont: {
-          size: 13,
+          size: 14,
         },
-        padding: 12,
+        padding: 16,
         callbacks: {
-          label: (context: any) => `${context.dataset.label}: ${formatCurrency(context.parsed.y, displayCurrency.code)}`,
+          title: (context: any) => `${context[0].label}`,
+          label: (context: any) => {
+            return `${context.dataset.label}: ${formatCurrency(context.parsed.y, displayCurrency.code)}`;
+          },
+          afterBody: (context: any) => {
+            const income = context.find((c: any) => c.dataset.label === 'Ingresos')?.parsed.y || 0;
+            const expenses = context.find((c: any) => c.dataset.label === 'Gastos')?.parsed.y || 0;
+            const balance = income - expenses;
+            return `Balance: ${formatCurrency(balance, displayCurrency.code)}`;
+          },
         },
       },
     },
@@ -565,6 +685,7 @@ export default function DashboardPage() {
           color: () => getGridColors().textColor,
           font: {
             size: 12,
+            weight: 500,
           },
         },
       },
@@ -577,12 +698,31 @@ export default function DashboardPage() {
           color: () => getGridColors().textColor,
           font: {
             size: 12,
+            weight: 500,
           },
-          callback: (value: any) => `$${(value / 1000).toFixed(0)}k`,
+          callback: (value: any) => {
+            // Formato completo sin K
+            return `$${value.toLocaleString('es-AR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}`;
+          },
         },
       },
     },
-  }
+    elements: {
+      point: {
+        radius: 8, // Puntos más grandes
+        hoverRadius: 12, // Puntos gigantes al hover
+        borderWidth: 4, // Border súper grueso
+        hoverBorderWidth: 6, // Border aún más grueso al hover
+      },
+      line: {
+        borderWidth: 4, // Líneas muy gruesas
+        tension: 0.4, // Líneas súper curvas
+      },
+    },
+  } as any
 
   const expensesPieData = {
     labels: convertedExpensesByCategory.map((item) => item.name),
@@ -590,9 +730,16 @@ export default function DashboardPage() {
       {
         data: convertedExpensesByCategory.map((item) => item.value),
         backgroundColor: convertedExpensesByCategory.map((item) => item.color),
-        borderColor: "hsl(var(--card))",
-        borderWidth: 2,
-        hoverBorderWidth: 3,
+        borderColor: () => getBorderColors().borderColor,
+        borderWidth: 3,
+        hoverBorderWidth: 4,
+        hoverBorderColor: () => getBorderColors().hoverBorderColor,
+        hoverOffset: 0, // Se controla desde onHover
+        // Efecto de sombra simulado con border
+        shadowOffsetX: 2,
+        shadowOffsetY: 2,
+        shadowBlur: 8,
+        shadowColor: 'rgba(0, 0, 0, 0.2)',
       },
     ],
   }
@@ -603,9 +750,16 @@ export default function DashboardPage() {
       {
         data: convertedIncomesByCategory.map((item) => item.value),
         backgroundColor: convertedIncomesByCategory.map((item) => item.color),
-        borderColor: "hsl(var(--card))",
-        borderWidth: 2,
-        hoverBorderWidth: 3,
+        borderColor: () => getBorderColors().borderColor,
+        borderWidth: 3,
+        hoverBorderWidth: 4,
+        hoverBorderColor: () => getBorderColors().hoverBorderColor,
+        hoverOffset: 0, // Se controla desde onHover
+        // Efecto de sombra simulado con border
+        shadowOffsetX: 2,
+        shadowOffsetY: 2,
+        shadowBlur: 8,
+        shadowColor: 'rgba(0, 0, 0, 0.2)',
       },
     ],
   }
@@ -613,6 +767,42 @@ export default function DashboardPage() {
   const pieChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    // Animaciones suaves de entrada
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1500,
+      easing: 'easeInOutQuart' as const,
+    },
+    // Interactividad mejorada
+    onHover: (event: any, elements: any, chart: any) => {
+      if (elements.length > 0) {
+        // Separar el segmento al hacer hover
+        chart.data.datasets[0].hoverOffset = 15;
+        chart.update('none');
+      } else {
+        // Restaurar cuando no hay hover
+        chart.data.datasets[0].hoverOffset = 0;
+        chart.update('none');
+      }
+    },
+    onClick: (event: any, elements: any, chart: any) => {
+      if (elements.length > 0) {
+        const categoryIndex = elements[0].index;
+        const categoryName = chart.data.labels[categoryIndex];
+        const categoryValue = chart.data.datasets[0].data[categoryIndex];
+        console.log(`Categoría seleccionada: ${categoryName} - ${formatCurrency(categoryValue, displayCurrency.code)}`);
+        // Aquí se podría abrir un modal con detalles de la categoría
+      }
+    },
+    layout: {
+      padding: {
+        top: 80,
+        bottom: 40,
+        left: 40,
+        right: 40
+      }
+    },
     plugins: {
       legend: {
         display: false, // We'll show custom legend below
@@ -631,9 +821,58 @@ export default function DashboardPage() {
         bodyFont: {
           size: 13,
         },
-        padding: 12,
+        padding: 16,
+        // Tooltips más informativos
         callbacks: {
-          label: (context: any) => `${context.label}: ${formatCurrency(context.parsed, displayCurrency.code)}`,
+          title: (context: any) => `categoría: ${context[0].label}`,
+          label: (context: any) => {
+            const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+            const percentage = ((context.parsed / total) * 100).toFixed(1).replace('.', ',');
+            return [
+              `Monto: ${formatCurrency(context.parsed, displayCurrency.code)}`,
+              `Porcentaje: ${percentage}%`
+            ];
+          }
+        },
+      },
+      datalabels: {
+        display: true,
+        color: () => getDataLabelColors().color,
+        backgroundColor: () => getDataLabelColors().backgroundColor,
+        borderColor: () => getDataLabelColors().borderColor,
+        borderRadius: 4,
+        borderWidth: 1,
+        padding: 6,
+        font: {
+          size: 12,
+          weight: 'bold' as const,
+        },
+        // Mostrar nombre de categoría, porcentaje y valor
+        formatter: (value: number, context: any) => {
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          const percentage = ((value / total) * 100).toFixed(1).replace('.', ',');
+          const amount = formatCurrency(value, displayCurrency.code);
+          const categoryName = context.chart.data.labels[context.dataIndex];
+          return `${categoryName}\n${percentage}%\n${amount}`;
+        },
+        textAlign: 'center' as const,
+        textShadowColor: () => getDataLabelColors().textShadowColor,
+        textShadowBlur: 3,
+        // Ajustar posición según el tamaño del segmento
+        anchor: (context: any) => {
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          const percentage = (context.parsed / total) * 100;
+          return percentage > 15 ? 'center' : 'end';
+        },
+        align: (context: any) => {
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          const percentage = (context.parsed / total) * 100;
+          return percentage > 15 ? 'center' : 'end';
+        },
+        offset: (context: any) => {
+          const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+          const percentage = (context.parsed / total) * 100;
+          return percentage > 15 ? 0 : 10;
         },
       },
     },
@@ -977,7 +1216,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Gráficos y movimientos */}
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6 sm:space-y-8">
           {/* Últimos movimientos - altura limitada */}
           <Card className="bg-card border-border">
             <CardHeader>
@@ -1040,11 +1279,11 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-border">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#43A047" }}></div>
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#22C55E" }}></div>
                   <span className="text-sm font-medium text-card-foreground">Ingresos</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#F57C00" }}></div>
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#DC2626" }}></div>
                   <span className="text-sm font-medium text-card-foreground">Gastos</span>
                 </div>
               </div>
@@ -1052,63 +1291,35 @@ export default function DashboardPage() {
           </Card>
 
           {/* Gráficos de torta - ahora ocupan todo el ancho */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 sm:mt-10">
             <Card className="bg-card border-border">
-              <CardHeader>
+              <CardHeader className="pb-1">
                 <CardTitle className="text-base sm:text-lg text-card-foreground">
-                  Gastos por Categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
+                  Gastos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
                 </CardTitle>
                 <CardDescription className="text-sm">
                   Total: {formatCurrency(convertedExpensesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[180px] sm:h-[200px] w-full">
+                <div className="h-[300px] sm:h-[350px] w-full">
                   <Pie data={expensesPieData} options={pieChartOptions} />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-2">
-                  {convertedExpensesByCategory.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 sm:w-3 sm:h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <span className="truncate text-card-foreground">{category.name}</span>
-                      </div>
-                      <span className="font-medium ml-2 text-card-foreground">{formatCurrency(category.value, displayCurrency.code)}</span>
-                    </div>
-                  ))}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-card border-border">
-              <CardHeader>
+              <CardHeader className="pb-1">
                 <CardTitle className="text-base sm:text-lg text-card-foreground">
-                  Ingresos por Categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
+                  Ingresos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
                 </CardTitle>
                 <CardDescription className="text-sm">
                   Total: {formatCurrency(convertedIncomesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[180px] sm:h-[200px] w-full">
+                <div className="h-[300px] sm:h-[350px] w-full">
                   <Pie data={incomesPieData} options={pieChartOptions} />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-2">
-                  {convertedIncomesByCategory.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 sm:w-3 sm:h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <span className="truncate text-card-foreground">{category.name}</span>
-                      </div>
-                      <span className="font-medium ml-2 text-card-foreground">{formatCurrency(category.value, displayCurrency.code)}</span>
-                    </div>
-                  ))}
                 </div>
               </CardContent>
             </Card>

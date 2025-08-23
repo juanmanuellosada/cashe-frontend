@@ -21,9 +21,12 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@tailwindcss/postcss": "^4.1.12",
     "@types/puppeteer": "^5.4.7",
     "canvas": "^3.2.0",
     "chart.js": "^4.5.0",
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "chartjs-plugin-zoom": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -39,8 +42,7 @@
     "react-dom": "^19.0.0",
     "react-to-print": "^3.1.1",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1",
-    "@tailwindcss/postcss": "^4.1.12"
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
