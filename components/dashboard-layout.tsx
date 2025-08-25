@@ -17,7 +17,6 @@ import {
   ArrowLeftRight,
   Settings,
   LogOut,
-  PieChart,
   Wallet,
   Tag,
   DollarSign,
@@ -36,7 +35,6 @@ const navigation = [
   { name: "Transferencias", href: "/transfers", icon: ArrowLeftRight },
   { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Monedas", href: "/currencies", icon: DollarSign },
-  { name: "Reportes", href: "/reports", icon: PieChart },
   { name: "Configuración", href: "/settings", icon: Settings },
 ]
 

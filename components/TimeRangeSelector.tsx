@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, ChevronDown } from "lucide-react"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays, subWeeks, subMonths, subQuarters, subYears } from "date-fns"
 import { es } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
@@ -179,22 +179,27 @@ export function TimeRangeSelector({ dateRange, onDateRangeChange, className }: T
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             transition={{
               type: "spring",
               stiffness: 500,
               damping: 45,
               duration: 0.1
             }}
+            className="w-full"
           >
             <Button
               variant="outline"
-              size="sm"
-              className="text-xs sm:text-sm bg-card hover:!border-orange-500 hover:!bg-card hover:!text-card-foreground dark:hover:!text-white transition-all duration-200"
+              role="combobox"
+              aria-expanded={isOpen}
+              className="w-full justify-between min-h-9 h-auto px-3 py-2 bg-background hover:bg-accent hover:text-accent-foreground border border-input transition-all duration-200"
             >
-              <CalendarIcon className="h-4 w-4 mr-1 sm:mr-2" />
-              {formatDateRange(dateRange)}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate text-left">{formatDateRange(dateRange)}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-50" />
             </Button>
           </motion.div>
         </PopoverTrigger>

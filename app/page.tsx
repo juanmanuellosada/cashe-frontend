@@ -15,7 +15,6 @@ import {
   Lock, 
   User, 
   ArrowRight, 
-  BarChart3,
   CreditCard,
   Target,
   Monitor
@@ -310,19 +309,7 @@ export default function LandingPage() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
-            <CardHeader>
-              <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-orange-400" />
-              </div>
-              <CardTitle className="text-white">Reportes Detallados</CardTitle>
-              <CardDescription className="text-gray-400">
-                Genera reportes detallados con gráficos y análisis de tus gastos e ingresos
-              </CardDescription>
-            </CardHeader>
-          </Card>
-          
+        <div className="grid md:grid-cols-2 gap-8">
           <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
             <CardHeader>
               <div className="w-12 h-12 bg-slate-500/20 rounded-full flex items-center justify-center">
