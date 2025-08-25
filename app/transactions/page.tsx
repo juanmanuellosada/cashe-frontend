@@ -31,6 +31,7 @@ import {
   GraduationCap,
   MoreHorizontal,
   Tag,
+  Paperclip,
 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -83,6 +84,7 @@ const initialTransactions = [
     account: "Cuenta Sueldo",
     date: "2025-01-15",
     createdAt: "2025-01-15T14:30:00Z",
+    receipt: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...", // Ejemplo de factura
   },
   {
     id: 3,
@@ -93,6 +95,7 @@ const initialTransactions = [
     account: "Cuenta Sueldo",
     date: "2025-01-14",
     createdAt: "2025-01-14T16:45:00Z",
+    voucher: "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PD...", // Ejemplo de comprobante
   },
   {
     id: 4,
@@ -103,6 +106,7 @@ const initialTransactions = [
     account: "Tarjeta Crédito",
     date: "2025-01-14",
     createdAt: "2025-01-14T09:15:00Z",
+    receipt: "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iao...", // Recibo de Netflix
   },
   {
     id: 5,
@@ -113,6 +117,8 @@ const initialTransactions = [
     account: "Efectivo",
     date: "2025-01-13",
     createdAt: "2025-01-13T18:20:00Z",
+    receipt: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAAAEBAA...", // Factura YPF
+    voucher: "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9ia...", // Comprobante de pago
   },
   {
     id: 6,
@@ -123,6 +129,7 @@ const initialTransactions = [
     account: "Efectivo",
     date: "2025-01-13",
     createdAt: "2025-01-13T11:30:00Z",
+    voucher: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...", // Comprobante farmacia
   },
   {
     id: 7,
@@ -143,6 +150,7 @@ const initialTransactions = [
     account: "Cuenta Sueldo",
     date: "2025-01-12",
     createdAt: "2025-01-12T08:45:00Z",
+    receipt: "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PD...", // Factura de servicio
   },
 ]
 
@@ -561,7 +569,14 @@ export default function TransactionsPage() {
                         <IconComponent className="h-5 w-5 text-white" />
                       </div>
                       <div className="space-y-1 min-w-0 flex-1">
-                        <p className="font-medium truncate">{transaction.description}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{transaction.description}</p>
+                          {(transaction.receipt || transaction.voucher) && (
+                            <div className="flex-shrink-0">
+                              <Paperclip className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm text-muted-foreground">
                           <Badge variant="outline" className="text-xs flex-shrink-0">
                             {transaction.category}

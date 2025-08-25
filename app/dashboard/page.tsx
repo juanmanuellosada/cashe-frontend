@@ -309,7 +309,7 @@ function DashboardContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] sm:h-[350px] w-full">
+              <div className="h-[350px] sm:h-[400px] w-full">
                 <Pie data={expensesPieData} options={pieChartOptions} />
               </div>
             </CardContent>
@@ -327,7 +327,7 @@ function DashboardContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] sm:h-[350px] w-full">
+              <div className="h-[350px] sm:h-[400px] w-full">
                 <Pie data={incomesPieData} options={pieChartOptions} />
               </div>
             </CardContent>
@@ -1324,10 +1324,21 @@ function DashboardContent() {
             </CardContent>
           </Card>
 
-          {/* Gráficos y widgets adicionales - dinámicamente ordenados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8 sm:mt-10">
+          {/* Gráficos principales de categorías - ocupan fila completa */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8 sm:mt-10">
             {getVisibleWidgets()
-              .filter(w => w.category === 'charts')
+              .filter(w => w.category === 'charts' && (w.id === 'expenses-categories' || w.id === 'income-categories'))
+              .map(widget => (
+                <div key={widget.id} className="w-full">
+                  {renderWidget(widget.id)}
+                </div>
+              ))}
+          </div>
+
+          {/* Otros gráficos y widgets */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+            {getVisibleWidgets()
+              .filter(w => w.category === 'charts' && w.id !== 'expenses-categories' && w.id !== 'income-categories')
               .map(widget => (
                 <div key={widget.id}>
                   {renderWidget(widget.id)}

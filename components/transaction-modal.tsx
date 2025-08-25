@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { ArrowUpRight, ArrowDownRight, CalendarIcon } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, CalendarIcon, Upload, X, FileText } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { renderCategoryIcon, renderAccountIcon } from "@/lib/icon-helpers"
@@ -37,6 +37,9 @@ export function TransactionModal({
   const { getCategoriesByType } = useCategories()
   const { getActiveAccounts } = useAccounts()
   
+  const receiptInputRef = useRef<HTMLInputElement>(null)
+  const voucherInputRef = useRef<HTMLInputElement>(null)
+  
   const [formData, setFormData] = useState({
     type: "expense",
     description: "",
@@ -45,6 +48,8 @@ export function TransactionModal({
     account: "",
     date: new Date().toISOString().split("T")[0],
     notes: "",
+    receipt: null as string | null,
+    voucher: null as string | null,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -71,6 +76,8 @@ export function TransactionModal({
         account: transaction.account || "",
         date: transaction.date || new Date().toISOString().split("T")[0],
         notes: transaction.notes || "",
+        receipt: transaction.receipt || null,
+        voucher: transaction.voucher || null,
       })
     } else {
       setSelectedDate(new Date())
@@ -82,6 +89,8 @@ export function TransactionModal({
         account: "",
         date: new Date().toISOString().split("T")[0],
         notes: "",
+        receipt: null,
+        voucher: null,
       })
     }
     setErrors({})
@@ -131,11 +140,46 @@ export function TransactionModal({
       account: formData.account,
       date: formData.date,
       notes: formData.notes,
+      receipt: formData.receipt,
+      voucher: formData.voucher,
       ...(transaction && { id: transaction.id }),
     }
 
     onSave(transactionData)
     onClose()
+  }
+
+  const handleFileUpload = (file: File, type: 'receipt' | 'voucher') => {
+    if (file) {
+      if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+        alert('Por favor, selecciona una imagen o PDF válido')
+        return
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('El archivo es muy grande. El tamaño máximo es 5MB')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const fileUrl = e.target?.result as string
+        setFormData({ ...formData, [type]: fileUrl })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const triggerFileInput = (type: 'receipt' | 'voucher') => {
+    if (type === 'receipt') {
+      receiptInputRef.current?.click()
+    } else {
+      voucherInputRef.current?.click()
+    }
+  }
+
+  const removeFile = (type: 'receipt' | 'voucher') => {
+    setFormData({ ...formData, [type]: null })
   }
 
   const currentCategories = getCategoriesByType(formData.type as "income" | "expense")
@@ -346,12 +390,100 @@ export function TransactionModal({
             </motion.div>
           </motion.div>
 
+          {/* Archivos adjuntos - Solo para gastos */}
+          {formData.type === "expense" && (
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              {/* Factura/Recibo */}
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.52 }}
+              >
+                <Label>Factura/Recibo (opcional)</Label>
+                <div className="space-y-2">
+                  {formData.receipt ? (
+                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground truncate flex-1">
+                        Archivo adjunto
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => removeFile('receipt')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => triggerFileInput('receipt')}
+                      className="w-full justify-start gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Subir factura/recibo
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Comprobante */}
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.54 }}
+              >
+                <Label>Comprobante (opcional)</Label>
+                <div className="space-y-2">
+                  {formData.voucher ? (
+                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground truncate flex-1">
+                        Archivo adjunto
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => removeFile('voucher')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => triggerFileInput('voucher')}
+                      className="w-full justify-start gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Subir comprobante
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {/* Notas */}
           <motion.div 
             className="grid w-full items-center gap-1.5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.56 }}
           >
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
@@ -367,7 +499,7 @@ export function TransactionModal({
             className="flex flex-col sm:flex-row justify-end gap-2 pt-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.55 }}
+            transition={{ delay: 0.6 }}
           >
             <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancelar
@@ -377,6 +509,32 @@ export function TransactionModal({
             </Button>
           </motion.div>
         </motion.form>
+
+        {/* Inputs de archivo ocultos */}
+        <input
+          ref={receiptInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              handleFileUpload(file, 'receipt')
+            }
+          }}
+        />
+        <input
+          ref={voucherInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              handleFileUpload(file, 'voucher')
+            }
+          }}
+        />
             </motion.div>
           </DialogContent>
         </Dialog>
