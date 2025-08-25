@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -214,10 +215,21 @@ export default function TransfersPage() {
             <h1 className="text-3xl font-bold font-space-grotesk">Transferencias</h1>
             <p className="text-muted-foreground">Mueve dinero entre tus cuentas</p>
           </div>
-          <Button onClick={() => setTransferModal({ isOpen: true })} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Transferencia
-          </Button>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 40,
+              duration: 0.15,
+            }}
+          >
+            <Button onClick={() => setTransferModal({ isOpen: true })} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Transferencia
+            </Button>
+          </motion.div>
         </div>
 
         {/* Filtros */}
@@ -226,10 +238,21 @@ export default function TransfersPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Filtros</CardTitle>
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-                  <X className="h-4 w-4 mr-1" />
-                  Limpiar filtros
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                    duration: 0.15,
+                  }}
+                >
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+                    <X className="h-4 w-4 mr-1" />
+                    Limpiar filtros
+                  </Button>
+                </motion.div>
               )}
             </div>
           </CardHeader>
@@ -256,14 +279,26 @@ export default function TransfersPage() {
                   <label className="text-sm font-medium">Período</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white"
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 40,
+                          duration: 0.15,
+                        }}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        <span className="truncate">{displayLabel.label}</span>
-                        <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal hover:!border-orange-500 hover:!text-card-foreground dark:hover:!text-white"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <span className="truncate">{displayLabel.label}</span>
+                          <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </motion.div>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
@@ -415,12 +450,36 @@ export default function TransfersPage() {
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="sm" onClick={() => setTransferModal({ isOpen: true, transfer })}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteDialog({ isOpen: true, transfer })}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 40,
+                          duration: 0.15,
+                        }}
+                      >
+                        <Button variant="ghost" size="sm" onClick={() => setTransferModal({ isOpen: true, transfer })}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 40,
+                          duration: 0.15,
+                        }}
+                      >
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteDialog({ isOpen: true, transfer })}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
                     </div>
                   </div>
                 </div>
@@ -438,10 +497,22 @@ export default function TransfersPage() {
                       : "Crea tu primera transferencia para comenzar"}
                   </p>
                   {!hasActiveFilters && (
-                    <Button onClick={() => setTransferModal({ isOpen: true })}>
+                    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 40,
+        duration: 0.15,
+      }}
+    >
+      <Button onClick={() => setTransferModal({ isOpen: true })}>
                       <Plus className="h-4 w-4 mr-2" />
                       Primera Transferencia
                     </Button>
+    </motion.div>
                   )}
                 </div>
               )}

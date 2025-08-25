@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -162,13 +163,24 @@ export default function CategoriesPage() {
             <h1 className="text-3xl font-bold font-space-grotesk">Categorías</h1>
             <p className="text-muted-foreground">Organiza tus ingresos y gastos por categorías</p>
           </div>
-          <Button
-            onClick={() => setCategoryModal({ isOpen: true, type: activeTab })}
-            className="bg-primary hover:bg-primary/90"
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 40,
+              duration: 0.15,
+            }}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Categoría
-          </Button>
+            <Button
+              onClick={() => setCategoryModal({ isOpen: true, type: activeTab })}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Categoría
+            </Button>
+          </motion.div>
         </div>
 
         {/* Estadísticas */}
@@ -280,20 +292,42 @@ export default function CategoriesPage() {
                           </div>
                         </div>
                         <div className="flex gap-1 justify-end flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCategoryModal({ isOpen: true, category: { ...category, type: "income" } })}
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 40,
+                              duration: 0.15,
+                            }}
                           >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteDialog({ isOpen: true, category: { ...category, type: "income" } })}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setCategoryModal({ isOpen: true, category: { ...category, type: "income" } })}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 40,
+                              duration: 0.15,
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteDialog({ isOpen: true, category: { ...category, type: "income" } })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
                         </div>
                       </div>
                     )
@@ -338,14 +372,37 @@ export default function CategoriesPage() {
                           </div>
                         </div>
                         <div className="flex gap-1 justify-end flex-shrink-0">
-                          <Button
+                          <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 40,
+        duration: 0.15,
+      }}
+    >
+      <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setCategoryModal({ isOpen: true, category: { ...category, type: "expense" } })}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
+    </motion.div>
+                          <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 40,
+        duration: 0.15,
+      }}
+    >
+      <Button
                             variant="ghost"
                             size="sm"
                             onClick={() =>
@@ -354,6 +411,7 @@ export default function CategoriesPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+    </motion.div>
                         </div>
                       </div>
                     )
@@ -372,10 +430,22 @@ export default function CategoriesPage() {
                   {searchTerm ? "Intenta con otros términos de búsqueda" : "Crea tu primera categoría personalizada"}
                 </p>
                 {!searchTerm && (
-                  <Button onClick={() => setCategoryModal({ isOpen: true, type: activeTab })}>
+                  <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 40,
+        duration: 0.15,
+      }}
+    >
+      <Button onClick={() => setCategoryModal({ isOpen: true, type: activeTab })}>
                     <Plus className="h-4 w-4 mr-2" />
                     Nueva Categoría
                   </Button>
+    </motion.div>
                 )}
               </div>
             )}

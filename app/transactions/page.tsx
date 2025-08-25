@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -274,22 +275,44 @@ export default function TransactionsPage() {
             <p className="text-muted-foreground">Registra y gestiona tus ingresos y gastos</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => setTransactionModal({ isOpen: true, type: "expense" })}
-              variant="outline"
-              className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 40,
+                duration: 0.15,
+              }}
             >
-              <ArrowDownRight className="h-4 w-4 mr-2" />
-              Gasto
-            </Button>
-            <Button
-              onClick={() => setTransactionModal({ isOpen: true, type: "income" })}
-              variant="outline"
-              className="bg-secondary/10 hover:bg-secondary/20 text-secondary border-secondary/20"
+              <Button
+                onClick={() => setTransactionModal({ isOpen: true, type: "expense" })}
+                variant="outline"
+                className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+              >
+                <ArrowDownRight className="h-4 w-4 mr-2" />
+                Gasto
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 40,
+                duration: 0.15,
+              }}
             >
-              <ArrowUpRight className="h-4 w-4 mr-2" />
-              Ingreso
-            </Button>
+              <Button
+                onClick={() => setTransactionModal({ isOpen: true, type: "income" })}
+                variant="outline"
+                className="bg-secondary/10 hover:bg-secondary/20 text-secondary border-secondary/20"
+              >
+                <ArrowUpRight className="h-4 w-4 mr-2" />
+                Ingreso
+              </Button>
+            </motion.div>
           </div>
         </div>
 
@@ -340,9 +363,20 @@ export default function TransactionsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Filtros</CardTitle>
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Limpiar filtros
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 45,
+                  duration: 0.1,
+                }}
+              >
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Limpiar filtros
+                </Button>
+              </motion.div>
             </div>
           </CardHeader>
           <CardContent>

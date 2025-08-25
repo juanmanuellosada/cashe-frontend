@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { HexColorPicker } from "react-colorful"
 import { motion, AnimatePresence } from "framer-motion"
+import { modalVariants, formVariants, formItemVariants } from "@/lib/animations"
 import { useCurrencies } from "@/contexts/currencies-context"
 import {
   ChevronDown,
@@ -108,10 +109,10 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
     color: "#3B82F6",
     icon: "wallet",
     description: "",
+    isDefault: false,
+    includeInTotal: true,
     image: null as string | null,
   })
-
-  // Available currencies from the dashboard selector - REMOVED, now using system currencies
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentPage, setCurrentPage] = useState(0)
@@ -147,6 +148,8 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
         color: account.color || "#3B82F6",
         icon: account.icon || "wallet",
         description: account.description || "",
+        isDefault: account.isDefault || false,
+        includeInTotal: account.includeInTotal !== false,
         image: account.image || null,
       })
     } else {
@@ -158,6 +161,8 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
         color: "#3B82F6",
         icon: "wallet",
         description: "",
+        isDefault: false,
+        includeInTotal: true,
         image: null,
       })
     }
@@ -180,15 +185,12 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
       newErrors.balance = "El saldo debe ser un número válido"
     }
 
-    // Solo validar color e ícono si no hay imagen personalizada
-    if (!formData.image) {
-      if (!formData.color) {
-        newErrors.color = "Selecciona un color"
-      }
+    if (!formData.color) {
+      newErrors.color = "Selecciona un color"
+    }
 
-      if (!formData.icon) {
-        newErrors.icon = "Selecciona un ícono"
-      }
+    if (!formData.icon) {
+      newErrors.icon = "Selecciona un ícono"
     }
 
     setErrors(newErrors)
@@ -255,19 +257,14 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto overflow-hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 500, 
-                damping: 45,
-                duration: 0.1 
-              }}
+              variants={modalVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
             >
               <DialogHeader>
                 <DialogTitle>{account ? "Editar Cuenta" : "Nueva Cuenta"}</DialogTitle>
-                <DialogDescription className="my-3">
+                <DialogDescription>
                   {account ? "Modifica los datos de tu cuenta" : "Crea una nueva cuenta para gestionar tu dinero"}
                 </DialogDescription>
               </DialogHeader>
@@ -275,17 +272,12 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
               <motion.form
                 onSubmit={handleSubmit}
                 className="space-y-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
+                variants={formVariants}
+                initial="initial"
+                animate="animate"
               >
                 {/* Nombre */}
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.15 }}
-                >
+                <motion.div variants={formItemVariants} className="space-y-2">
                   <Label htmlFor="name">Nombre de la cuenta *</Label>
                   <Input
                     id="name"
@@ -298,12 +290,7 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                 </motion.div>
 
                 {/* Tipo de cuenta y moneda */}
-                <motion.div 
-                  className="grid grid-cols-2 gap-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
+                <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="type">Tipo de cuenta</Label>
                     <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
@@ -330,7 +317,7 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                       <SelectContent>
                         {currencies.map((currency) => (
                           <SelectItem key={currency.code} value={currency.code}>
-                            {currency.symbol || currency.code} {currency.code} - {currency.name}
+                            {currency.code} - {currency.name}
                             {currency.isPrimary && " (Principal)"}
                           </SelectItem>
                         ))}
@@ -340,12 +327,7 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                 </motion.div>
 
                 {/* Saldo inicial */}
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                >
+                <motion.div variants={formItemVariants} className="space-y-2">
                   <Label htmlFor="balance">Saldo inicial *</Label>
                   <Input
                     id="balance"
@@ -359,68 +341,77 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                   {errors.balance && <p className="text-sm text-destructive">{errors.balance}</p>}
                 </motion.div>
 
-                {/* Color e ícono (solo si no hay imagen personalizada) */}
-                {!formData.image && (
-                  <motion.div 
-                    className="grid grid-cols-2 gap-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <div className="space-y-2">
-                      <Label>Color *</Label>
-                      <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2"
-                          >
-                            <div
-                              className="w-4 h-4 rounded border"
-                              style={{ backgroundColor: formData.color }}
-                            />
-                            {formData.color}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64" align="start">
-                          <HexColorPicker
-                            color={formData.color}
-                            onChange={(color) => setFormData({ ...formData, color })}
+                {/* Color e ícono */}
+                <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Color *</Label>
+                    <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-2"
+                        >
+                          <div
+                            className="w-4 h-4 rounded border"
+                            style={{ backgroundColor: formData.color }}
                           />
-                        </PopoverContent>
-                      </Popover>
-                      {errors.color && <p className="text-sm text-destructive">{errors.color}</p>}
-                    </div>
+                          {formData.color}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64" align="start">
+                        <HexColorPicker
+                          color={formData.color}
+                          onChange={(color) => setFormData({ ...formData, color })}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {errors.color && <p className="text-sm text-destructive">{errors.color}</p>}
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label>Ícono *</Label>
-                      <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2"
+                  <div className="space-y-2">
+                    <Label>Ícono *</Label>
+                    <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-2"
+                        >
+                          {React.createElement(getSelectedIcon(), {
+                            className: "w-4 h-4",
+                            style: { color: formData.color }
+                          })}
+                          {availableIcons.find(icon => icon.name === formData.icon)?.label || "Seleccionar"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-96 animate-duration-200" align="start">
+                        <motion.div 
+                          className="space-y-4"
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {/* Búsqueda */}
+                          <motion.div 
+                            className="relative"
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0.05 }}
                           >
-                            {React.createElement(getSelectedIcon(), {
-                              className: "w-4 h-4",
-                              style: { color: formData.color }
-                            })}
-                            {availableIcons.find(icon => icon.name === formData.icon)?.label || "Seleccionar"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-96" align="start">
-                          <div className="space-y-4">
-                            {/* Búsqueda */}
-                            <div className="relative">
-                              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                              <Input
-                                placeholder="Buscar íconos..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-8"
-                              />
-                            </div>
+                            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Input
+                              placeholder="Buscar íconos..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-8"
+                            />
+                          </motion.div>
 
-                            {/* Categorías */}
+                          {/* Categorías */}
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0.1 }}
+                          >
                             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                               <SelectTrigger>
                                 <SelectValue />
@@ -433,69 +424,118 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                                 ))}
                               </SelectContent>
                             </Select>
+                          </motion.div>
 
-                            {/* Grid de íconos */}
+                          {/* Grid de íconos */}
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0.15 }}
+                          >
                             <ScrollArea className="h-48">
                               <div className="grid grid-cols-6 gap-2">
-                                {currentIcons.map((iconData) => (
-                                  <Button
+                                {currentIcons.map((iconData, index) => (
+                                  <motion.div
                                     key={iconData.name}
-                                    variant={formData.icon === iconData.name ? "default" : "outline"}
-                                    size="sm"
-                                    className="h-10 w-full p-1"
-                                    onClick={() => {
-                                      setFormData({ ...formData, icon: iconData.name })
-                                      setIsIconPickerOpen(false)
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ 
+                                      duration: 0.15,
+                                      delay: 0.02 * index,
+                                      ease: "easeOut"
                                     }}
                                   >
-                                    {React.createElement(iconData.icon, {
-                                      className: "w-4 h-4",
-                                      style: { color: formData.icon === iconData.name ? "white" : formData.color }
-                                    })}
-                                  </Button>
+                                    <Button
+                                      variant={formData.icon === iconData.name ? "default" : "outline"}
+                                      size="sm"
+                                      className="h-10 w-full p-1 icon-button transition-all duration-150 hover:scale-105"
+                                      onClick={() => {
+                                        setFormData({ ...formData, icon: iconData.name })
+                                        setIsIconPickerOpen(false)
+                                      }}
+                                    >
+                                      {React.createElement(iconData.icon, {
+                                        className: "w-4 h-4",
+                                        style: { color: formData.icon === iconData.name ? "white" : formData.color }
+                                      })}
+                                    </Button>
+                                  </motion.div>
                                 ))}
                               </div>
                             </ScrollArea>
+                          </motion.div>
 
-                            {/* Paginación */}
-                            {totalPages > 1 && (
-                              <div className="flex items-center justify-between">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                  disabled={currentPage === 0}
-                                >
-                                  <ChevronLeft className="w-4 h-4" />
-                                </Button>
-                                <span className="text-sm text-muted-foreground">
-                                  {currentPage + 1} de {totalPages}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                                  disabled={currentPage === totalPages - 1}
-                                >
-                                  <ChevronRight className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      {errors.icon && <p className="text-sm text-destructive">{errors.icon}</p>}
-                    </div>
-                  </motion.div>
-                )}
+                          {/* Paginación */}
+                          {totalPages > 1 && (
+                            <motion.div 
+                              className="flex items-center justify-between"
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2, delay: 0.2 }}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                disabled={currentPage === 0}
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                              </Button>
+                              <span className="text-sm text-muted-foreground">
+                                {currentPage + 1} de {totalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                disabled={currentPage === totalPages - 1}
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      </PopoverContent>
+                    </Popover>
+                    {errors.icon && <p className="text-sm text-destructive">{errors.icon}</p>}
+                  </div>
+                </motion.div>
 
-                {/* Subir imagen personalizada */}
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.35 }}
-                >
+                {/* Descripción */}
+                <motion.div variants={formItemVariants} className="space-y-2">
+                  <Label htmlFor="description">Descripción</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Descripción opcional de la cuenta..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                  />
+                </motion.div>
+
+                {/* Opciones adicionales */}
+                <motion.div variants={formItemVariants} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="isDefault">Cuenta por defecto</Label>
+                    <Switch
+                      id="isDefault"
+                      checked={formData.isDefault}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="includeInTotal">Incluir en total general</Label>
+                    <Switch
+                      id="includeInTotal"
+                      checked={formData.includeInTotal}
+                      onCheckedChange={(checked) => setFormData({ ...formData, includeInTotal: checked })}
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Imagen personalizada */}
+                <motion.div variants={formItemVariants} className="space-y-2">
                   <Label>Imagen personalizada (opcional)</Label>
                   <div className="flex items-center gap-4">
                     {formData.image && (
@@ -528,77 +568,8 @@ export function AccountModal({ isOpen, account, onClose, onSave }: AccountModalP
                   </div>
                 </motion.div>
 
-                {/* Descripción */}
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <Label htmlFor="description">Descripción</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Descripción opcional de la cuenta..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </motion.div>
-
-                {/* Vista previa */}
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.45 }}
-                >
-                  <Label>Vista previa</Label>
-                  <div className="p-4 border rounded-lg bg-muted/30">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-12 h-12 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: formData.image ? 'transparent' : formData.color }}
-                      >
-                        {formData.image ? (
-                          <img 
-                            src={formData.image} 
-                            alt="Icon" 
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                        ) : (
-                          React.createElement(getSelectedIcon(), {
-                            className: "w-6 h-6 text-white"
-                          })
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{formData.name || "Nombre de la cuenta"}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formData.type === "cash" && "Efectivo"}
-                          {formData.type === "bank" && "Cuenta bancaria"}
-                          {formData.type === "credit" && "Tarjeta de crédito"}
-                          {formData.type === "savings" && "Ahorros"}
-                          {formData.type === "investment" && "Inversión"}
-                          {formData.type === "other" && "Otro"}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">
-                          {currencies.find(c => c.code === formData.currency)?.symbol || "$"} {formData.balance || "0.00"}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{formData.currency}</div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
                 {/* Botones */}
-                <motion.div 
-                  className="flex justify-end gap-3 pt-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
+                <motion.div variants={formItemVariants} className="flex justify-end gap-3 pt-4">
                   <Button type="button" variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>

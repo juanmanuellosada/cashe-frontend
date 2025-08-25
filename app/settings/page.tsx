@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -289,10 +290,21 @@ export default function SettingsPage() {
               <CardDescription>Gestiona tus datos y configuración de cuenta</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full bg-transparent" onClick={handleExportData}>
-                <Download className="h-4 w-4 mr-2" />
-                Exportar mis datos
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 40,
+                  duration: 0.15,
+                }}
+              >
+                <Button variant="outline" className="w-full bg-transparent" onClick={handleExportData}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar mis datos
+                </Button>
+              </motion.div>
 
               <Separator />
 
@@ -301,10 +313,21 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   Esta acción no se puede deshacer. Se eliminarán permanentemente todos tus datos.
                 </p>
-                <Button variant="destructive" className="w-full" onClick={handleDeleteAccount}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar cuenta
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                    duration: 0.15,
+                  }}
+                >
+                  <Button variant="destructive" className="w-full" onClick={handleDeleteAccount}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar cuenta
+                  </Button>
+                </motion.div>
               </div>
             </CardContent>
           </Card>

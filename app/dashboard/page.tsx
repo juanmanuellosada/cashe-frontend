@@ -1,5 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { modalVariants, formVariants } from "@/lib/animations"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -9,6 +11,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { TimeRangeSelector } from "@/components/TimeRangeSelector"
+import { TopExpensesWidget } from "@/components/TopExpensesWidget"
+import { DashboardProvider, useDashboard } from "@/components/DashboardContext"
+import { DashboardCustomizer } from "@/components/DashboardCustomizer"
+import { FloatingActionButton } from "@/components/FloatingActionButton"
 import {
   TrendingUp,
   TrendingDown,
@@ -88,7 +95,8 @@ const summaryData = {
   totalIncome: 45000,
   totalExpenses: 32500,
   balance: 12500,
-  accounts: 4,
+  savingsRate: 27.8, // (balance / totalIncome) * 100
+  expenseRatio: 72.2, // (totalExpenses / totalIncome) * 100
   currency: "ARS",
 }
 
@@ -170,9 +178,18 @@ const monthlyTrend = [
 ]
 
 export default function DashboardPage() {
+  return (
+    <DashboardProvider>
+      <DashboardContent />
+    </DashboardProvider>
+  )
+}
+
+function DashboardContent() {
   const { displayCurrency, formatDisplayAmount, formatOriginalAmount } = useCurrency()
   const { addCategory } = useCategories()
   const { addAccount, getActiveAccounts } = useAccounts()
+  const { widgets } = useDashboard()
   const availableAccounts = getActiveAccounts().map(account => account.name)
   const [transactionModal, setTransactionModal] = useState<{ isOpen: boolean; transaction?: any; type?: string }>({
     isOpen: false,
@@ -184,7 +201,6 @@ export default function DashboardPage() {
     from: new Date(2025, 0, 1), // Enero 2025
     to: new Date(2025, 0, 31), // Fin de enero 2025
   })
-  const [showCalendar, setShowCalendar] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [chartKey, setChartKey] = useState(0) // Para forzar re-render del chart
   const [filters, setFilters] = useState({
@@ -194,6 +210,133 @@ export default function DashboardPage() {
     minAmount: "",
     maxAmount: "",
   })
+
+  // Helper function to check if widget is visible
+  const isWidgetVisible = (widgetId: string) => {
+    const widget = widgets.find(w => w.id === widgetId)
+    return widget?.visible ?? true
+  }
+
+  // Helper function to get visible widgets sorted by order
+  const getVisibleWidgets = () => {
+    return widgets
+      .filter(w => w.visible)
+      .sort((a, b) => a.order - b.order)
+  }
+
+  // Render widget component by ID
+  const renderWidget = (widgetId: string) => {
+    switch (widgetId) {
+      case 'balance':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Balance</CardTitle>
+              <DollarSign className="h-4 w-4 text-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg sm:text-2xl font-bold text-accent">{convertedSummaryData.balance}</div>
+              <p className="text-xs text-muted-foreground">{displayLabel.shortLabel}</p>
+            </CardContent>
+          </Card>
+        )
+      case 'income':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Ingresos Totales</CardTitle>
+              <TrendingUp className="h-4 w-4 text-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg sm:text-2xl font-bold text-secondary">
+                {convertedSummaryData.totalIncome}
+              </div>
+              <p className="text-xs text-muted-foreground">{displayLabel.shortLabel}</p>
+            </CardContent>
+          </Card>
+        )
+      case 'expenses':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Gastos Totales</CardTitle>
+              <TrendingDown className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg sm:text-2xl font-bold text-primary">
+                {convertedSummaryData.totalExpenses}
+              </div>
+              <p className="text-xs text-muted-foreground">{displayLabel.shortLabel}</p>
+            </CardContent>
+          </Card>
+        )
+      case 'transactions':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Tasa de Ahorro</CardTitle>
+              <TrendingUp className="h-4 w-4 text-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg sm:text-2xl font-bold text-secondary">{summaryData.savingsRate.toFixed(1).replace('.', ',')}%</div>
+              <p className="text-xs text-muted-foreground">Meta: 20%</p>
+            </CardContent>
+          </Card>
+        )
+      case 'top-expenses':
+        return (
+          <TopExpensesWidget 
+            expenses={recentTransactions.map(t => ({
+              id: t.id.toString(),
+              description: t.description,
+              amount: t.amount,
+              category: t.category || 'Sin categoría',
+              date: t.date,
+            }))}
+            dateRange={dateRange}
+            className="xl:col-span-1"
+          />
+        )
+      case 'expenses-categories':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-base sm:text-lg text-card-foreground">
+                Gastos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Total: {formatCurrency(convertedExpensesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] sm:h-[350px] w-full">
+                <Pie data={expensesPieData} options={pieChartOptions} />
+              </div>
+            </CardContent>
+          </Card>
+        )
+      case 'income-categories':
+        return (
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-base sm:text-lg text-card-foreground">
+                Ingresos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Total: {formatCurrency(convertedIncomesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] sm:h-[350px] w-full">
+                <Pie data={incomesPieData} options={pieChartOptions} />
+              </div>
+            </CardContent>
+          </Card>
+        )
+      default:
+        return null
+    }
+  }
 
   // Función para manejar el guardado de categorías
   const handleCategorySave = (categoryData: any) => {
@@ -317,7 +460,7 @@ export default function DashboardPage() {
     totalIncome: formatDisplayAmount(summaryData.totalIncome, summaryData.currency),
     totalExpenses: formatDisplayAmount(summaryData.totalExpenses, summaryData.currency),
     balance: formatDisplayAmount(summaryData.balance, summaryData.currency),
-    accounts: summaryData.accounts,
+    savingsRate: summaryData.savingsRate,
     currency: displayCurrency.code,
   }
 
@@ -402,42 +545,6 @@ export default function DashboardPage() {
     }
   }
 
-  const getPeriodComparison = () => {
-    if (!dateRange?.from) {
-      return "vs período anterior"
-    }
-
-    if (dateRange.to) {
-      // Rango de fechas
-      const currentPeriod = `${format(dateRange.from, "dd/MM", { locale: es })} - ${format(dateRange.to, "dd/MM", { locale: es })}`
-      
-      // Calcular período anterior con la misma duración
-      const duration = dateRange.to.getTime() - dateRange.from.getTime()
-      const previousEnd = new Date(dateRange.from.getTime() - 1) // Un día antes del inicio actual
-      const previousStart = new Date(previousEnd.getTime() - duration)
-      
-      const previousPeriod = `${format(previousStart, "dd/MM", { locale: es })} - ${format(previousEnd, "dd/MM", { locale: es })}`
-      
-      return `vs ${previousPeriod}`
-    } else {
-      // Fecha única
-      const currentPeriod = format(dateRange.from, "dd/MM", { locale: es })
-      
-      // Período anterior (mismo día del mes anterior, o mes anterior si no es posible)
-      const previousDate = new Date(dateRange.from)
-      previousDate.setMonth(previousDate.getMonth() - 1)
-      
-      // Si el día no existe en el mes anterior (ej: 31 de marzo -> 28/29 de febrero)
-      if (previousDate.getMonth() === dateRange.from.getMonth() - 2) {
-        previousDate.setDate(0) // Último día del mes anterior
-      }
-      
-      const previousPeriod = format(previousDate, "dd/MM", { locale: es })
-      
-      return `vs ${previousPeriod}`
-    }
-  }
-
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -456,7 +563,6 @@ export default function DashboardPage() {
 
   const displayLabel = getDisplayLabel()
   const activeFiltersCount = getActiveFiltersCount()
-  const periodComparison = getPeriodComparison()
 
   // Función para crear gradientes dinámicos
   const createGradient = (ctx: CanvasRenderingContext2D, color: string) => {
@@ -942,73 +1048,45 @@ export default function DashboardPage() {
 
             {/* Filtros de fecha y general */}
             <div className="flex items-center gap-2 lg:ml-auto">
-              <Popover open={showCalendar} onOpenChange={setShowCalendar}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm bg-card hover:!border-orange-500 hover:!bg-card hover:!text-card-foreground dark:hover:!text-white transition-all duration-200">
-                    <CalendarIcon className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">{displayLabel.label}</span>
-                    <span className="sm:hidden">{displayLabel.shortLabel}</span>
-                    <ChevronDown className="h-3 w-3 ml-1" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-card border-border" align="end">
-                  <div className="p-3">
-                    <h4 className="font-medium text-sm mb-3 text-card-foreground">Seleccionar período</h4>
-                    <Calendar
-                      mode="range"
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={2}
-                      locale={es}
-                      className="rounded-md border-0"
-                    />
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-border">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setDateRange(undefined)
-                          setShowCalendar(false)
-                        }}
-                        className="flex-1"
-                      >
-                        Limpiar
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setShowCalendar(false)}
-                        disabled={!dateRange?.from}
-                        className="flex-1"
-                      >
-                        Aplicar
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <TimeRangeSelector 
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+              <DashboardCustomizer />
 
               <Popover open={showFilters} onOpenChange={setShowFilters}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm bg-card hover:!border-orange-500 hover:!bg-card hover:!text-card-foreground dark:hover:!text-white transition-all duration-200 relative">
-                    <Filter className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Filtros</span>
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-xs flex items-center justify-center">
-                        {activeFiltersCount}
-                      </Badge>
-                    )}
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 45,
+                      duration: 0.1,
+                    }}
+                  >
+                    <Button variant="outline" size="sm" className="text-xs sm:text-sm bg-card hover:!border-orange-500 hover:!bg-card hover:!text-card-foreground dark:hover:!text-white transition-all duration-200 relative">
+                      <Filter className="h-4 w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Filtros</span>
+                      {activeFiltersCount > 0 && (
+                        <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-xs flex items-center justify-center">
+                          {activeFiltersCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </motion.div>
                 </PopoverTrigger>
-              <PopoverContent className="w-80 p-0 bg-card border-border" align="end">
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-sm text-card-foreground">Filtros</h4>
-                    {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-                        Limpiar todo
-                      </Button>
-                    )}
-                  </div>
+                <PopoverContent className="w-80 p-0 bg-card border-border" align="end">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium text-sm text-card-foreground">Filtros</h4>
+                      {activeFiltersCount > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+                          Limpiar todo
+                        </Button>
+                      )}
+                    </div>
 
                   <div className="space-y-4">
                     {/* Cuentas */}
@@ -1113,7 +1191,7 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 </div>
-              </PopoverContent>
+                </PopoverContent>
             </Popover>
             </div>
           </div>
@@ -1160,59 +1238,15 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Tarjetas de resumen */}
+        {/* Tarjetas de resumen - dinámicamente ordenadas */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Ingresos Totales</CardTitle>
-              <TrendingUp className="h-4 w-4 text-secondary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-secondary">
-                {convertedSummaryData.totalIncome}
+          {getVisibleWidgets()
+            .filter(w => w.category === 'summary')
+            .map(widget => (
+              <div key={widget.id}>
+                {renderWidget(widget.id)}
               </div>
-              <p className="text-xs text-muted-foreground">+12% {periodComparison}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Gastos Totales</CardTitle>
-              <TrendingDown className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-primary">
-                {convertedSummaryData.totalExpenses}
-              </div>
-              <p className="text-xs text-muted-foreground">+5% {periodComparison}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">Balance</CardTitle>
-              <DollarSign className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-accent">{convertedSummaryData.balance}</div>
-              <p className="text-xs text-muted-foreground">Ahorro este período</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base sm:text-lg text-card-foreground">Cuentas Activas</CardTitle>
-                  <CardDescription className="text-sm">Cuentas configuradas</CardDescription>
-                </div>
-                <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-card-foreground">{summaryData.accounts}</div>
-            </CardContent>
-          </Card>
+            ))}
         </div>
 
         {/* Gráficos y movimientos */}
@@ -1290,44 +1324,29 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Gráficos de torta - ahora ocupan todo el ancho */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 sm:mt-10">
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-1">
-                <CardTitle className="text-base sm:text-lg text-card-foreground">
-                  Gastos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Total: {formatCurrency(convertedExpensesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] sm:h-[350px] w-full">
-                  <Pie data={expensesPieData} options={pieChartOptions} />
+          {/* Gráficos y widgets adicionales - dinámicamente ordenados */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8 sm:mt-10">
+            {getVisibleWidgets()
+              .filter(w => w.category === 'charts')
+              .map(widget => (
+                <div key={widget.id}>
+                  {renderWidget(widget.id)}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-1">
-                <CardTitle className="text-base sm:text-lg text-card-foreground">
-                  Ingresos por categoría {dateRange?.from ? `(${displayLabel.shortLabel})` : ''}
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Total: {formatCurrency(convertedIncomesByCategory.reduce((sum, cat) => sum + cat.value, 0), displayCurrency.code)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] sm:h-[350px] w-full">
-                  <Pie data={incomesPieData} options={pieChartOptions} />
-                </div>
-              </CardContent>
-            </Card>
+              ))}
           </div>
+
+          {/* Floating Action Button */}
+          <FloatingActionButton
+            onNewIncome={() => setTransactionModal({ isOpen: true, type: "income" })}
+            onNewExpense={() => setTransactionModal({ isOpen: true, type: "expense" })}
+            onNewTransfer={() => setTransferModalOpen(true)}
+            onNewAccount={() => setAccountModalOpen(true)}
+            onNewCategory={() => setCategoryModalOpen(true)}
+          />
         </div>
       </div>
 
-      {/* Modal de transacciones */}
+      {/* Modales */}
       <TransactionModal
         isOpen={transactionModal.isOpen}
         transaction={transactionModal.transaction}
@@ -1336,7 +1355,6 @@ export default function DashboardPage() {
         onSave={handleCreateTransaction}
       />
       
-      {/* Modal de transferencias */}
       <TransferModal 
         isOpen={transferModalOpen} 
         onClose={() => setTransferModalOpen(false)} 
@@ -1354,7 +1372,6 @@ export default function DashboardPage() {
         exchangeRates={{ "USD": 1, "EUR": 0.85, "GBP": 0.75 }}
       />
       
-      {/* Modal de categorías */}
       <CategoryModal 
         isOpen={categoryModalOpen} 
         onClose={() => setCategoryModalOpen(false)} 
@@ -1362,7 +1379,6 @@ export default function DashboardPage() {
         defaultType="expense"
       />
       
-      {/* Modal de cuentas */}
       <AccountModal 
         isOpen={accountModalOpen} 
         onClose={() => setAccountModalOpen(false)} 

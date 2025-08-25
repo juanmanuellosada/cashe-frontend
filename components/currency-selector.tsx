@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown } from "lucide-react"
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,9 +46,27 @@ export function CurrencySelector() {
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="end">
+      <AnimatePresence mode="wait">
+        {open && (
+          <PopoverContent className="w-64 p-0" align="end" asChild>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 400, 
+                damping: 40,
+                duration: 0.15 
+              }}
+            >
         <div className="max-h-60 overflow-y-auto">
-          <div className="px-2 py-2">
+          <motion.div 
+            className="px-2 py-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
             <div className="text-sm font-medium text-muted-foreground px-2 py-1">
               Moneda de visualización
             </div>
@@ -72,16 +91,24 @@ export function CurrencySelector() {
                 )}
               </button>
             ))}
-          </div>
-          <div className="border-t px-2 py-2">
+          </motion.div>
+          <motion.div 
+            className="border-t px-2 py-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+          >
             <div className="text-xs text-muted-foreground px-2">
               Los totales se muestran en {displayCurrency.name}.
               <br />
               Las transacciones mantienen su moneda original.
             </div>
-          </div>
+          </motion.div>
         </div>
-      </PopoverContent>
+            </motion.div>
+          </PopoverContent>
+        )}
+      </AnimatePresence>
     </Popover>
   )
 }

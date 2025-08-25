@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -311,10 +312,21 @@ export default function AccountsPage() {
             <h1 className="text-3xl font-bold font-space-grotesk">Gestión de Cuentas</h1>
             <p className="text-muted-foreground">Administra todas tus cuentas y saldos</p>
           </div>
-          <Button onClick={() => setAccountModal({ isOpen: true })} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Cuenta
-          </Button>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 40,
+              duration: 0.15,
+            }}
+          >
+            <Button onClick={() => setAccountModal({ isOpen: true })} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Cuenta
+            </Button>
+          </motion.div>
         </div>
 
         {/* Resumen de cuentas */}
@@ -359,10 +371,21 @@ export default function AccountsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Filtros</CardTitle>
-            <Button variant="outline" onClick={() => setShowInactive(!showInactive)} className="gap-2">
-              {showInactive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              {showInactive ? "Ocultar inactivas" : "Mostrar inactivas"}
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 40,
+                duration: 0.15,
+              }}
+            >
+              <Button variant="outline" onClick={() => setShowInactive(!showInactive)} className="gap-2">
+                {showInactive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showInactive ? "Ocultar inactivas" : "Mostrar inactivas"}
+              </Button>
+            </motion.div>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -404,12 +427,34 @@ export default function AccountsPage() {
                     </Badge>
                   )}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => setAccountModal({ isOpen: true, account })}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteDialog({ isOpen: true, account })}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 40,
+                        duration: 0.15,
+                      }}
+                    >
+                      <Button variant="ghost" size="sm" onClick={() => setAccountModal({ isOpen: true, account })}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 40,
+                        duration: 0.15,
+                      }}
+                    >
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteDialog({ isOpen: true, account })}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               </CardHeader>
@@ -451,10 +496,21 @@ export default function AccountsPage() {
                 {searchTerm ? "Intenta con otros términos de búsqueda" : "Crea tu primera cuenta para comenzar"}
               </p>
               {!searchTerm && (
-                <Button onClick={() => setAccountModal({ isOpen: true })}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Primera Cuenta
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                    duration: 0.15,
+                  }}
+                >
+                  <Button onClick={() => setAccountModal({ isOpen: true })}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Primera Cuenta
+                  </Button>
+                </motion.div>
               )}
             </CardContent>
           </Card>

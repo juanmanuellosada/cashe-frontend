@@ -17,6 +17,7 @@ import { es } from "date-fns/locale"
 import { renderCategoryIcon, renderAccountIcon } from "@/lib/icon-helpers"
 import { useCategories } from "@/contexts/categories-context"
 import { useAccounts } from "@/contexts/accounts-context"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface TransactionModalProps {
   isOpen: boolean
@@ -141,22 +142,46 @@ export function TransactionModal({
   const accounts = getActiveAccounts()
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-card">
+    <AnimatePresence>
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-card">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 500, 
+                damping: 45,
+                duration: 0.1 
+              }}
+            >
         <DialogHeader>
           <DialogTitle>
             {transaction ? "Editar Transacción" : "Nueva Transacción"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="my-3">
             {transaction
               ? "Modifica los detalles de la transacción"
               : "Completa los datos para crear una nueva transacción"}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <motion.form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           {/* Tipo de transacción */}
-          <div className="grid w-full items-center gap-1.5">
+          <motion.div 
+            className="grid w-full items-center gap-1.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+          >
             <Label>Tipo *</Label>
             <Tabs
               value={formData.type}
@@ -183,11 +208,21 @@ export function TransactionModal({
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             {/* Monto */}
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.25 }}
+            >
               <Label htmlFor="amount">Monto *</Label>
               <Input
                 id="amount"
@@ -199,10 +234,15 @@ export function TransactionModal({
                 className={errors.amount ? "border-destructive" : ""}
               />
               {errors.amount && <p className="text-sm text-destructive">{errors.amount}</p>}
-            </div>
+            </motion.div>
 
             {/* Fecha */}
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               <Label htmlFor="date">Fecha *</Label>
               <Popover open={showCalendar} onOpenChange={setShowCalendar}>
                 <PopoverTrigger asChild>
@@ -226,11 +266,16 @@ export function TransactionModal({
                 </PopoverContent>
               </Popover>
               {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Descripción */}
-          <div className="grid w-full items-center gap-1.5">
+          <motion.div 
+            className="grid w-full items-center gap-1.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+          >
             <Label htmlFor="description">Descripción *</Label>
             <Input
               id="description"
@@ -240,11 +285,21 @@ export function TransactionModal({
               className={errors.description ? "border-destructive" : ""}
             />
             {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             {/* Categoría */}
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
               <Label htmlFor="category">Categoría *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
                 <SelectTrigger className={`w-full ${errors.category ? "border-destructive" : ""}`}>
@@ -262,10 +317,15 @@ export function TransactionModal({
                 </SelectContent>
               </Select>
               {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
-            </div>
+            </motion.div>
 
             {/* Cuenta */}
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.45 }}
+            >
               <Label htmlFor="account">Cuenta *</Label>
               <Select value={formData.account} onValueChange={(value) => setFormData({ ...formData, account: value })}>
                 <SelectTrigger className={`w-full ${errors.account ? "border-destructive" : ""}`}>
@@ -283,11 +343,16 @@ export function TransactionModal({
                 </SelectContent>
               </Select>
               {errors.account && <p className="text-sm text-destructive">{errors.account}</p>}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Notas */}
-          <div className="grid w-full items-center gap-1.5">
+          <motion.div 
+            className="grid w-full items-center gap-1.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
               id="notes"
@@ -296,18 +361,26 @@ export function TransactionModal({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
             />
-          </div>
+          </motion.div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+          <motion.div 
+            className="flex flex-col sm:flex-row justify-end gap-2 pt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.55 }}
+          >
             <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button type="submit" className="w-full sm:w-auto">
               {transaction ? "Guardar cambios" : "Crear transacción"}
             </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </motion.div>
+        </motion.form>
+            </motion.div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </AnimatePresence>
   )
 }

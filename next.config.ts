@@ -14,9 +14,6 @@ const nextConfig: NextConfig = {
       config.externals.push('canvas');
     }
     return config;
-  },
-  experimental: {
-    serverComponentsExternalPackages: ['puppeteer', 'canvas']
   }
 };
 

@@ -1,25 +1,18 @@
 "use client"
 
+import React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { HexColorPicker } from "react-colorful"
+import { motion, AnimatePresence } from "framer-motion"
+
 import {
   TrendingUp,
   TrendingDown,
@@ -28,108 +21,274 @@ import {
   ChevronRight,
   Search,
   Upload,
-  Trash2,
-  // Trabajo y Profesión
-  Briefcase,
-  Laptop,
-  Laptop2,
-  Clock,
-  Building,
-  Monitor,
-  Code,
-  // Finanzas
-  PiggyBank,
-  CreditCard,
-  Wallet,
-  Banknote,
-  Coins,
-  Database,
-  // Alimentación y Bebidas
-  Utensils,
-  Coffee,
-  Pizza,
-  Cookie,
-  Wine,
-  Egg,
-  // Transporte
-  Car,
-  Bus,
-  Bike,
-  Plane,
-  Train,
-  Truck,
-  // Hogar y Vida
-  Home,
-  Sofa,
-  Umbrella,
-  Key,
-  Lightbulb,
-  Flame,
-  // Entretenimiento
-  Gamepad2,
-  Gamepad,
-  Music,
-  Tv,
-  Film,
-  Camera,
-  Headphones,
-  Speaker,
-  Radio,
-  // Salud y Deporte
-  Heart,
-  Dumbbell,
+  X,
+  // Íconos principales (todos los disponibles en Lucide React)
   Activity,
-  Thermometer,
-  // Educación y Libros
-  GraduationCap,
-  Book,
-  Library,
-  Pencil,
-  // Compras y Regalos
-  ShoppingBag,
-  Gift,
-  Shirt,
-  Gem,
-  // Comunicación y Tecnología
-  Phone,
-  Smartphone,
-  Wifi,
-  Mail,
-  Cloud,
-  // Servicios
-  Zap,
-  Wrench,
-  Hammer,
-  Printer,
-  // Naturaleza y Clima
-  Trees,
-  Flower,
-  Leaf,
-  Sun,
-  Moon,
-  Snowflake,
-  Mountain,
-  Earth,
-  // Premios y Logros
-  Award,
-  Medal,
-  Crown,
-  Star,
-  Target,
-  // Otros
-  Tag,
-  MoreHorizontal,
-  Circle,
-  User,
-  Eye,
-  Watch,
-  Calendar,
-  Map,
-  Compass,
+  Airplay,
+  AlertCircle,
+  AlertTriangle,
   Anchor,
-  Rocket,
+  Apple,
+  Archive,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  AtSign,
+  Award,
+  Baby,
+  Backpack,
+  Badge,
+  Banknote,
+  Battery,
+  Bed,
+  Beer,
+  Bell,
+  Bike,
+  Book,
+  Bookmark,
+  Box,
+  Briefcase,
+  Building,
+  Bus,
+  Calculator,
+  Calendar,
+  Camera,
+  Car,
+  ShoppingCart,
+  Check,
+  ChefHat,
+  Circle,
+  Clock,
+  Cloud,
+  Coffee,
+  Coins,
+  Computer,
+  Cookie,
+  CreditCard,
+  Crown,
+  Database,
   Diamond,
+  Dog,
+  DollarSign,
+  Download,
+  Droplets,
+  Euro,
+  Eye,
+  Factory,
+  FastForward,
+  Film,
+  Filter,
+  Fish,
+  Flag,
+  Flame,
+  Flashlight,
+  Flower,
+  Folder,
+  FolderOpen,
+  Fuel,
+  Gamepad2,
+  Gift,
+  Globe,
+  GraduationCap,
+  Hand,
+  Headphones,
+  Heart,
+  Home,
+  Hospital,
+  Hotel,
+  Image,
+  Inbox,
+  Info,
+  Key,
+  Landmark,
+  Laptop,
+  Library,
+  Lightbulb,
+  Link,
+  Lock,
+  Mail,
+  Map,
+  Medal,
+  Megaphone,
+  MessageCircle,
+  Mic,
+  Monitor,
+  Moon,
+  Mountain,
+  Music,
+  Navigation,
+  Newspaper,
+  Package,
+  Paintbrush,
+  Paperclip,
+  PartyPopper,
+  Phone,
+  Piano,
+  PiggyBank,
+  Pill,
+  Pizza,
+  Plane,
+  Play,
+  Plus,
+  Pocket,
+  Printer,
+  Radio,
+  Receipt,
+  Recycle,
+  Repeat,
+  Rocket,
+  Scissors,
+  Settings,
+  Shield,
+  Ship,
+  ShoppingBag,
+  ShoppingCart as CartIcon,
+  Shuffle,
+  Smartphone,
+  Smile,
+  Snowflake,
+  Speaker,
+  Square,
+  Star,
+  Sun,
+  Tag,
+  Target,
+  Thermometer,
+  ThumbsUp,
+  Ticket,
+  Timer,
+  Train,
+  Trash,
+  TrendingUp as TrendingUpIcon,
+  Triangle,
+  Trophy,
+  Truck,
+  Tv,
+  Umbrella,
+  University,
+  Upload as UploadIcon,
+  User,
+  Users,
+  Utensils,
+  Video,
+  Wallet,
+  Watch,
+  Wifi,
+  Wind,
+  Wine,
+  Wrench,
+  Zap,
 } from "lucide-react"
+
+// Lista completa de íconos organizados por categorías
+const availableIcons = [
+  // Finanzas
+  { name: "banknote", icon: Banknote, label: "Billetes", category: "Finanzas" },
+  { name: "coins", icon: Coins, label: "Monedas", category: "Finanzas" },
+  { name: "credit-card", icon: CreditCard, label: "Tarjeta", category: "Finanzas" },
+  { name: "wallet", icon: Wallet, label: "Billetera", category: "Finanzas" },
+  { name: "piggy-bank", icon: PiggyBank, label: "Alcancía", category: "Finanzas" },
+  { name: "dollar-sign", icon: DollarSign, label: "Dólar", category: "Finanzas" },
+  { name: "euro", icon: Euro, label: "Euro", category: "Finanzas" },
+  { name: "landmark", icon: Landmark, label: "Banco", category: "Finanzas" },
+  { name: "receipt", icon: Receipt, label: "Recibo", category: "Finanzas" },
+  { name: "calculator", icon: Calculator, label: "Calculadora", category: "Finanzas" },
+  
+  // Alimentación
+  { name: "utensils", icon: Utensils, label: "Comida", category: "Alimentación" },
+  { name: "coffee", icon: Coffee, label: "Café", category: "Alimentación" },
+  { name: "pizza", icon: Pizza, label: "Pizza", category: "Alimentación" },
+  { name: "apple", icon: Apple, label: "Fruta", category: "Alimentación" },
+  { name: "cookie", icon: Cookie, label: "Dulces", category: "Alimentación" },
+  { name: "wine", icon: Wine, label: "Vino", category: "Alimentación" },
+  { name: "beer", icon: Beer, label: "Cerveza", category: "Alimentación" },
+  { name: "chef-hat", icon: ChefHat, label: "Cocina", category: "Alimentación" },
+  { name: "droplets", icon: Droplets, label: "Bebidas frías", category: "Alimentación" },
+  
+  // Transporte
+  { name: "car", icon: Car, label: "Auto", category: "Transporte" },
+  { name: "bus", icon: Bus, label: "Autobús", category: "Transporte" },
+  { name: "bike", icon: Bike, label: "Bicicleta", category: "Transporte" },
+  { name: "plane", icon: Plane, label: "Avión", category: "Transporte" },
+  { name: "train", icon: Train, label: "Tren", category: "Transporte" },
+  { name: "ship", icon: Ship, label: "Barco", category: "Transporte" },
+  { name: "truck", icon: Truck, label: "Camión", category: "Transporte" },
+  { name: "fuel", icon: Fuel, label: "Combustible", category: "Transporte" },
+  
+  // Hogar
+  { name: "home", icon: Home, label: "Casa", category: "Hogar" },
+  { name: "bed", icon: Bed, label: "Dormitorio", category: "Hogar" },
+  { name: "lightbulb", icon: Lightbulb, label: "Electricidad", category: "Hogar" },
+  { name: "droplets", icon: Droplets, label: "Agua", category: "Hogar" },
+  { name: "flame", icon: Flame, label: "Gas", category: "Hogar" },
+  { name: "wifi", icon: Wifi, label: "Internet", category: "Hogar" },
+  { name: "tv", icon: Tv, label: "Televisión", category: "Hogar" },
+  { name: "wrench", icon: Wrench, label: "Reparaciones", category: "Hogar" },
+  
+  // Entretenimiento
+  { name: "gamepad-2", icon: Gamepad2, label: "Videojuegos", category: "Entretenimiento" },
+  { name: "film", icon: Film, label: "Cine", category: "Entretenimiento" },
+  { name: "music", icon: Music, label: "Música", category: "Entretenimiento" },
+  { name: "headphones", icon: Headphones, label: "Auriculares", category: "Entretenimiento" },
+  { name: "book", icon: Book, label: "Libros", category: "Entretenimiento" },
+  { name: "party-popper", icon: PartyPopper, label: "Fiesta", category: "Entretenimiento" },
+  { name: "camera", icon: Camera, label: "Fotografía", category: "Entretenimiento" },
+  { name: "activity", icon: Activity, label: "Deportes", category: "Entretenimiento" },
+  
+  // Salud
+  { name: "heart", icon: Heart, label: "Salud", category: "Salud" },
+  { name: "pill", icon: Pill, label: "Medicinas", category: "Salud" },
+  { name: "hospital", icon: Hospital, label: "Hospital", category: "Salud" },
+  { name: "activity", icon: Activity, label: "Ejercicio", category: "Salud" },
+  { name: "thermometer", icon: Thermometer, label: "Temperatura", category: "Salud" },
+  
+  // Compras
+  { name: "shopping-bag", icon: ShoppingBag, label: "Compras", category: "Compras" },
+  { name: "shopping-cart", icon: ShoppingCart, label: "Carrito", category: "Compras" },
+  { name: "gift", icon: Gift, label: "Regalos", category: "Compras" },
+  { name: "package", icon: Package, label: "Paquetes", category: "Compras" },
+  
+  // Educación
+  { name: "graduation-cap", icon: GraduationCap, label: "Educación", category: "Educación" },
+  { name: "library", icon: Library, label: "Biblioteca", category: "Educación" },
+  { name: "university", icon: University, label: "Universidad", category: "Educación" },
+  
+  // Trabajo
+  { name: "briefcase", icon: Briefcase, label: "Trabajo", category: "Trabajo" },
+  { name: "building", icon: Building, label: "Oficina", category: "Trabajo" },
+  { name: "laptop", icon: Laptop, label: "Computadora", category: "Trabajo" },
+  { name: "printer", icon: Printer, label: "Impresora", category: "Trabajo" },
+  
+  // Comunicación
+  { name: "phone", icon: Phone, label: "Teléfono", category: "Comunicación" },
+  { name: "smartphone", icon: Smartphone, label: "Móvil", category: "Comunicación" },
+  { name: "mail", icon: Mail, label: "Correo", category: "Comunicación" },
+  { name: "message-circle", icon: MessageCircle, label: "Mensajes", category: "Comunicación" },
+  
+  // Viajes
+  { name: "map", icon: Map, label: "Mapa", category: "Viajes" },
+  { name: "hotel", icon: Hotel, label: "Hotel", category: "Viajes" },
+  { name: "backpack", icon: Backpack, label: "Mochila", category: "Viajes" },
+  { name: "ticket", icon: Ticket, label: "Tickets", category: "Viajes" },
+  
+  // Servicios
+  { name: "scissors", icon: Scissors, label: "Peluquería", category: "Servicios" },
+  { name: "paintbrush", icon: Paintbrush, label: "Belleza", category: "Servicios" },
+  { name: "settings", icon: Settings, label: "Servicios", category: "Servicios" },
+  
+  // General
+  { name: "tag", icon: Tag, label: "Etiqueta", category: "General" },
+  { name: "star", icon: Star, label: "Estrella", category: "General" },
+  { name: "circle", icon: Circle, label: "Círculo", category: "General" },
+  { name: "square", icon: Square, label: "Cuadrado", category: "General" },
+  { name: "triangle", icon: Triangle, label: "Triángulo", category: "General" },
+  { name: "diamond", icon: Diamond, label: "Diamante", category: "General" },
+  { name: "crown", icon: Crown, label: "Corona", category: "General" },
+  { name: "award", icon: Award, label: "Premio", category: "General" },
+  { name: "trophy", icon: Trophy, label: "Trofeo", category: "General" },
+  { name: "medal", icon: Medal, label: "Medalla", category: "General" },
+]
 
 interface CategoryModalProps {
   isOpen: boolean
@@ -139,131 +298,15 @@ interface CategoryModalProps {
   onSave: (categoryData: any) => void
 }
 
-// Lista completa de íconos organizados por categorías
-const availableIcons = [
-  // Trabajo y Profesión
-  { name: "briefcase", icon: Briefcase, label: "Trabajo", category: "Trabajo" },
-  { name: "laptop", icon: Laptop, label: "Freelance", category: "Trabajo" },
-  { name: "laptop2", icon: Laptop2, label: "Computadora", category: "Trabajo" },
-  { name: "clock", icon: Clock, label: "Horas extra", category: "Trabajo" },
-  { name: "building", icon: Building, label: "Oficina", category: "Trabajo" },
-  { name: "monitor", icon: Monitor, label: "Monitor", category: "Trabajo" },
-  { name: "code", icon: Code, label: "Programación", category: "Trabajo" },
+export function CategoryModal({ 
+  isOpen, 
+  category, 
+  defaultType = "expense", 
+  onClose, 
+  onSave 
+}: CategoryModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Finanzas
-  { name: "piggy-bank", icon: PiggyBank, label: "Ahorros", category: "Finanzas" },
-  { name: "credit-card", icon: CreditCard, label: "Tarjetas", category: "Finanzas" },
-  { name: "wallet", icon: Wallet, label: "Efectivo", category: "Finanzas" },
-  { name: "banknote", icon: Banknote, label: "Billetes", category: "Finanzas" },
-  { name: "coins", icon: Coins, label: "Monedas", category: "Finanzas" },
-  { name: "trending-up", icon: TrendingUp, label: "Inversiones", category: "Finanzas" },
-  { name: "database", icon: Database, label: "Base de datos", category: "Finanzas" },
-  
-  // Alimentación y Bebidas
-  { name: "utensils", icon: Utensils, label: "Alimentación", category: "Comida" },
-  { name: "coffee", icon: Coffee, label: "Café", category: "Comida" },
-  { name: "pizza", icon: Pizza, label: "Pizza", category: "Comida" },
-  { name: "cookie", icon: Cookie, label: "Postres", category: "Comida" },
-  { name: "wine", icon: Wine, label: "Bebidas", category: "Comida" },
-  { name: "egg", icon: Egg, label: "Huevos", category: "Comida" },
-  
-  // Transporte
-  { name: "car", icon: Car, label: "Auto", category: "Transporte" },
-  { name: "bus", icon: Bus, label: "Autobús", category: "Transporte" },
-  { name: "bike", icon: Bike, label: "Bicicleta", category: "Transporte" },
-  { name: "plane", icon: Plane, label: "Avión", category: "Transporte" },
-  { name: "train", icon: Train, label: "Tren", category: "Transporte" },
-  { name: "truck", icon: Truck, label: "Camión", category: "Transporte" },
-  
-  // Hogar y Vida
-  { name: "home", icon: Home, label: "Hogar", category: "Hogar" },
-  { name: "sofa", icon: Sofa, label: "Muebles", category: "Hogar" },
-  { name: "umbrella", icon: Umbrella, label: "Paraguas", category: "Hogar" },
-  { name: "key", icon: Key, label: "Llaves", category: "Hogar" },
-  { name: "lightbulb", icon: Lightbulb, label: "Electricidad", category: "Hogar" },
-  { name: "flame", icon: Flame, label: "Gas", category: "Hogar" },
-  
-  // Entretenimiento
-  { name: "gamepad2", icon: Gamepad2, label: "Videojuegos", category: "Entretenimiento" },
-  { name: "gamepad", icon: Gamepad, label: "Juegos", category: "Entretenimiento" },
-  { name: "music", icon: Music, label: "Música", category: "Entretenimiento" },
-  { name: "tv", icon: Tv, label: "Televisión", category: "Entretenimiento" },
-  { name: "film", icon: Film, label: "Películas", category: "Entretenimiento" },
-  { name: "camera", icon: Camera, label: "Fotografía", category: "Entretenimiento" },
-  { name: "headphones", icon: Headphones, label: "Auriculares", category: "Entretenimiento" },
-  { name: "speaker", icon: Speaker, label: "Altavoces", category: "Entretenimiento" },
-  { name: "radio", icon: Radio, label: "Radio", category: "Entretenimiento" },
-  
-  // Salud y Deporte
-  { name: "heart", icon: Heart, label: "Salud", category: "Salud" },
-  { name: "dumbbell", icon: Dumbbell, label: "Ejercicio", category: "Salud" },
-  { name: "activity", icon: Activity, label: "Actividad", category: "Salud" },
-  { name: "thermometer", icon: Thermometer, label: "Medicina", category: "Salud" },
-  
-  // Educación y Libros
-  { name: "graduation-cap", icon: GraduationCap, label: "Educación", category: "Educación" },
-  { name: "book", icon: Book, label: "Libros", category: "Educación" },
-  { name: "library", icon: Library, label: "Biblioteca", category: "Educación" },
-  { name: "pencil", icon: Pencil, label: "Escritura", category: "Educación" },
-  
-  // Compras y Regalos
-  { name: "shopping-bag", icon: ShoppingBag, label: "Compras", category: "Compras" },
-  { name: "gift", icon: Gift, label: "Regalos", category: "Compras" },
-  { name: "shirt", icon: Shirt, label: "Ropa", category: "Compras" },
-  { name: "gem", icon: Gem, label: "Joyas", category: "Compras" },
-  
-  // Comunicación y Tecnología
-  { name: "phone", icon: Phone, label: "Teléfono", category: "Tecnología" },
-  { name: "smartphone", icon: Smartphone, label: "Móvil", category: "Tecnología" },
-  { name: "wifi", icon: Wifi, label: "Internet", category: "Tecnología" },
-  { name: "mail", icon: Mail, label: "Email", category: "Tecnología" },
-  { name: "cloud", icon: Cloud, label: "Nube", category: "Tecnología" },
-  
-  // Servicios
-  { name: "zap", icon: Zap, label: "Electricidad", category: "Servicios" },
-  { name: "wrench", icon: Wrench, label: "Reparaciones", category: "Servicios" },
-  { name: "hammer", icon: Hammer, label: "Construcción", category: "Servicios" },
-  { name: "printer", icon: Printer, label: "Impresora", category: "Servicios" },
-  
-  // Naturaleza y Clima
-  { name: "trees", icon: Trees, label: "Naturaleza", category: "Naturaleza" },
-  { name: "flower", icon: Flower, label: "Flores", category: "Naturaleza" },
-  { name: "leaf", icon: Leaf, label: "Plantas", category: "Naturaleza" },
-  { name: "sun", icon: Sun, label: "Sol", category: "Naturaleza" },
-  { name: "moon", icon: Moon, label: "Luna", category: "Naturaleza" },
-  { name: "snowflake", icon: Snowflake, label: "Nieve", category: "Naturaleza" },
-  { name: "mountain", icon: Mountain, label: "Montaña", category: "Naturaleza" },
-  { name: "earth", icon: Earth, label: "Planeta", category: "Naturaleza" },
-  
-  // Premios y Logros
-  { name: "award", icon: Award, label: "Premio", category: "Logros" },
-  { name: "medal", icon: Medal, label: "Medalla", category: "Logros" },
-  { name: "crown", icon: Crown, label: "Corona", category: "Logros" },
-  { name: "star", icon: Star, label: "Estrella", category: "Logros" },
-  { name: "target", icon: Target, label: "Objetivo", category: "Logros" },
-  
-  // Otros
-  { name: "tag", icon: Tag, label: "General", category: "Otros" },
-  { name: "more-horizontal", icon: MoreHorizontal, label: "Otros", category: "Otros" },
-  { name: "circle", icon: Circle, label: "Círculo", category: "Otros" },
-  { name: "user", icon: User, label: "Usuario", category: "Otros" },
-  { name: "eye", icon: Eye, label: "Vista", category: "Otros" },
-  { name: "watch", icon: Watch, label: "Reloj", category: "Otros" },
-  { name: "calendar", icon: Calendar, label: "Calendario", category: "Otros" },
-  { name: "map", icon: Map, label: "Mapa", category: "Otros" },
-  { name: "compass", icon: Compass, label: "Brújula", category: "Otros" },
-  { name: "anchor", icon: Anchor, label: "Ancla", category: "Otros" },
-  { name: "rocket", icon: Rocket, label: "Cohete", category: "Otros" },
-  { name: "diamond", icon: Diamond, label: "Diamante", category: "Otros" },
-]
-
-// Helper para obtener el componente de ícono
-const getIconComponent = (iconName: string) => {
-  const iconData = availableIcons.find((icon) => icon.name === iconName)
-  return iconData ? iconData.icon : Tag
-}
-
-export function CategoryModal({ isOpen, category, defaultType, onClose, onSave }: CategoryModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     color: "#F57C00",
@@ -329,12 +372,15 @@ export function CategoryModal({ isOpen, category, defaultType, onClose, onSave }
       newErrors.name = "El nombre debe tener al menos 2 caracteres"
     }
 
-    if (!formData.color) {
-      newErrors.color = "Selecciona un color"
-    }
+    // Solo validar color e ícono si no hay imagen personalizada
+    if (!formData.image) {
+      if (!formData.color) {
+        newErrors.color = "Selecciona un color"
+      }
 
-    if (!formData.icon) {
-      newErrors.icon = "Selecciona un ícono"
+      if (!formData.icon) {
+        newErrors.icon = "Selecciona un ícono"
+      }
     }
 
     setErrors(newErrors)
@@ -363,8 +409,6 @@ export function CategoryModal({ isOpen, category, defaultType, onClose, onSave }
     setIsIconPickerOpen(false)
   }
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   const handleFileUpload = (eventOrFile: React.ChangeEvent<HTMLInputElement> | File) => {
     let file: File | null = null
     
@@ -375,19 +419,16 @@ export function CategoryModal({ isOpen, category, defaultType, onClose, onSave }
     }
     
     if (file) {
-      // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         alert('Por favor, selecciona una imagen válida')
         return
       }
 
-      // Validar tamaño de archivo (máx. 2MB)
       if (file.size > 2 * 1024 * 1024) {
         alert('La imagen es muy grande. El tamaño máximo es 2MB')
         return
       }
 
-      // Crear URL para mostrar la imagen
       const reader = new FileReader()
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string
@@ -401,321 +442,330 @@ export function CategoryModal({ isOpen, category, defaultType, onClose, onSave }
     fileInputRef.current?.click()
   }
 
+  const getSelectedIcon = () => {
+    const iconData = availableIcons.find(icon => icon.name === formData.icon)
+    return iconData ? iconData.icon : Tag
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{category ? "Editar Categoría" : "Nueva Categoría"}</DialogTitle>
-          <DialogDescription>
-            {category ? "Modifica los datos de tu categoría" : "Crea una nueva categoría para organizar tus finanzas"}
-          </DialogDescription>
-        </DialogHeader>
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 500, 
+                damping: 45,
+                duration: 0.1 
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>{category ? "Editar Categoría" : "Nueva Categoría"}</DialogTitle>
+                <DialogDescription className="my-3">
+                  {category ? "Modifica los datos de tu categoría" : "Crea una nueva categoría para organizar tus finanzas"}
+                </DialogDescription>
+              </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Tipo de categoría */}
-          {!category && (
-            <Tabs value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="income" className="gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Ingresos
-                </TabsTrigger>
-                <TabsTrigger value="expense" className="gap-2">
-                  <TrendingDown className="h-4 w-4" />
-                  Gastos
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
+              <motion.form
+                onSubmit={handleSubmit}
+                className="space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {/* Tipo de categoría */}
+                {!category && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                  >
+                    <Tabs value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="income" className="gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Ingresos
+                        </TabsTrigger>
+                        <TabsTrigger value="expense" className="gap-2">
+                          <TrendingDown className="h-4 w-4" />
+                          Gastos
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </motion.div>
+                )}
 
-          {/* Nombre */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nombre de la categoría *</Label>
-            <Input
-              id="name"
-              placeholder="Ej: Alimentación, Sueldo, etc."
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-          </div>
+                {/* Nombre */}
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Label htmlFor="name">Nombre de la categoría *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Ej: Alimentación, Sueldo, etc."
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className={errors.name ? "border-destructive" : ""}
+                  />
+                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                </motion.div>
 
-          {/* Color Picker - Solo visible cuando NO hay imagen personalizada */}
-          {!formData.image && (
-            <div className="space-y-3">
-              <Label>Color de la categoría *</Label>
-              <div className="flex items-center gap-3">
-                <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-                  <PopoverTrigger asChild>
+                {/* Subir imagen personalizada */}
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <Label>Imagen personalizada (opcional)</Label>
+                  <div className="flex items-center gap-4">
+                    {formData.image && (
+                      <div className="relative">
+                        <img
+                          src={formData.image}
+                          alt="Preview"
+                          className="w-16 h-16 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                          onClick={() => setFormData({ ...formData, image: null })}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-20 h-12 p-1 rounded-lg"
-                      style={{ backgroundColor: formData.color }}
+                      onClick={triggerFileInput}
+                      className="gap-2"
                     >
-                      <div className="w-full h-full rounded border-2 border-white shadow-sm" />
+                      <Upload className="w-4 h-4" />
+                      {formData.image ? "Cambiar imagen" : "Subir imagen"}
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-4" align="start">
-                    <div className="space-y-4">
-                      <HexColorPicker color={formData.color} onChange={(color) => setFormData({ ...formData, color })} />
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="text"
-                          value={formData.color}
-                          onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                          placeholder="#F57C00"
-                          className="font-mono text-sm"
-                        />
+                  </div>
+                </motion.div>
+
+                {/* Color e ícono (solo si no hay imagen personalizada) */}
+                {!formData.image && (
+                  <motion.div 
+                    className="grid grid-cols-2 gap-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="space-y-2">
+                      <Label>Color *</Label>
+                      <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                          >
+                            <div
+                              className="w-4 h-4 rounded border"
+                              style={{ backgroundColor: formData.color }}
+                            />
+                            {formData.color}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64" align="start">
+                          <HexColorPicker
+                            color={formData.color}
+                            onChange={(color) => setFormData({ ...formData, color })}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      {errors.color && <p className="text-sm text-destructive">{errors.color}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Ícono *</Label>
+                      <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                          >
+                            {React.createElement(getSelectedIcon(), {
+                              className: "w-4 h-4",
+                              style: { color: formData.color }
+                            })}
+                            {availableIcons.find(icon => icon.name === formData.icon)?.label || "Seleccionar"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-96" align="start">
+                          <div className="space-y-4">
+                            {/* Búsqueda */}
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                              <Input
+                                placeholder="Buscar íconos..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8"
+                              />
+                            </div>
+
+                            {/* Categorías */}
+                            <select
+                              value={selectedCategory}
+                              onChange={(e) => setSelectedCategory(e.target.value)}
+                              className="w-full p-2 border rounded"
+                            >
+                              {categories.map(category => (
+                                <option key={category} value={category}>
+                                  {category}
+                                </option>
+                              ))}
+                            </select>
+
+                            {/* Grid de íconos */}
+                            <ScrollArea className="h-48">
+                              <div className="grid grid-cols-6 gap-2">
+                                {currentIcons.map((iconData) => (
+                                  <Button
+                                    key={iconData.name}
+                                    variant={formData.icon === iconData.name ? "default" : "outline"}
+                                    size="sm"
+                                    className="h-10 w-full p-1"
+                                    onClick={() => handleIconSelect(iconData.name)}
+                                  >
+                                    {React.createElement(iconData.icon, {
+                                      className: "w-4 h-4",
+                                      style: { color: formData.icon === iconData.name ? "white" : formData.color }
+                                    })}
+                                  </Button>
+                                ))}
+                              </div>
+                            </ScrollArea>
+
+                            {/* Paginación */}
+                            {totalPages > 1 && (
+                              <div className="flex items-center justify-between">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                  disabled={currentPage === 0}
+                                >
+                                  <ChevronLeft className="w-4 h-4" />
+                                </Button>
+                                <span className="text-sm text-muted-foreground">
+                                  {currentPage + 1} de {totalPages}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                  disabled={currentPage === totalPages - 1}
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {errors.icon && <p className="text-sm text-destructive">{errors.icon}</p>}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Vista previa */}
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <Label>Vista previa</Label>
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-12 h-12 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: formData.image ? 'transparent' : formData.color }}
+                      >
+                        {formData.image ? (
+                          <img 
+                            src={formData.image} 
+                            alt="Icon" 
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                        ) : (
+                          React.createElement(getSelectedIcon(), {
+                            className: "w-6 h-6 text-white"
+                          })
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{formData.name || "Nombre de la categoría"}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formData.type === "income" ? "Categoría de ingresos" : "Categoría de gastos"}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">
+                          {formData.type === "income" ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <TrendingUp className="w-4 h-4" />
+                              Ingreso
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <TrendingDown className="w-4 h-4" />
+                              Gasto
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
-                <div className="flex-1">
-                  <Input
-                    type="text"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    placeholder="#F57C00"
-                    className="font-mono"
-                  />
-                </div>
-              </div>
-              {errors.color && <p className="text-sm text-destructive">{errors.color}</p>}
-            </div>
-          )}
-
-          {/* Selector de Ícono */}
-          <div className="space-y-3">
-            <Label>Ícono de la categoría *</Label>
-            <div className="space-y-2">
-              <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      {formData.image ? (
-                        <>
-                          <div className="w-6 h-6 rounded-full overflow-hidden">
-                            <img
-                              src={formData.image}
-                              alt="Ícono personalizado"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <span>Imagen personalizada</span>
-                        </>
-                      ) : (
-                        (() => {
-                          const IconComponent = getIconComponent(formData.icon)
-                          return (
-                            <>
-                              <div
-                                className="w-6 h-6 rounded-full border flex items-center justify-center"
-                                style={{ backgroundColor: formData.color }}
-                              >
-                                <IconComponent className="h-3 w-3 text-white" />
-                              </div>
-                              <span>
-                                {availableIcons.find(icon => icon.name === formData.icon)?.label || "Seleccionar ícono"}
-                              </span>
-                            </>
-                          )
-                        })()
-                      )}
-                    </div>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-96 p-0" align="start">
-                  <div className="p-4 space-y-4">
-                  {/* Búsqueda */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar íconos..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
                   </div>
+                </motion.div>
 
-                  {/* Filtro por categoría */}
-                  <div className="flex flex-wrap gap-1">
-                    {categories.map((cat) => (
-                      <Button
-                        key={cat}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "text-xs border-2",
-                          selectedCategory === cat ? "border-primary text-primary" : "border-border"
-                        )}
-                        onClick={() => setSelectedCategory(cat)}
-                      >
-                        {cat}
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Grid de íconos */}
-                  <ScrollArea className="h-64">
-                    <div className="grid grid-cols-6 gap-2 p-1">
-                      {currentIcons.map((iconData) => {
-                        const IconComponent = iconData.icon
-                        return (
-                          <Button
-                            key={iconData.name}
-                            type="button"
-                            variant={formData.icon === iconData.name ? "default" : "outline"}
-                            size="sm"
-                            className="h-12 w-12 p-0"
-                            onClick={() => handleIconSelect(iconData.name)}
-                            title={iconData.label}
-                          >
-                            <IconComponent className="h-5 w-5" />
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  </ScrollArea>
-
-                  {/* Paginación */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-                        disabled={currentPage === 0}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Página {currentPage + 1} de {totalPages}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-                        disabled={currentPage === totalPages - 1}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            {/* Opción de imagen personalizada - fuera del selector */}
-            <div className="space-y-2">
-              <div className="flex justify-between gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={triggerFileInput}
-                  className="flex-1"
+                {/* Botones */}
+                <motion.div 
+                  className="flex justify-end gap-3 pt-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Subir imagen personalizada
-                </Button>
-                {formData.image && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                  >
-                    <Trash2 className="h-4 w-4" />
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancelar
                   </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Formatos soportados: JPG, PNG, GIF. Máximo 2MB.
-              </p>
-            </div>
-            
-            {errors.icon && <p className="text-sm text-destructive">{errors.icon}</p>}
-            </div>
-          </div>
-
-          {/* Vista previa HERMOSA */}
-          <div className="p-6 bg-gradient-to-br from-muted/50 to-muted/80 rounded-xl border-2 border-dashed border-muted-foreground/20">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Vista previa:</p>
-            <div className="flex items-center gap-4">
-              {formData.image ? (
-                <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg transform transition-transform hover:scale-105">
-                  <img
-                    src={formData.image}
-                    alt="Ícono personalizado"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                (() => {
-                  const IconComponent = getIconComponent(formData.icon)
-                  return (
-                    <div
-                      className="w-12 h-12 rounded-full border-2 border-white shadow-lg flex items-center justify-center transform transition-transform hover:scale-105"
-                      style={{ backgroundColor: formData.color }}
-                    >
-                      <IconComponent className="h-6 w-6 text-white" />
-                    </div>
-                  )
-                })()
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{formData.name || "Nombre de la categoría"}</h3>
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  {formData.type === "income" ? (
-                    <>
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                      Categoría de Ingresos
-                    </>
-                  ) : (
-                    <>
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                      Categoría de Gastos
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className={
-                formData.type === "income" ? "bg-secondary hover:bg-secondary/90" : "bg-primary hover:bg-primary/90"
-              }
-            >
-              {category ? "Actualizar" : "Crear"} Categoría
-            </Button>
-          </div>
-        </form>
-        
-        {/* Input de archivo oculto */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleFileUpload}
-        />
-      </DialogContent>
-    </Dialog>
+                  <Button
+                    type="submit"
+                    className={
+                      formData.type === "income" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                    }
+                  >
+                    {category ? "Actualizar" : "Crear"} Categoría
+                  </Button>
+                </motion.div>
+              </motion.form>
+              
+              {/* Input de archivo oculto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+              />
+            </motion.div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </AnimatePresence>
   )
 }

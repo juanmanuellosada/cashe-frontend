@@ -14,6 +14,7 @@ import { useAccounts } from "@/contexts/accounts-context"
 import { useCategories } from "@/contexts/categories-context"
 import html2canvas from 'html2canvas'
 import { toast } from "sonner"
+import { motion } from "framer-motion"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -611,14 +612,36 @@ export default function ReportsPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={exportToCSV} variant="outline" className="w-full sm:w-auto">
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Exportar CSV
-            </Button>
-            <Button onClick={exportToPDF} disabled={isExporting} className="w-full sm:w-auto">
-              <Download className="mr-2 h-4 w-4" />
-              {isExporting ? 'Generando PDF...' : 'Exportar PDF'}
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 45,
+                duration: 0.1,
+              }}
+            >
+              <Button onClick={exportToCSV} variant="outline" className="w-full sm:w-auto">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar CSV
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 45,
+                duration: 0.1,
+              }}
+            >
+              <Button onClick={exportToPDF} disabled={isExporting} className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? 'Generando PDF...' : 'Exportar PDF'}
+              </Button>
+            </motion.div>
           </div>
         </div>
 
