@@ -80,60 +80,108 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
       {/* Expanded content */}
       {expanded && (
         <div className="animate-scale-in" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-          {accounts.map((account, index) => {
-            const isARS = account.moneda === 'Peso';
-            const currencyColor = isARS ? '#75AADB' : '#3CB371';
+          {/* Desktop: Grid layout */}
+          <div className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-px" style={{ backgroundColor: 'var(--border-subtle)' }}>
+            {accounts.map((account) => {
+              const isARS = account.moneda === 'Peso';
+              const currencyColor = isARS ? '#75AADB' : '#3CB371';
 
-            return (
-              <button
-                key={account.nombre}
-                onClick={() => handleAccountClick(account)}
-                className="w-full p-4 flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]"
-                style={{
-                  borderBottom: index < accounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
-                }}
-              >
-                {/* Currency icon */}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${currencyColor}20` }}
+              return (
+                <button
+                  key={account.nombre}
+                  onClick={() => handleAccountClick(account)}
+                  className="p-4 flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]"
+                  style={{ backgroundColor: 'var(--bg-secondary)' }}
                 >
-                  <span className="text-sm font-bold" style={{ color: currencyColor }}>
-                    {isARS ? '$' : 'US$'}
-                  </span>
-                </div>
+                  {/* Currency icon */}
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${currencyColor}20` }}
+                  >
+                    <span className="text-sm font-bold" style={{ color: currencyColor }}>
+                      {isARS ? '$' : 'US$'}
+                    </span>
+                  </div>
 
-                {/* Account info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                    {account.nombre}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {isARS ? 'Pesos' : 'Dólares'}
-                    {account.tipo && ` · ${account.tipo}`}
-                  </p>
-                </div>
+                  {/* Account info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {account.nombre}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {isARS ? 'Pesos' : 'Dólares'}
+                      {account.tipo && ` · ${account.tipo}`}
+                    </p>
+                  </div>
 
-                {/* Balance */}
-                <div className="text-right flex-shrink-0">
-                  <p className="font-semibold" style={{ color: 'var(--accent-primary)' }}>
-                    {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
-                  </p>
-                </div>
+                  {/* Balance */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                      {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-                {/* Arrow */}
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: 'var(--text-secondary)' }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          {/* Mobile: List layout */}
+          <div className="lg:hidden">
+            {accounts.map((account, index) => {
+              const isARS = account.moneda === 'Peso';
+              const currencyColor = isARS ? '#75AADB' : '#3CB371';
+
+              return (
+                <button
+                  key={account.nombre}
+                  onClick={() => handleAccountClick(account)}
+                  className="w-full p-4 flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]"
+                  style={{
+                    borderBottom: index < accounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
+                  }}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            );
-          })}
+                  {/* Currency icon */}
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${currencyColor}20` }}
+                  >
+                    <span className="text-sm font-bold" style={{ color: currencyColor }}>
+                      {isARS ? '$' : 'US$'}
+                    </span>
+                  </div>
+
+                  {/* Account info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {account.nombre}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {isARS ? 'Pesos' : 'Dólares'}
+                      {account.tipo && ` · ${account.tipo}`}
+                    </p>
+                  </div>
+
+                  {/* Balance */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                      {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
+                    </p>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: 'var(--text-secondary)' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
 
           {/* View all button */}
           <button

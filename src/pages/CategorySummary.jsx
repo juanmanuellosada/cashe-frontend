@@ -238,7 +238,7 @@ function CategorySummary() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          Resumen por Categoria
+          Resumen por categoría
         </h2>
         <div className="flex items-center gap-3">
           {/* Selector de moneda global */}

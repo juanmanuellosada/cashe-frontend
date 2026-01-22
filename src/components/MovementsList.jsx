@@ -631,6 +631,17 @@ function MovementsList({
         renderEmptyState()
       ) : (
         <div className="space-y-2">
+          {/* Desktop table header */}
+          <div className="hidden lg:flex items-center gap-3 px-4 py-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+            {selectionMode && <div className="w-6" />}
+            <div className="w-12" /> {/* Icon space */}
+            <div className="flex-1">Descripción</div>
+            <div className="w-24 text-center">Fecha</div>
+            {type !== 'transferencia' && <div className="w-32 text-center">Cuenta</div>}
+            <div className="w-28 text-right">Monto</div>
+            <div className="w-10" /> {/* Delete button space */}
+          </div>
+          
           {filteredMovements.map((movement, index) => {
             const itemId = movement.rowIndex || movement.id;
             const isSelected = selectedItems.has(itemId);
@@ -736,16 +747,32 @@ function MovementsList({
                     )}
                   </div>
 
+                  {/* Desktop: Show date in separate column */}
+                  <div className="hidden lg:block text-center flex-shrink-0 w-24">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {formatDate(movement.fecha, 'short')}
+                    </p>
+                  </div>
+
+                  {/* Desktop: Show account/category info */}
+                  {type !== 'transferencia' && (
+                    <div className="hidden lg:block text-center flex-shrink-0 w-32">
+                      <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>
+                        {movement.cuenta}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Amount and date */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-xl font-bold" style={{ color: getTypeColor() }}>
+                    <p className="text-xl font-bold lg:text-lg" style={{ color: getTypeColor() }}>
                       {type === 'transferencia'
                         ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
                         : type === 'ingreso'
                           ? `+${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`
                           : `-${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
                     </p>
-                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-xs lg:hidden" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
                     </p>
                   </div>

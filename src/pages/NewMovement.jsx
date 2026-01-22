@@ -82,7 +82,7 @@ function NewMovement() {
   }
 
   return (
-    <div>
+    <div className="lg:max-w-2xl lg:mx-auto">
       {toast && (
         <Toast
           message={toast.message}
@@ -92,7 +92,7 @@ function NewMovement() {
       )}
 
       <h2
-        className="text-xl font-bold mb-6"
+        className="text-xl font-bold mb-6 lg:text-2xl lg:mb-8"
         style={{ color: 'var(--text-primary)' }}
       >
         {prefillData ? 'Duplicar Movimiento' : 'Nuevo Movimiento'}
@@ -110,14 +110,20 @@ function NewMovement() {
         </div>
       )}
 
-      <MovementForm
-        key={formKey}
-        accounts={accounts}
-        categories={categories}
-        onSubmit={handleSubmit}
-        loading={submitting}
-        prefillData={prefillData}
-      />
+      {/* Card container for desktop */}
+      <div
+        className="lg:rounded-2xl lg:p-6"
+        style={{ backgroundColor: 'transparent' }}
+      >
+        <MovementForm
+          key={formKey}
+          accounts={accounts}
+          categories={categories}
+          onSubmit={handleSubmit}
+          loading={submitting}
+          prefillData={prefillData}
+        />
+      </div>
     </div>
   );
 }

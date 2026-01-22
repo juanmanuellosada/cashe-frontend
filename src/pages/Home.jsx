@@ -194,8 +194,8 @@ function Home() {
     <div className="space-y-6">
       {/* Balance Section */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-sm font-semibold lg:text-base" style={{ color: 'var(--text-secondary)' }}>
             Resumen
           </h2>
           <div className="flex items-center gap-2">
@@ -267,26 +267,29 @@ function Home() {
         }}
       />
 
-      {/* Weekly Summary */}
-      <WeeklySummary
-        movements={movements}
-        loading={loadingMovements}
-      />
+      {/* Desktop Grid Layout for Weekly Summary and Movements */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Weekly Summary */}
+        <WeeklySummary
+          movements={movements}
+          loading={loadingMovements}
+        />
 
-      {/* Movements Section */}
-      <RecentMovements
-        movements={movements}
-        dateRange={movementDateRange}
-        onDateRangeChange={setMovementDateRange}
-        filters={movementFilters}
-        onFilterChange={setMovementFilters}
-        accounts={accounts}
-        categories={categories}
-        onMovementClick={setEditingMovement}
-        onMovementDelete={handleDeleteMovement}
-        loading={loadingMovements}
-        currency={currency}
-      />
+        {/* Movements Section */}
+        <RecentMovements
+          movements={movements}
+          dateRange={movementDateRange}
+          onDateRangeChange={setMovementDateRange}
+          filters={movementFilters}
+          onFilterChange={setMovementFilters}
+          accounts={accounts}
+          categories={categories}
+          onMovementClick={setEditingMovement}
+          onMovementDelete={handleDeleteMovement}
+          loading={loadingMovements}
+          currency={currency}
+        />
+      </div>
 
       {/* Edit Modal */}
       {editingMovement && (

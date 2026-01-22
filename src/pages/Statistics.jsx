@@ -275,52 +275,52 @@ function Statistics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-4 lg:p-5"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
             Total Ingresos
           </p>
-          <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
+          <p className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>
             {loading ? '...' : formatCurrency(summaryStats.totalIngresos, currency)}
           </p>
         </div>
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-4 lg:p-5"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
             Total Gastos
           </p>
-          <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
+          <p className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--accent-red)' }}>
             {loading ? '...' : formatCurrency(summaryStats.totalGastos, currency)}
           </p>
         </div>
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-4 lg:p-5"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
             Balance
           </p>
           <p
-            className="text-xl font-bold"
+            className="text-xl lg:text-2xl font-bold"
             style={{ color: summaryStats.balance >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
           >
             {loading ? '...' : formatCurrency(summaryStats.balance, currency)}
           </p>
         </div>
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-4 lg:p-5"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
             Tasa de Ahorro
           </p>
           <p
-            className="text-xl font-bold"
+            className="text-xl lg:text-2xl font-bold"
             style={{ color: summaryStats.savingsRate >= 0 ? 'var(--accent-primary)' : 'var(--accent-red)' }}
           >
             {loading ? '...' : `${summaryStats.savingsRate.toFixed(1)}%`}
@@ -328,17 +328,21 @@ function Statistics() {
         </div>
       </div>
 
-      {/* Charts */}
-      <ExpensePieChart 
-        data={pieChartData} 
-        loading={loading} 
-        currency={currency}
-      />
-      <IncomeExpenseBarChart 
-        data={barChartData} 
-        loading={loading}
-        currency={currency}
-      />
+      {/* Charts - 2 column grid on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ExpensePieChart 
+          data={pieChartData} 
+          loading={loading} 
+          currency={currency}
+        />
+        <IncomeExpenseBarChart 
+          data={barChartData} 
+          loading={loading}
+          currency={currency}
+        />
+      </div>
+      
+      {/* Full width line chart */}
       <BalanceLineChart 
         data={lineChartData} 
         loading={loading}

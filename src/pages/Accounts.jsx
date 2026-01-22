@@ -276,7 +276,7 @@ function Accounts() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
           {accounts.map((account) => {
             const percentage = getAccountPercentage(account);
             const isExpanded = showDetails[account.nombre];
