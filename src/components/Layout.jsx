@@ -4,11 +4,13 @@ import ThemeToggle from './ThemeToggle';
 import SearchButton from './SearchButton';
 import SearchModal from './SearchModal';
 import EditMovementModal from './EditMovementModal';
+import NewMovementModal from './NewMovementModal';
 import { getAccounts, getCategories, updateMovement, deleteMovement } from '../services/sheetsApi';
 
 function Layout({ children, darkMode, toggleDarkMode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [newMovementOpen, setNewMovementOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
@@ -22,10 +24,19 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Función para abrir nuevo movimiento (modal en desktop, página en mobile)
+  const openNewMovement = () => {
+    if (isDesktop) {
+      setNewMovementOpen(true);
+    } else {
+      navigate('/nuevo');
+    }
+  };
+
   // Definición de atajos de teclado
   const keyboardShortcuts = [
-    { key: 'K', ctrl: true, label: 'Buscar', action: () => setSearchOpen(true) },
-    { key: 'N', ctrl: true, label: 'Nuevo movimiento', action: () => navigate('/nuevo') },
+    { key: 'K', alt: true, label: 'Buscar', action: () => setSearchOpen(true) },
+    { key: 'N', alt: true, label: 'Nuevo movimiento', action: openNewMovement },
     { key: '?', ctrl: false, shift: true, label: 'Mostrar atajos', action: () => setShortcutsOpen(true) },
     { key: 'H', ctrl: false, alt: true, label: 'Ir al inicio', action: () => navigate('/') },
     { key: 'E', ctrl: false, alt: true, label: 'Estadísticas', action: () => navigate('/estadisticas') },
@@ -38,7 +49,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'U', ctrl: false, alt: true, label: 'Cuentas', action: () => navigate('/cuentas') },
     { key: 'A', ctrl: false, alt: true, label: 'Categorías', action: () => navigate('/categorias') },
     { key: 'B', ctrl: false, alt: true, label: 'Colapsar menú', action: () => setSidebarCollapsed(prev => !prev) },
-    { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); } },
+    { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); setNewMovementOpen(false); } },
   ];
 
   // Persist sidebar state
@@ -233,17 +244,17 @@ function Layout({ children, darkMode, toggleDarkMode }) {
 
           {/* New Movement Button */}
           <div className={`${sidebarCollapsed ? 'px-3' : 'px-4'} mb-4`}>
-            <NavLink
-              to="/nuevo"
+            <button
+              onClick={openNewMovement}
               className={`flex items-center justify-center ${sidebarCollapsed ? 'w-11 h-11' : 'gap-2 w-full py-3'} rounded-xl font-semibold transition-all hover:opacity-90`}
               style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
-              title={sidebarCollapsed ? 'Nuevo Movimiento' : undefined}
+              title={sidebarCollapsed ? 'Nuevo Movimiento (Alt+N)' : undefined}
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
               </svg>
               {!sidebarCollapsed && <span>Nuevo Movimiento</span>}
-            </NavLink>
+            </button>
           </div>
 
           {/* Navigation Links */}
@@ -433,7 +444,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                 </svg>
                 <span className="text-sm">Buscar...</span>
                 <kbd className="ml-2 px-2 py-0.5 text-xs rounded" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                  Ctrl+K
+                  Alt+K
                 </kbd>
               </button>
               <button
@@ -737,6 +748,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
           loading={savingMovement}
         />
       )}
+
+      {/* New Movement Modal (desktop only) */}
+      <NewMovementModal 
+        isOpen={newMovementOpen} 
+        onClose={() => setNewMovementOpen(false)} 
+      />
     </div>
   );
 }
