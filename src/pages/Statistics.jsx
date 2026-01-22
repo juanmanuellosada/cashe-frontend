@@ -1,16 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getRecentMovements } from '../services/sheetsApi';
 import { formatCurrency } from '../utils/format';
+import DateRangePicker from '../components/DateRangePicker';
 import ExpensePieChart from '../components/charts/ExpensePieChart';
 import IncomeExpenseBarChart from '../components/charts/IncomeExpenseBarChart';
 import BalanceLineChart from '../components/charts/BalanceLineChart';
 
+// Presets específicos para estadísticas
+const STATS_PRESETS = [
+  { label: 'Este mes', getValue: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
+  { label: '3 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 2)), to: endOfMonth(new Date()) }) },
+  { label: '6 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 5)), to: endOfMonth(new Date()) }) },
+  { label: '12 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 11)), to: endOfMonth(new Date()) }) },
+];
+
 function Statistics() {
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState(6); // months
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(subMonths(new Date(), 5)),
+    to: endOfMonth(new Date())
+  });
 
   useEffect(() => {
     async function loadMovements() {
@@ -29,13 +41,17 @@ function Statistics() {
 
   // Process data for pie chart (expenses by category)
   const pieChartData = useMemo(() => {
-    const now = new Date();
-    const startDate = startOfMonth(subMonths(now, period - 1));
+    if (!dateRange.from || !dateRange.to) return [];
+
+    const startDate = new Date(dateRange.from);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(dateRange.to);
+    endDate.setHours(23, 59, 59, 999);
 
     const expenses = movements.filter(m => {
       if (m.tipo !== 'gasto') return false;
       const fecha = new Date(m.fecha);
-      return fecha >= startDate;
+      return fecha >= startDate && fecha <= endDate;
     });
 
     const byCategory = {};
@@ -61,15 +77,19 @@ function Statistics() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [movements, period]);
+  }, [movements, dateRange]);
 
   // Process data for bar chart (income vs expenses by month)
   const barChartData = useMemo(() => {
-    const now = new Date();
-    const months = [];
+    if (!dateRange.from || !dateRange.to) return [];
 
-    for (let i = period - 1; i >= 0; i--) {
-      const monthDate = subMonths(now, i);
+    // Get all months in the range
+    const monthsInRange = eachMonthOfInterval({
+      start: dateRange.from,
+      end: dateRange.to
+    });
+
+    return monthsInRange.map(monthDate => {
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
       const monthKey = format(monthDate, 'yyyy-MM');
@@ -90,22 +110,24 @@ function Statistics() {
         }
       });
 
-      months.push({
+      return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
         monthKey,
         ingresos,
         gastos,
-      });
-    }
-
-    return months;
-  }, [movements, period]);
+      };
+    });
+  }, [movements, dateRange]);
 
   // Process data for line chart (balance evolution)
   const lineChartData = useMemo(() => {
-    const now = new Date();
-    const months = [];
-    let runningBalance = 0;
+    if (!dateRange.from || !dateRange.to) return [];
+
+    // Get all months in the range
+    const monthsInRange = eachMonthOfInterval({
+      start: dateRange.from,
+      end: dateRange.to
+    });
 
     // Get all movements sorted by date
     const sortedMovements = [...movements].sort(
@@ -113,8 +135,7 @@ function Statistics() {
     );
 
     // Calculate balance for each month
-    for (let i = period - 1; i >= 0; i--) {
-      const monthDate = subMonths(now, i);
+    return monthsInRange.map(monthDate => {
       const monthEnd = endOfMonth(monthDate);
       const monthLabel = format(monthDate, 'MMM', { locale: es });
 
@@ -132,26 +153,30 @@ function Statistics() {
         }
       });
 
-      months.push({
+      return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
         balance: monthBalance,
-      });
-    }
-
-    return months;
-  }, [movements, period]);
+      };
+    });
+  }, [movements, dateRange]);
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    const now = new Date();
-    const startDate = startOfMonth(subMonths(now, period - 1));
+    if (!dateRange.from || !dateRange.to) {
+      return { totalIngresos: 0, totalGastos: 0, balance: 0, savingsRate: 0 };
+    }
+
+    const startDate = new Date(dateRange.from);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(dateRange.to);
+    endDate.setHours(23, 59, 59, 999);
 
     let totalIngresos = 0;
     let totalGastos = 0;
 
     movements.forEach(m => {
       const fecha = new Date(m.fecha);
-      if (fecha >= startDate) {
+      if (fecha >= startDate && fecha <= endDate) {
         const amount = m.montoPesos || m.monto || 0;
         if (m.tipo === 'ingreso') {
           totalIngresos += amount;
@@ -167,25 +192,21 @@ function Statistics() {
       balance: totalIngresos - totalGastos,
       savingsRate: totalIngresos > 0 ? ((totalIngresos - totalGastos) / totalIngresos) * 100 : 0,
     };
-  }, [movements, period]);
+  }, [movements, dateRange]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
           Estadisticas
         </h2>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(Number(e.target.value))}
-          className="px-3 py-2 rounded-xl text-sm font-medium"
-          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-        >
-          <option value={3}>3 meses</option>
-          <option value={6}>6 meses</option>
-          <option value={12}>12 meses</option>
-        </select>
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          presets={STATS_PRESETS}
+          defaultPreset="6 meses"
+        />
       </div>
 
       {/* Summary Cards */}
