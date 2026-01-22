@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(start http://localhost:5173/finanzas-personales/)",
+      "Bash(timeout:*)",
+      "Bash(npm run build:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vite)"
+    ]
+  }
+}
