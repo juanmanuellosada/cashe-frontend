@@ -1,0 +1,283 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #161616;
+  --bg-tertiary: #1f1f1f;
+  --bg-elevated: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --accent-green: #22c55e;
+  --accent-green-dim: rgba(34, 197, 94, 0.15);
+  --accent-red: #ef4444;
+  --accent-red-dim: rgba(239, 68, 68, 0.15);
+  --accent-blue: #3b82f6;
+  --accent-blue-dim: rgba(59, 130, 246, 0.15);
+  --accent-primary: #60a5fa;
+  --accent-primary-dim: rgba(96, 165, 250, 0.15);
+  --border-subtle: #2a2a2a;
+}
+
+.light {
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3f4f6;
+  --bg-elevated: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --accent-green-dim: rgba(34, 197, 94, 0.1);
+  --accent-red-dim: rgba(239, 68, 68, 0.1);
+  --accent-blue-dim: rgba(59, 130, 246, 0.1);
+  --accent-primary-dim: rgba(96, 165, 250, 0.1);
+  --border-subtle: #e5e7eb;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Input styles */
+input, select, textarea {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+/* Button base */
+.btn-primary {
+  background-color: var(--accent-primary);
+  @apply text-white font-semibold py-3 px-6 rounded-lg;
+  @apply hover:opacity-90 active:opacity-80;
+  @apply transition-colors duration-200;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Card styles */
+.card {
+  background-color: var(--bg-secondary);
+  @apply rounded-xl p-4;
+}
+
+/* Movement type colors */
+.income {
+  color: var(--accent-green);
+}
+
+.expense {
+  color: var(--accent-red);
+}
+
+.transfer {
+  color: var(--accent-blue);
+}
+
+/* Animations */
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(96, 165, 250, 0.3);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes check-bounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-tab {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-check-bounce {
+  animation: check-bounce 0.4s ease-out;
+}
+
+.animate-slide-tab {
+  animation: slide-tab 0.2s ease-out;
+}
+
+/* Gradient backgrounds */
+.gradient-green {
+  background: linear-gradient(135deg, var(--accent-green-dim) 0%, transparent 100%);
+}
+
+.gradient-red {
+  background: linear-gradient(135deg, var(--accent-red-dim) 0%, transparent 100%);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, var(--accent-blue-dim) 0%, transparent 100%);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, var(--accent-primary-dim) 0%, transparent 100%);
+}
+
+/* Hover scale effect */
+.hover-scale {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.01);
+}
+
+/* Group hover for delete buttons */
+.group:hover .group-hover-visible {
+  opacity: 1;
+}
+
+.group-hover-visible {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Date picker dark mode improvements */
+.rdp-root {
+  --rdp-accent-color: var(--accent-primary);
+  --rdp-accent-background-color: var(--accent-primary-dim);
+}
+
+.rdp-day_button.rdp-day_selected {
+  background-color: var(--accent-primary) !important;
+  color: white !important;
+}
+
+.rdp-day_button:hover:not(.rdp-day_selected) {
+  background-color: var(--bg-elevated) !important;
+}

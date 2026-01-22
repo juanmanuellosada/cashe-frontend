@@ -1,0 +1,593 @@
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { formatCurrency, formatDate } from '../utils/format';
+import DateRangePicker from './DateRangePicker';
+
+function MovementsList({
+  title,
+  movements,
+  accounts,
+  categories,
+  loading,
+  onMovementClick,
+  onMovementDelete,
+  type, // 'gasto', 'ingreso', 'transferencia'
+}) {
+  const navigate = useNavigate();
+  const [dateRange, setDateRange] = useState({ from: null, to: null });
+  const [selectedAccounts, setSelectedAccounts] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Filter movements
+  const filteredMovements = useMemo(() => {
+    let filtered = [...movements];
+
+    // Filter by date
+    if (dateRange.from) {
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(m => new Date(m.fecha) >= from);
+    }
+    if (dateRange.to) {
+      const to = new Date(dateRange.to);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(m => new Date(m.fecha) <= to);
+    }
+
+    // Filter by accounts
+    if (selectedAccounts.length > 0) {
+      if (type === 'transferencia') {
+        filtered = filtered.filter(m =>
+          selectedAccounts.includes(m.cuentaSaliente) ||
+          selectedAccounts.includes(m.cuentaEntrante)
+        );
+      } else {
+        filtered = filtered.filter(m => selectedAccounts.includes(m.cuenta));
+      }
+    }
+
+    // Filter by categories (only for income/expense)
+    if (selectedCategories.length > 0 && type !== 'transferencia') {
+      filtered = filtered.filter(m => selectedCategories.includes(m.categoria));
+    }
+
+    // Filter by search text (nota, categoria, cuenta)
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase().trim();
+      filtered = filtered.filter(m => {
+        const nota = (m.nota || '').toLowerCase();
+        const categoria = (m.categoria || '').toLowerCase();
+        const cuenta = (m.cuenta || '').toLowerCase();
+        const cuentaSaliente = (m.cuentaSaliente || '').toLowerCase();
+        const cuentaEntrante = (m.cuentaEntrante || '').toLowerCase();
+        return nota.includes(search) ||
+               categoria.includes(search) ||
+               cuenta.includes(search) ||
+               cuentaSaliente.includes(search) ||
+               cuentaEntrante.includes(search);
+      });
+    }
+
+    return filtered;
+  }, [movements, dateRange, selectedAccounts, selectedCategories, searchText, type]);
+
+  // Calculate subtotals
+  const subtotals = useMemo(() => {
+    if (type === 'transferencia') {
+      const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
+      const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
+      return { totalSaliente, totalEntrante };
+    } else {
+      const totalPesos = filteredMovements.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+      return { totalPesos };
+    }
+  }, [filteredMovements, type]);
+
+  const toggleAccount = (accountName) => {
+    setSelectedAccounts(prev =>
+      prev.includes(accountName)
+        ? prev.filter(a => a !== accountName)
+        : [...prev, accountName]
+    );
+  };
+
+  const toggleCategory = (categoryName) => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryName)
+        ? prev.filter(c => c !== categoryName)
+        : [...prev, categoryName]
+    );
+  };
+
+  const clearFilters = () => {
+    setDateRange({ from: null, to: null });
+    setSelectedAccounts([]);
+    setSelectedCategories([]);
+    setSearchText('');
+  };
+
+  const activeFiltersCount = [
+    dateRange.from || dateRange.to,
+    selectedAccounts.length > 0,
+    selectedCategories.length > 0,
+    searchText.trim().length > 0,
+  ].filter(Boolean).length;
+
+  const getTypeColor = () => {
+    switch (type) {
+      case 'ingreso': return 'var(--accent-green)';
+      case 'gasto': return 'var(--accent-red)';
+      case 'transferencia': return 'var(--accent-blue)';
+      default: return 'var(--accent-primary)';
+    }
+  };
+
+  const getTypeBgDim = () => {
+    switch (type) {
+      case 'ingreso': return 'rgba(34, 197, 94, 0.15)';
+      case 'gasto': return 'rgba(239, 68, 68, 0.15)';
+      case 'transferencia': return 'rgba(59, 130, 246, 0.15)';
+      default: return 'rgba(96, 165, 250, 0.15)';
+    }
+  };
+
+  const handleDeleteClick = (e, movement) => {
+    e.stopPropagation();
+    setDeleteConfirm(movement);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      onMovementDelete?.(deleteConfirm);
+      setDeleteConfirm(null);
+    }
+  };
+
+  // Skeleton loading
+  const renderSkeleton = () => (
+    <div className="space-y-3">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="rounded-2xl p-4"
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl skeleton" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-28 skeleton" />
+              <div className="h-3 w-40 skeleton" />
+            </div>
+            <div className="text-right space-y-2">
+              <div className="h-5 w-24 skeleton ml-auto" />
+              <div className="h-3 w-16 skeleton ml-auto" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Empty state
+  const renderEmptyState = () => (
+    <div
+      className="rounded-2xl p-8 text-center"
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
+    >
+      <div
+        className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+        style={{ backgroundColor: getTypeBgDim() }}
+      >
+        {type === 'transferencia' ? (
+          <svg className="w-10 h-10" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        ) : type === 'ingreso' ? (
+          <svg className="w-10 h-10" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        ) : (
+          <svg className="w-10 h-10" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        )}
+      </div>
+      <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+        Sin {type === 'transferencia' ? 'transferencias' : type === 'ingreso' ? 'ingresos' : 'gastos'}
+      </h3>
+      <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+        {activeFiltersCount > 0
+          ? 'No se encontraron movimientos con los filtros seleccionados'
+          : `Aun no has registrado ningun ${type === 'transferencia' ? 'a' : ''} ${type}`}
+      </p>
+      <button
+        onClick={() => navigate('/nuevo')}
+        className="px-6 py-3 rounded-xl font-medium text-white transition-all duration-200 hover:opacity-90"
+        style={{ backgroundColor: getTypeColor() }}
+      >
+        Agregar {type === 'transferencia' ? 'transferencia' : type}
+      </button>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-6 w-24 skeleton" />
+          <div className="h-8 w-32 skeleton" />
+        </div>
+        {renderSkeleton()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+          {title}
+        </h2>
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+        />
+      </div>
+
+      {/* Filters Toggle */}
+      <button
+        onClick={() => setShowFilters(!showFilters)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+        style={{
+          backgroundColor: showFilters ? getTypeBgDim() : 'var(--bg-tertiary)',
+          color: showFilters ? getTypeColor() : 'var(--text-secondary)'
+        }}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+        <span>Filtros</span>
+        {activeFiltersCount > 0 && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+            style={{ backgroundColor: getTypeColor() }}
+          >
+            {activeFiltersCount}
+          </span>
+        )}
+      </button>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div
+          className="p-4 rounded-2xl space-y-4 animate-scale-in"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
+        >
+          {/* Search filter */}
+          <div>
+            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Buscar
+            </label>
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                style={{ color: 'var(--text-secondary)' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder={type === 'transferencia'
+                  ? "Buscar por cuenta..."
+                  : "Buscar por nota, categoria, cuenta..."}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              />
+            </div>
+          </div>
+
+          {/* Accounts filter */}
+          <div>
+            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Cuentas
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {accounts.map(account => (
+                <button
+                  key={account.nombre}
+                  onClick={() => toggleAccount(account.nombre)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                  style={{
+                    backgroundColor: selectedAccounts.includes(account.nombre)
+                      ? getTypeColor()
+                      : 'var(--bg-tertiary)',
+                    color: selectedAccounts.includes(account.nombre)
+                      ? 'white'
+                      : 'var(--text-secondary)',
+                  }}
+                >
+                  {account.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Categories filter (not for transfers) */}
+          {type !== 'transferencia' && categories.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Categorias
+              </label>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => toggleCategory(cat)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                    style={{
+                      backgroundColor: selectedCategories.includes(cat)
+                        ? getTypeColor()
+                        : 'var(--bg-tertiary)',
+                      color: selectedCategories.includes(cat)
+                        ? 'white'
+                        : 'var(--text-secondary)',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Clear filters */}
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-medium transition-colors hover:opacity-80"
+              style={{ color: getTypeColor() }}
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Subtotals */}
+      <div
+        className="rounded-2xl p-4 relative overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-secondary)' }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(135deg, ${getTypeBgDim()} 0%, transparent 70%)` }}
+        />
+        <div className="relative z-10">
+          {/* Count */}
+          <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+            {filteredMovements.length} {type === 'transferencia' ? 'transferencia' : 'movimiento'}{filteredMovements.length !== 1 ? 's' : ''}
+          </p>
+
+          {type === 'transferencia' ? (
+            /* Transfer totals - show both saliente and entrante */
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs mb-1 flex items-center gap-1" style={{ color: 'var(--accent-red)' }}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                  </svg>
+                  Total saliente
+                </p>
+                <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
+                  {formatCurrency(subtotals.totalSaliente)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs mb-1 flex items-center gap-1 justify-end" style={{ color: 'var(--accent-green)' }}>
+                  Total entrante
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h14" />
+                  </svg>
+                </p>
+                <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
+                  {formatCurrency(subtotals.totalEntrante)}
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Income/Expense total */
+            <div>
+              <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Total
+              </p>
+              <p className="text-2xl font-bold" style={{ color: getTypeColor() }}>
+                {formatCurrency(subtotals.totalPesos)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Movements list */}
+      {filteredMovements.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <div className="space-y-2">
+          {filteredMovements.map((movement, index) => (
+            <div
+              key={movement.id || movement.rowIndex}
+              className="group rounded-2xl p-4 transition-all duration-200 hover:scale-[1.01]"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => onMovementClick?.(movement)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  style={{ backgroundColor: 'transparent' }}
+                >
+                  {/* Icon */}
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    style={{ backgroundColor: getTypeBgDim() }}
+                  >
+                    {type === 'transferencia' ? (
+                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                    ) : type === 'ingreso' ? (
+                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                      </svg>
+                    ) : (
+                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {type === 'transferencia'
+                          ? 'Transferencia'
+                          : movement.categoria || '-'}
+                      </p>
+                      {/* Installment badge */}
+                      {movement.cuota && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1"
+                          style={{
+                            backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                            color: 'var(--accent-purple)',
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          {movement.cuota}
+                        </span>
+                      )}
+                      {/* Category badge */}
+                      {type !== 'transferencia' && movement.categoria && !movement.cuota && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium hidden sm:inline-block"
+                          style={{
+                            backgroundColor: getTypeBgDim(),
+                            color: getTypeColor(),
+                          }}
+                        >
+                          {movement.categoria.split(' ')[0]}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+                      {type === 'transferencia'
+                        ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
+                        : movement.cuenta}
+                    </p>
+                    {movement.nota && (
+                      <p className="text-xs truncate mt-0.5 italic" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
+                        "{movement.nota}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Amount and date */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xl font-bold" style={{ color: getTypeColor() }}>
+                      {type === 'transferencia'
+                        ? formatCurrency(movement.montoSaliente)
+                        : type === 'ingreso'
+                          ? `+${formatCurrency(movement.montoPesos || movement.monto)}`
+                          : `-${formatCurrency(movement.montoPesos || movement.monto)}`}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {formatDate(movement.fecha, 'short')}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Delete button - hidden by default */}
+                <button
+                  onClick={(e) => handleDeleteClick(e, movement)}
+                  className="p-2 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Eliminar"
+                >
+                  <svg className="w-5 h-5 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <div className="text-center">
+              <div
+                className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
+              >
+                <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                Eliminar movimiento
+              </h3>
+              <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                ¿Estas seguro de que quieres eliminar este movimiento?
+                <br />
+                <span className="font-semibold text-base" style={{ color: getTypeColor() }}>
+                  {type === 'transferencia'
+                    ? formatCurrency(deleteConfirm.montoSaliente)
+                    : formatCurrency(deleteConfirm.montoPesos || deleteConfirm.monto)}
+                </span>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90"
+                  style={{ backgroundColor: 'var(--accent-red)' }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default MovementsList;

@@ -1,0 +1,331 @@
+import { useState } from 'react';
+import { formatCurrency, formatDate } from '../../utils/format';
+import DateRangePicker from '../DateRangePicker';
+import FilterBar from '../FilterBar';
+
+function RecentMovements({
+  movements,
+  dateRange,
+  onDateRangeChange,
+  filters,
+  onFilterChange,
+  accounts,
+  categories,
+  onMovementClick,
+  onMovementDelete,
+  loading = false
+}) {
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const getTypeStyles = (tipo) => {
+    switch (tipo) {
+      case 'ingreso':
+        return {
+          color: 'var(--accent-green)',
+          bgColor: 'rgba(34, 197, 94, 0.15)',
+          prefix: '+',
+          icon: 'up',
+        };
+      case 'gasto':
+        return {
+          color: 'var(--accent-red)',
+          bgColor: 'rgba(239, 68, 68, 0.15)',
+          prefix: '-',
+          icon: 'down',
+        };
+      case 'transferencia':
+        return {
+          color: 'var(--accent-blue)',
+          bgColor: 'rgba(59, 130, 246, 0.15)',
+          prefix: '',
+          icon: 'transfer',
+        };
+      default:
+        return {
+          color: 'var(--accent-blue)',
+          bgColor: 'rgba(59, 130, 246, 0.15)',
+          prefix: '',
+          icon: 'down',
+        };
+    }
+  };
+
+  const handleDeleteClick = (e, movement) => {
+    e.stopPropagation();
+    setDeleteConfirm(movement);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      onMovementDelete?.(deleteConfirm);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const renderIcon = (tipo, color) => {
+    if (tipo === 'transferencia') {
+      return (
+        <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      );
+    }
+    if (tipo === 'ingreso') {
+      return (
+        <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      </svg>
+    );
+  };
+
+  // Skeleton loading
+  const renderSkeleton = () => (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
+    >
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 p-4"
+          style={{ borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}
+        >
+          <div className="w-10 h-10 rounded-full skeleton" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-24 skeleton" />
+            <div className="h-3 w-32 skeleton" />
+          </div>
+          <div className="text-right space-y-2">
+            <div className="h-4 w-20 skeleton ml-auto" />
+            <div className="h-3 w-14 skeleton ml-auto" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Header con titulo y selector de fechas */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3
+          className="text-sm font-semibold"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Movimientos
+        </h3>
+        <DateRangePicker
+          value={dateRange}
+          onChange={onDateRangeChange}
+          defaultPreset="Esta semana"
+        />
+      </div>
+
+      {/* Filtros */}
+      <FilterBar
+        accounts={accounts}
+        categories={categories}
+        filters={filters}
+        onFilterChange={onFilterChange}
+      />
+
+      {/* Lista de movimientos */}
+      {loading ? (
+        renderSkeleton()
+      ) : !movements || movements.length === 0 ? (
+        <div
+          className="rounded-2xl p-8 text-center"
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
+        >
+          <div
+            className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <svg
+              className="w-8 h-8"
+              style={{ color: 'var(--text-secondary)' }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+            Sin movimientos
+          </p>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            No hay movimientos en este periodo
+          </p>
+        </div>
+      ) : (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
+        >
+          {movements.map((movement, index) => {
+            const styles = getTypeStyles(movement.tipo);
+
+            return (
+              <div
+                key={movement.rowIndex || index}
+                className={`group flex items-center gap-3 p-4 transition-all duration-200 hover:bg-[var(--bg-tertiary)] ${
+                  index !== movements.length - 1 ? 'border-b' : ''
+                }`}
+                style={{ borderColor: 'var(--border-subtle)' }}
+              >
+                {/* Clickable area for edit */}
+                <button
+                  onClick={() => onMovementClick?.(movement)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left transition-transform duration-200 group-hover:scale-[1.005]"
+                  style={{ backgroundColor: 'transparent' }}
+                >
+                  {/* Icon */}
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    style={{ backgroundColor: styles.bgColor }}
+                  >
+                    {renderIcon(movement.tipo, styles.color)}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p
+                        className="font-medium truncate"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {movement.tipo === 'transferencia'
+                          ? 'Transferencia'
+                          : movement.categoria || ''}
+                      </p>
+                      {/* Installment badge */}
+                      {movement.cuota && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-xs font-medium flex items-center gap-0.5 flex-shrink-0"
+                          style={{
+                            backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                            color: 'var(--accent-purple)',
+                          }}
+                        >
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          {movement.cuota}
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      {movement.tipo === 'transferencia'
+                        ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
+                        : movement.cuenta}
+                    </p>
+                  </div>
+
+                  {/* Amount and date */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-lg" style={{ color: styles.color }}>
+                      {movement.tipo === 'transferencia'
+                        ? formatCurrency(movement.montoSaliente)
+                        : `${styles.prefix}${formatCurrency(movement.montoPesos || movement.monto)}`}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {formatDate(movement.fecha, 'short')}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Delete button - hidden by default, visible on hover */}
+                <button
+                  onClick={(e) => handleDeleteClick(e, movement)}
+                  className="p-2 rounded-lg flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Eliminar"
+                >
+                  <svg className="w-5 h-5 transition-colors hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Contador de resultados */}
+      {movements && movements.length > 0 && (
+        <p className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
+          Mostrando {movements.length} movimiento{movements.length !== 1 ? 's' : ''}
+        </p>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <div className="text-center">
+              <div
+                className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
+              >
+                <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                Eliminar movimiento
+              </h3>
+              <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                ¿Estas seguro de que quieres eliminar {deleteConfirm.tipo === 'transferencia' ? 'esta' : 'este'} {deleteConfirm.tipo}?
+                <br />
+                <span className="font-semibold text-base" style={{ color: getTypeStyles(deleteConfirm.tipo).color }}>
+                  {deleteConfirm.tipo === 'transferencia'
+                    ? formatCurrency(deleteConfirm.montoSaliente)
+                    : formatCurrency(deleteConfirm.montoPesos || deleteConfirm.monto)}
+                </span>
+                {' - '}
+                {deleteConfirm.tipo === 'transferencia'
+                  ? `${deleteConfirm.cuentaSaliente} → ${deleteConfirm.cuentaEntrante}`
+                  : deleteConfirm.categoria}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90"
+                  style={{ backgroundColor: 'var(--accent-red)' }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default RecentMovements;
