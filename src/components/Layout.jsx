@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import SearchButton from './SearchButton';
 import SearchModal from './SearchModal';
@@ -14,6 +14,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
   const [savingMovement, setSavingMovement] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Load accounts and categories for edit modal
   useEffect(() => {
@@ -80,6 +81,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/gastos', label: 'Gastos', icon: 'expense', color: 'var(--accent-red)' },
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
+    { path: '/tarjetas', label: 'Tarjetas', icon: 'creditcard', color: 'var(--accent-purple)' },
     { path: '/cuentas', label: 'Cuentas', icon: 'accounts', color: 'var(--accent-primary)' },
     { path: '/categorias', label: 'Categorias', icon: 'categories', color: 'var(--accent-primary)' },
   ];
@@ -122,6 +124,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
         );
+      case 'creditcard':
+        return (
+          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        );
       case 'categories':
         return (
           <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,9 +154,13 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between backdrop-blur-lg"
         style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}
       >
-        <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+        <button
+          onClick={() => navigate('/')}
+          className="text-lg font-bold hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
           Finanzas
-        </h1>
+        </button>
         <div className="flex items-center gap-1">
           <SearchButton onClick={() => setSearchOpen(true)} />
           <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />

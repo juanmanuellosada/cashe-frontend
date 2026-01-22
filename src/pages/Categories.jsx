@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getCategoriesAll, addCategory, updateCategory, deleteCategory } from '../services/sheetsApi';
+import ConfirmModal from '../components/ConfirmModal';
 
 function Categories() {
   const [categories, setCategories] = useState([]);
@@ -8,6 +9,7 @@ function Categories() {
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState('todos'); // 'todos', 'Ingreso', 'Gasto'
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // Categoría a eliminar
 
   useEffect(() => {
     fetchCategories();
@@ -53,12 +55,16 @@ function Categories() {
     }
   };
 
-  const handleDelete = async (rowIndex) => {
-    if (!window.confirm('¿Estas seguro de que quieres eliminar esta categoria?')) return;
+  const handleDelete = async (category) => {
+    setDeleteConfirm(category);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
       setSaving(true);
-      await deleteCategory(rowIndex);
+      await deleteCategory(deleteConfirm.rowIndex);
+      setDeleteConfirm(null);
       setEditingCategory(null);
       fetchCategories();
     } catch (err) {
@@ -304,11 +310,30 @@ function Categories() {
         <CategoryModal
           category={editingCategory}
           onSave={handleUpdate}
-          onDelete={() => handleDelete(editingCategory.rowIndex)}
+          onDelete={() => handleDelete(editingCategory)}
           onClose={() => setEditingCategory(null)}
           loading={saving}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar categoría"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar la categoría{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {deleteConfirm?.nombre}
+            </span>
+            ?
+          </>
+        }
+        confirmText="Eliminar"
+        loading={saving}
+      />
     </div>
   );
 }

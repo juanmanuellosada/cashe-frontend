@@ -42,6 +42,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
 
   const [cantidadCuotas, setCantidadCuotas] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
 
   // Encontrar la cuenta seleccionada y verificar si es tarjeta de crédito
   const selectedAccount = useMemo(() => {
@@ -67,12 +68,13 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Reset cuotas a 1 si cambia la cuenta a una no-tarjeta
+    // Reset cuotas y moneda si cambia la cuenta
     if (name === 'cuenta') {
       const newAccount = accounts.find(a => a.nombre === value);
       if (!newAccount?.esTarjetaCredito) {
         setCantidadCuotas(1);
       }
+      setMonedaGasto('ARS'); // Reset a pesos al cambiar de cuenta
     }
   };
 
@@ -95,9 +97,11 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
         categoria: formData.categoria,
         nota: formData.nota,
         cantidadCuotas: cantidadCuotas,
+        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de crédito
       } : {
         ...formData,
         monto: parseFloat(formData.monto),
+        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de crédito
       },
     });
 
@@ -195,7 +199,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
               className="text-3xl font-bold"
               style={{ color: 'var(--accent-red)' }}
             >
-              $
+              {monedaGasto === 'USD' ? 'US$' : '$'}
             </span>
             <input
               type="number"
@@ -209,6 +213,40 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
               style={{ color: 'var(--text-primary)' }}
             />
           </div>
+          
+          {/* Selector de moneda para tarjetas de crédito */}
+          {esTarjetaCredito && (
+            <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <button
+                type="button"
+                onClick={() => setMonedaGasto('ARS')}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                  monedaGasto === 'ARS' ? 'ring-2' : 'opacity-60'
+                }`}
+                style={{
+                  backgroundColor: monedaGasto === 'ARS' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-secondary)',
+                  color: monedaGasto === 'ARS' ? 'var(--accent-red)' : 'var(--text-secondary)',
+                  '--tw-ring-color': 'var(--accent-red)',
+                }}
+              >
+                $ Pesos
+              </button>
+              <button
+                type="button"
+                onClick={() => setMonedaGasto('USD')}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                  monedaGasto === 'USD' ? 'ring-2' : 'opacity-60'
+                }`}
+                style={{
+                  backgroundColor: monedaGasto === 'USD' ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-secondary)',
+                  color: monedaGasto === 'USD' ? 'var(--accent-green)' : 'var(--text-secondary)',
+                  '--tw-ring-color': 'var(--accent-green)',
+                }}
+              >
+                US$ Dólares
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -316,7 +354,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
                   Monto por cuota:
                 </span>
                 <span className="font-bold" style={{ color: 'var(--accent-purple)' }}>
-                  {formatCurrency(montoPorCuota)}
+                  {formatCurrency(montoPorCuota, monedaGasto)}
                 </span>
               </div>
               {fechaPrimeraCuota && (

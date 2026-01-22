@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/sheetsApi';
+import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 
@@ -63,6 +63,28 @@ function Expenses() {
     }
   };
 
+  const handleBulkDelete = async (movements) => {
+    // Remover de lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setExpenses(prev => prev.filter(e => !rowIndexes.has(e.rowIndex)));
+
+    // Borrar en background
+    await bulkDeleteMovements(movements);
+    fetchData();
+  };
+
+  const handleBulkUpdate = async (movements, field, value) => {
+    // Actualizar lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setExpenses(prev => prev.map(e => 
+      rowIndexes.has(e.rowIndex) ? { ...e, [field]: value } : e
+    ));
+
+    // Actualizar en background
+    await bulkUpdateMovements(movements, field, value);
+    fetchData();
+  };
+
   return (
     <>
       <MovementsList
@@ -73,6 +95,8 @@ function Expenses() {
         loading={loading}
         onMovementClick={setEditingMovement}
         onMovementDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
+        onBulkUpdate={handleBulkUpdate}
         type="gasto"
       />
       {editingMovement && (

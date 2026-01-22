@@ -6,7 +6,7 @@ const COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#84cc16'
 ];
 
-function ExpensePieChart({ data, loading }) {
+function ExpensePieChart({ data, loading, currency = 'ARS' }) {
   if (loading) {
     return (
       <div
@@ -36,6 +36,8 @@ function ExpensePieChart({ data, loading }) {
       </div>
     );
   }
+
+
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {

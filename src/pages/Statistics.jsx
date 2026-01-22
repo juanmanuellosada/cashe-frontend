@@ -23,6 +23,8 @@ function Statistics() {
     from: startOfMonth(subMonths(new Date(), 5)),
     to: endOfMonth(new Date())
   });
+  // Estado global de moneda para toda la sección
+  const [currency, setCurrency] = useState('ARS');
 
   useEffect(() => {
     async function loadMovements() {
@@ -55,29 +57,41 @@ function Statistics() {
     });
 
     const byCategory = {};
-    let total = 0;
+    let totalPesos = 0;
+    let totalDolares = 0;
 
     expenses.forEach(m => {
       const cat = m.categoria || 'Sin categoria';
       const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
-      const amount = m.montoPesos || m.monto || 0;
-      total += amount;
+      const pesos = m.montoPesos || m.monto || 0;
+      const dolares = m.montoDolares || 0;
+      
+      totalPesos += pesos;
+      totalDolares += dolares;
 
       if (!byCategory[cleanCat]) {
-        byCategory[cleanCat] = 0;
+        byCategory[cleanCat] = { pesos: 0, dolares: 0 };
       }
-      byCategory[cleanCat] += amount;
+      byCategory[cleanCat].pesos += pesos;
+      byCategory[cleanCat].dolares += dolares;
     });
 
+    const total = currency === 'ARS' ? totalPesos : totalDolares;
+
     return Object.entries(byCategory)
-      .map(([name, value]) => ({
-        name,
-        value,
-        percentage: total > 0 ? (value / total) * 100 : 0,
-      }))
+      .map(([name, data]) => {
+        const value = currency === 'ARS' ? data.pesos : data.dolares;
+        return {
+          name,
+          value,
+          pesos: data.pesos,
+          dolares: data.dolares,
+          percentage: total > 0 ? (value / total) * 100 : 0,
+        };
+      })
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [movements, dateRange]);
+  }, [movements, dateRange, currency]);
 
   // Process data for bar chart (income vs expenses by month)
   const barChartData = useMemo(() => {
@@ -95,17 +109,22 @@ function Statistics() {
       const monthKey = format(monthDate, 'yyyy-MM');
       const monthLabel = format(monthDate, 'MMM', { locale: es });
 
-      let ingresos = 0;
-      let gastos = 0;
+      let ingresosPesos = 0;
+      let gastosPesos = 0;
+      let ingresosDolares = 0;
+      let gastosDolares = 0;
 
       movements.forEach(m => {
         const fecha = new Date(m.fecha);
         if (fecha >= monthStart && fecha <= monthEnd) {
-          const amount = m.montoPesos || m.monto || 0;
+          const pesos = m.montoPesos || m.monto || 0;
+          const dolares = m.montoDolares || 0;
           if (m.tipo === 'ingreso') {
-            ingresos += amount;
+            ingresosPesos += pesos;
+            ingresosDolares += dolares;
           } else if (m.tipo === 'gasto') {
-            gastos += amount;
+            gastosPesos += pesos;
+            gastosDolares += dolares;
           }
         }
       });
@@ -113,11 +132,15 @@ function Statistics() {
       return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
         monthKey,
-        ingresos,
-        gastos,
+        ingresos: currency === 'ARS' ? ingresosPesos : ingresosDolares,
+        gastos: currency === 'ARS' ? gastosPesos : gastosDolares,
+        ingresosPesos,
+        gastosPesos,
+        ingresosDolares,
+        gastosDolares,
       };
     });
-  }, [movements, dateRange]);
+  }, [movements, dateRange, currency]);
 
   // Process data for line chart (balance evolution)
   const lineChartData = useMemo(() => {
@@ -140,25 +163,31 @@ function Statistics() {
       const monthLabel = format(monthDate, 'MMM', { locale: es });
 
       // Sum all movements up to this month
-      let monthBalance = 0;
+      let balancePesos = 0;
+      let balanceDolares = 0;
       sortedMovements.forEach(m => {
         const fecha = new Date(m.fecha);
         if (fecha <= monthEnd) {
-          const amount = m.montoPesos || m.monto || 0;
+          const pesos = m.montoPesos || m.monto || 0;
+          const dolares = m.montoDolares || 0;
           if (m.tipo === 'ingreso') {
-            monthBalance += amount;
+            balancePesos += pesos;
+            balanceDolares += dolares;
           } else if (m.tipo === 'gasto') {
-            monthBalance -= amount;
+            balancePesos -= pesos;
+            balanceDolares -= dolares;
           }
         }
       });
 
       return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
-        balance: monthBalance,
+        balance: currency === 'ARS' ? balancePesos : balanceDolares,
+        balancePesos,
+        balanceDolares,
       };
     });
-  }, [movements, dateRange]);
+  }, [movements, dateRange, currency]);
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
@@ -171,20 +200,28 @@ function Statistics() {
     const endDate = new Date(dateRange.to);
     endDate.setHours(23, 59, 59, 999);
 
-    let totalIngresos = 0;
-    let totalGastos = 0;
+    let totalIngresosPesos = 0;
+    let totalGastosPesos = 0;
+    let totalIngresosDolares = 0;
+    let totalGastosDolares = 0;
 
     movements.forEach(m => {
       const fecha = new Date(m.fecha);
       if (fecha >= startDate && fecha <= endDate) {
-        const amount = m.montoPesos || m.monto || 0;
+        const pesos = m.montoPesos || m.monto || 0;
+        const dolares = m.montoDolares || 0;
         if (m.tipo === 'ingreso') {
-          totalIngresos += amount;
+          totalIngresosPesos += pesos;
+          totalIngresosDolares += dolares;
         } else if (m.tipo === 'gasto') {
-          totalGastos += amount;
+          totalGastosPesos += pesos;
+          totalGastosDolares += dolares;
         }
       }
     });
+
+    const totalIngresos = currency === 'ARS' ? totalIngresosPesos : totalIngresosDolares;
+    const totalGastos = currency === 'ARS' ? totalGastosPesos : totalGastosDolares;
 
     return {
       totalIngresos,
@@ -192,7 +229,7 @@ function Statistics() {
       balance: totalIngresos - totalGastos,
       savingsRate: totalIngresos > 0 ? ((totalIngresos - totalGastos) / totalIngresos) * 100 : 0,
     };
-  }, [movements, dateRange]);
+  }, [movements, dateRange, currency]);
 
   return (
     <div className="space-y-6">
@@ -201,12 +238,40 @@ function Statistics() {
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
           Estadisticas
         </h2>
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          presets={STATS_PRESETS}
-          defaultPreset="6 meses"
-        />
+        <div className="flex items-center gap-2">
+          {/* Currency Selector */}
+          <div
+            className="inline-flex rounded-lg p-0.5"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <button
+              onClick={() => setCurrency('ARS')}
+              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Pesos
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Dólares
+            </button>
+          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            presets={STATS_PRESETS}
+            defaultPreset="6 meses"
+          />
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -219,7 +284,7 @@ function Statistics() {
             Total Ingresos
           </p>
           <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
-            {loading ? '...' : formatCurrency(summaryStats.totalIngresos)}
+            {loading ? '...' : formatCurrency(summaryStats.totalIngresos, currency)}
           </p>
         </div>
         <div
@@ -230,7 +295,7 @@ function Statistics() {
             Total Gastos
           </p>
           <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
-            {loading ? '...' : formatCurrency(summaryStats.totalGastos)}
+            {loading ? '...' : formatCurrency(summaryStats.totalGastos, currency)}
           </p>
         </div>
         <div
@@ -244,7 +309,7 @@ function Statistics() {
             className="text-xl font-bold"
             style={{ color: summaryStats.balance >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
           >
-            {loading ? '...' : formatCurrency(summaryStats.balance)}
+            {loading ? '...' : formatCurrency(summaryStats.balance, currency)}
           </p>
         </div>
         <div
@@ -264,9 +329,21 @@ function Statistics() {
       </div>
 
       {/* Charts */}
-      <ExpensePieChart data={pieChartData} loading={loading} />
-      <IncomeExpenseBarChart data={barChartData} loading={loading} />
-      <BalanceLineChart data={lineChartData} loading={loading} />
+      <ExpensePieChart 
+        data={pieChartData} 
+        loading={loading} 
+        currency={currency}
+      />
+      <IncomeExpenseBarChart 
+        data={barChartData} 
+        loading={loading}
+        currency={currency}
+      />
+      <BalanceLineChart 
+        data={lineChartData} 
+        loading={loading}
+        currency={currency}
+      />
     </div>
   );
 }

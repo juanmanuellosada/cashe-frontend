@@ -13,7 +13,8 @@ function RecentMovements({
   categories,
   onMovementClick,
   onMovementDelete,
-  loading = false
+  loading = false,
+  currency = 'ARS'
 }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -235,8 +236,8 @@ function RecentMovements({
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold text-lg" style={{ color: styles.color }}>
                       {movement.tipo === 'transferencia'
-                        ? formatCurrency(movement.montoSaliente)
-                        : `${styles.prefix}${formatCurrency(movement.montoPesos || movement.monto)}`}
+                        ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
+                        : `${styles.prefix}${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}

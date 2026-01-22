@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getAccounts, addAccount, updateAccount, deleteAccount } from '../services/sheetsApi';
 import { formatCurrency } from '../utils/format';
+import ConfirmModal from '../components/ConfirmModal';
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);
@@ -9,6 +10,8 @@ function Accounts() {
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState({});
+  const [displayCurrency, setDisplayCurrency] = useState('original'); // 'original', 'ARS', 'USD'
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // Cuenta a eliminar
 
   useEffect(() => {
     fetchAccounts();
@@ -26,19 +29,53 @@ function Accounts() {
     }
   };
 
-  // Calculate total balance across all accounts (in pesos)
+  // Calculate total balance across all accounts based on displayCurrency
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, acc) => {
       const balance = acc.balanceActual || 0;
-      // Assuming tipoCambio is available or use a default
-      if (acc.moneda === 'Peso') {
-        return sum + balance;
+      const tipoCambio = acc.tipoCambio || 1000;
+      
+      if (displayCurrency === 'original') {
+        // En modo original, convertimos todo a pesos para calcular porcentajes
+        if (acc.moneda === 'Peso') {
+          return sum + balance;
+        } else {
+          return sum + (balance * tipoCambio);
+        }
+      } else if (displayCurrency === 'ARS') {
+        // Todo a pesos
+        if (acc.moneda === 'Peso') {
+          return sum + balance;
+        } else {
+          return sum + (balance * tipoCambio);
+        }
       } else {
-        // Convert USD to pesos (rough estimate, would need actual exchange rate)
-        return sum + (balance * (acc.tipoCambio || 1000));
+        // Todo a dólares
+        if (acc.moneda === 'Peso') {
+          return sum + (balance / tipoCambio);
+        } else {
+          return sum + balance;
+        }
       }
     }, 0);
-  }, [accounts]);
+  }, [accounts, displayCurrency]);
+
+  // Helper para obtener el balance de una cuenta en la moneda seleccionada
+  const getDisplayBalance = (account) => {
+    const balance = account.balanceActual || 0;
+    const tipoCambio = account.tipoCambio || 1000;
+    const isARS = account.moneda === 'Peso';
+
+    if (displayCurrency === 'original') {
+      return { value: balance, currency: isARS ? 'ARS' : 'USD' };
+    } else if (displayCurrency === 'ARS') {
+      const converted = isARS ? balance : balance * tipoCambio;
+      return { value: converted, currency: 'ARS' };
+    } else {
+      const converted = isARS ? balance / tipoCambio : balance;
+      return { value: converted, currency: 'USD' };
+    }
+  };
 
   const handleAdd = async (formData) => {
     try {
@@ -68,11 +105,16 @@ function Accounts() {
     }
   };
 
-  const handleDelete = async (rowIndex) => {
-    if (!window.confirm('¿Estas seguro de que quieres eliminar esta cuenta? Los movimientos asociados no se eliminarán.')) return;
+  const handleDelete = async (account) => {
+    setDeleteConfirm(account);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
       setSaving(true);
-      await deleteAccount(rowIndex);
+      await deleteAccount(deleteConfirm.rowIndex);
+      setDeleteConfirm(null);
       setEditingAccount(null);
       fetchAccounts();
     } catch (err) {
@@ -108,11 +150,9 @@ function Accounts() {
 
   const getAccountPercentage = (account) => {
     if (totalBalance === 0) return 0;
-    const balance = account.balanceActual || 0;
-    const balanceInPesos = account.moneda === 'Peso'
-      ? balance
-      : balance * (account.tipoCambio || 1000);
-    return Math.min(100, Math.max(0, (balanceInPesos / totalBalance) * 100));
+    const { value } = getDisplayBalance(account);
+    // Para el porcentaje, usamos el valor convertido
+    return Math.min(100, Math.max(0, (value / totalBalance) * 100));
   };
 
   // Skeleton loading
@@ -154,20 +194,58 @@ function Accounts() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           Cuentas
         </h2>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:opacity-90 flex items-center gap-2"
-          style={{ backgroundColor: 'var(--accent-primary)' }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nueva
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Selector de moneda */}
+          <div
+            className="inline-flex rounded-lg p-0.5"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <button
+              onClick={() => setDisplayCurrency('original')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: displayCurrency === 'original' ? 'var(--accent-primary)' : 'transparent',
+                color: displayCurrency === 'original' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Original
+            </button>
+            <button
+              onClick={() => setDisplayCurrency('ARS')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: displayCurrency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                color: displayCurrency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Pesos
+            </button>
+            <button
+              onClick={() => setDisplayCurrency('USD')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: displayCurrency === 'USD' ? 'var(--accent-primary)' : 'transparent',
+                color: displayCurrency === 'USD' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Dólares
+            </button>
+          </div>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:opacity-90 flex items-center gap-2"
+            style={{ backgroundColor: 'var(--accent-primary)' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva
+          </button>
+        </div>
       </div>
 
       {accounts.length === 0 ? (
@@ -202,6 +280,7 @@ function Accounts() {
           {accounts.map((account) => {
             const percentage = getAccountPercentage(account);
             const isExpanded = showDetails[account.nombre];
+            const displayBalance = getDisplayBalance(account);
 
             return (
               <div
@@ -254,9 +333,7 @@ function Accounts() {
 
                   <div className="text-right flex-shrink-0">
                     <p className="text-lg font-bold" style={{ color: 'var(--accent-primary)' }}>
-                      {account.moneda === 'Peso'
-                        ? formatCurrency(account.balanceActual, 'ARS')
-                        : formatCurrency(account.balanceActual, 'USD')}
+                      {formatCurrency(displayBalance.value, displayBalance.currency)}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {percentage.toFixed(1)}% del total
@@ -338,6 +415,15 @@ function Accounts() {
                       </div>
                     </div>
 
+                    {/* Día de cierre para tarjetas de crédito */}
+                    {account.esTarjetaCredito && (
+                      <ClosingDayEditor
+                        account={account}
+                        onSave={handleSave}
+                        loading={saving}
+                      />
+                    )}
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -373,11 +459,36 @@ function Accounts() {
         <AccountModal
           account={editingAccount}
           onSave={handleSave}
-          onDelete={() => handleDelete(editingAccount.rowIndex)}
+          onDelete={() => handleDelete(editingAccount)}
           onClose={() => setEditingAccount(null)}
           loading={saving}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar cuenta"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar la cuenta{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {deleteConfirm?.nombre}
+            </span>
+            ?<br />
+            <span className="text-xs mt-1 block">Los movimientos asociados no se eliminarán.</span>
+          </>
+        }
+        confirmText="Eliminar"
+        loading={saving}
+        icon={
+          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        }
+      />
     </div>
   );
 }
@@ -391,6 +502,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     moneda: account?.moneda || 'Peso',
     numeroCuenta: account?.numeroCuenta || '',
     tipo: account?.tipo || '',
+    esTarjetaCredito: account?.esTarjetaCredito || false,
+    diaCierre: account?.diaCierre?.toString() || '1',
   });
 
   const handleChange = (e) => {
@@ -403,6 +516,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     onSave({
       ...formData,
       balanceInicial: parseFloat(formData.balanceInicial) || 0,
+      diaCierre: formData.esTarjetaCredito ? parseInt(formData.diaCierre) || 1 : null,
     });
   };
 
@@ -505,21 +619,83 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
             />
           </div>
 
+          {/* Tipo de cuenta - Selector unificado */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Tipo
+              Tipo de cuenta
             </label>
-            <input
-              type="text"
-              name="tipo"
-              value={formData.tipo}
-              onChange={handleChange}
-              placeholder="Ej: Caja de ahorro, Cuenta corriente..."
-              className="w-full px-4 py-3 rounded-xl transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)]"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-              required
-            />
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: 'Caja de ahorro', icon: '🏦', label: 'Caja de ahorro' },
+                { value: 'Cuenta corriente', icon: '💼', label: 'Cuenta corriente' },
+                { value: 'Tarjeta de crédito', icon: '💳', label: 'Tarjeta de crédito' },
+                { value: 'Billetera virtual', icon: '📱', label: 'Billetera virtual' },
+                { value: 'Efectivo', icon: '💵', label: 'Efectivo' },
+                { value: 'Inversiones', icon: '📈', label: 'Inversiones' },
+              ].map((tipo) => {
+                const isSelected = formData.tipo === tipo.value;
+                const isCreditCard = tipo.value === 'Tarjeta de crédito';
+                return (
+                  <button
+                    key={tipo.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      tipo: tipo.value,
+                      esTarjetaCredito: isCreditCard,
+                    }))}
+                    className="flex items-center gap-2 p-3 rounded-xl font-medium transition-all duration-200 text-left"
+                    style={{
+                      backgroundColor: isSelected
+                        ? (isCreditCard ? 'var(--accent-purple)' : 'var(--accent-primary)')
+                        : 'var(--bg-tertiary)',
+                      color: isSelected ? 'white' : 'var(--text-secondary)',
+                      border: isSelected ? 'none' : '1px solid var(--border-subtle)',
+                    }}
+                  >
+                    <span className="text-lg">{tipo.icon}</span>
+                    <span className="text-sm">{tipo.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Día de cierre - solo visible si es tarjeta de crédito */}
+          {formData.esTarjetaCredito && (
+            <div
+              className="p-4 rounded-xl"
+              style={{ backgroundColor: 'var(--accent-purple-dim)', border: '1px solid var(--accent-purple)' }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--accent-purple)' }}
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Día de cierre</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Para calcular resúmenes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  name="diaCierre"
+                  value={formData.diaCierre}
+                  onChange={handleChange}
+                  min="1"
+                  max="31"
+                  className="flex-1 px-4 py-3 rounded-xl transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)] text-center text-lg font-semibold"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>de cada mes</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             {isEditing && onDelete && (
@@ -554,3 +730,115 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
 }
 
 export default Accounts;
+
+// Componente para editar rápidamente el día de cierre
+function ClosingDayEditor({ account, onSave, loading }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [diaCierre, setDiaCierre] = useState(account.diaCierre?.toString() || '1');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const newDia = parseInt(diaCierre) || 1;
+    if (newDia === account.diaCierre) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      await onSave({
+        rowIndex: account.rowIndex,
+        nombre: account.nombre,
+        balanceInicial: account.balanceInicial,
+        moneda: account.moneda,
+        numeroCuenta: account.numeroCuenta,
+        tipo: account.tipo,
+        esTarjetaCredito: account.esTarjetaCredito,
+        diaCierre: newDia,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error updating closing day:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isEditing) {
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsEditing(true);
+        }}
+        className="w-full p-3 rounded-xl mb-4 flex items-center justify-between transition-colors hover:opacity-80"
+        style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: 'var(--accent-purple)' }}
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Día de cierre</p>
+            <p className="font-semibold" style={{ color: 'var(--accent-purple)' }}>
+              {account.diaCierre || 1} de cada mes
+            </p>
+          </div>
+        </div>
+        <svg className="w-5 h-5" style={{ color: 'var(--accent-purple)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="p-4 rounded-xl mb-4"
+      style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+        Día de cierre del resumen
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          value={diaCierre}
+          onChange={(e) => setDiaCierre(e.target.value)}
+          min="1"
+          max="31"
+          className="flex-1 px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
+          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+          autoFocus
+        />
+        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>de cada mes</span>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => {
+            setDiaCierre(account.diaCierre?.toString() || '1');
+            setIsEditing(false);
+          }}
+          className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+          style={{ backgroundColor: 'var(--accent-purple)' }}
+        >
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </div>
+  );
+}

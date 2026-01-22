@@ -14,6 +14,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 function Home() {
   const navigate = useNavigate();
 
+  // Currency selector for balance section
+  const [currency, setCurrency] = useState('ARS');
+
   // Balance date range (default: current month)
   const [balanceDateRange, setBalanceDateRange] = useState({
     from: startOfMonth(new Date()),
@@ -195,11 +198,39 @@ function Home() {
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
             Resumen
           </h2>
-          <DateRangePicker
-            value={balanceDateRange}
-            onChange={setBalanceDateRange}
-            defaultPreset="Este mes"
-          />
+          <div className="flex items-center gap-2">
+            {/* Currency Selector */}
+            <div
+              className="inline-flex rounded-lg p-0.5"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <button
+                onClick={() => setCurrency('ARS')}
+                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                  color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+                }}
+              >
+                Pesos
+              </button>
+              <button
+                onClick={() => setCurrency('USD')}
+                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+                  color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+                }}
+              >
+                Dólares
+              </button>
+            </div>
+            <DateRangePicker
+              value={balanceDateRange}
+              onChange={setBalanceDateRange}
+              defaultPreset="Este mes"
+            />
+          </div>
         </div>
 
         {loadingDashboard ? (
@@ -212,12 +243,13 @@ function Home() {
               totalPesos={dashboard?.totalPesos}
               totalDolares={dashboard?.totalDolares}
               totalGeneralPesos={dashboard?.totalGeneralPesos}
+              totalGeneralDolares={dashboard?.totalGeneralDolares}
               tipoCambio={dashboard?.tipoCambio}
-            />
-            <QuickStats
+              currency={currency}
               ingresosMes={dashboard?.ingresosMes}
               gastosMes={dashboard?.gastosMes}
-              balanceMes={dashboard?.balanceMes}
+              ingresosMesDolares={dashboard?.ingresosMesDolares}
+              gastosMesDolares={dashboard?.gastosMesDolares}
             />
           </>
         )}
@@ -253,6 +285,7 @@ function Home() {
         onMovementClick={setEditingMovement}
         onMovementDelete={handleDeleteMovement}
         loading={loadingMovements}
+        currency={currency}
       />
 
       {/* Edit Modal */}

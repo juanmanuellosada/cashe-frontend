@@ -295,6 +295,18 @@ function doGet(e) {
       case 'getPendingInstallments':
         result = getPendingInstallments();
         break;
+      case 'getAllExpenses':
+        result = getAllExpenses();
+        break;
+      case 'getAllIncomes':
+        result = getAllIncomes();
+        break;
+      case 'getAllTransfers':
+        result = getAllTransfers();
+        break;
+      case 'getCategoriesAll':
+        result = getCategoriesAll();
+        break;
       default:
         result = { error: 'Acción GET no válida: ' + action };
     }
@@ -363,6 +375,11 @@ function doPost(e) {
         result = deleteInstallmentsByPurchase(data);
         break;
       
+      // ACCOUNTS
+      case 'updateAccount':
+        result = updateAccount(data);
+        break;
+      
       default:
         result = { error: 'Acción POST no válida: ' + action };
     }
@@ -416,6 +433,7 @@ function getAccounts() {
       }
       
       accounts.push({
+        rowIndex: i + 1, // Índice de fila para edición (1-based, +1 por header)
         nombre: data[i][0],
         balanceInicial: data[i][1] || 0,
         moneda: data[i][2],
@@ -435,6 +453,47 @@ function getAccounts() {
   }
   
   return { success: true, accounts: accounts };
+}
+
+/**
+ * Actualiza una cuenta existente
+ * 
+ * @param {Object} data - Datos de la cuenta
+ * @param {number} data.rowIndex - Índice de fila (2-based)
+ * @param {string} data.nombre - Nombre de la cuenta
+ * @param {number} data.balanceInicial - Balance inicial
+ * @param {string} data.moneda - Moneda (Peso o Dólar estadounidense)
+ * @param {string} data.numeroCuenta - Número de cuenta (opcional)
+ * @param {string} data.tipo - Tipo de cuenta
+ * @param {boolean} data.esTarjetaCredito - Si es tarjeta de crédito
+ * @param {number} data.diaCierre - Día de cierre (1-31, solo para tarjetas)
+ */
+function updateAccount(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Cuentas');
+  
+  var rowIndex = data.rowIndex;
+  if (!rowIndex || rowIndex < 2) {
+    return { success: false, error: 'Índice de fila inválido' };
+  }
+  
+  // Actualizar campos editables
+  // A: Nombre, B: Balance inicial, C: Moneda, D: Número cuenta, E: Tipo, F: Día cierre
+  sheet.getRange(rowIndex, 1).setValue(data.nombre || '');
+  sheet.getRange(rowIndex, 2).setValue(data.balanceInicial || 0);
+  sheet.getRange(rowIndex, 3).setValue(data.moneda || 'Peso');
+  sheet.getRange(rowIndex, 4).setValue(data.numeroCuenta || '');
+  sheet.getRange(rowIndex, 5).setValue(data.tipo || '');
+  
+  // Día de cierre - solo si es tarjeta de crédito
+  if (data.esTarjetaCredito && data.diaCierre) {
+    sheet.getRange(rowIndex, 6).setValue(parseInt(data.diaCierre) || 1);
+  } else if (!data.esTarjetaCredito) {
+    // Si no es tarjeta, limpiar el día de cierre
+    sheet.getRange(rowIndex, 6).setValue('');
+  }
+  
+  return { success: true, message: 'Cuenta actualizada correctamente' };
 }
 
 /**
@@ -731,6 +790,135 @@ function getAllMovements() {
 }
 
 /**
+ * Obtiene TODOS los gastos (optimizado - solo lee la hoja de Gastos)
+ */
+function getAllExpenses() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var gastosSheet = ss.getSheetByName('Gastos');
+  var gastosData = gastosSheet.getDataRange().getValues();
+  
+  var expenses = [];
+  
+  for (var i = 1; i < gastosData.length; i++) {
+    if (gastosData[i][0]) {
+      expenses.push({
+        id: 'gasto_' + i,
+        rowIndex: i + 1,
+        tipo: 'gasto',
+        fecha: gastosData[i][0] instanceof Date ? gastosData[i][0].toISOString() : gastosData[i][0],
+        monto: gastosData[i][1] || 0,
+        cuenta: gastosData[i][2] || '',
+        categoria: gastosData[i][3] || '',
+        montoPesos: gastosData[i][4] || 0,
+        montoDolares: gastosData[i][5] || 0,
+        nota: gastosData[i][6] || '',
+        idCompra: gastosData[i][7] || null,
+        cuota: gastosData[i][8] || null
+      });
+    }
+  }
+  
+  // Ordenar por fecha descendente
+  expenses.sort(function(a, b) {
+    return new Date(b.fecha) - new Date(a.fecha);
+  });
+  
+  return { success: true, expenses: expenses };
+}
+
+/**
+ * Obtiene TODOS los ingresos (optimizado - solo lee la hoja de Ingresos)
+ */
+function getAllIncomes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ingresosSheet = ss.getSheetByName('Ingresos');
+  var ingresosData = ingresosSheet.getDataRange().getValues();
+  
+  var incomes = [];
+  
+  for (var i = 1; i < ingresosData.length; i++) {
+    if (ingresosData[i][0]) {
+      incomes.push({
+        id: 'ingreso_' + i,
+        rowIndex: i + 1,
+        tipo: 'ingreso',
+        fecha: ingresosData[i][0] instanceof Date ? ingresosData[i][0].toISOString() : ingresosData[i][0],
+        monto: ingresosData[i][1] || 0,
+        cuenta: ingresosData[i][2] || '',
+        categoria: ingresosData[i][3] || '',
+        montoPesos: ingresosData[i][4] || 0,
+        montoDolares: ingresosData[i][5] || 0,
+        nota: ingresosData[i][6] || ''
+      });
+    }
+  }
+  
+  // Ordenar por fecha descendente
+  incomes.sort(function(a, b) {
+    return new Date(b.fecha) - new Date(a.fecha);
+  });
+  
+  return { success: true, incomes: incomes };
+}
+
+/**
+ * Obtiene TODAS las transferencias (optimizado - solo lee la hoja de Transferencias)
+ */
+function getAllTransfers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var transfSheet = ss.getSheetByName('Transferencias');
+  var transfData = transfSheet.getDataRange().getValues();
+  
+  var transfers = [];
+  
+  for (var i = 1; i < transfData.length; i++) {
+    if (transfData[i][0]) {
+      transfers.push({
+        id: 'transferencia_' + i,
+        rowIndex: i + 1,
+        tipo: 'transferencia',
+        fecha: transfData[i][0] instanceof Date ? transfData[i][0].toISOString() : transfData[i][0],
+        cuentaSaliente: transfData[i][1] || '',
+        cuentaEntrante: transfData[i][2] || '',
+        montoSaliente: transfData[i][3] || 0,
+        montoEntrante: transfData[i][4] || 0,
+        nota: transfData[i][5] || ''
+      });
+    }
+  }
+  
+  // Ordenar por fecha descendente
+  transfers.sort(function(a, b) {
+    return new Date(b.fecha) - new Date(a.fecha);
+  });
+  
+  return { success: true, transfers: transfers };
+}
+
+/**
+ * Obtiene todas las categorías con rowIndex (para gestión)
+ */
+function getCategoriesAll() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Categorías');
+  var data = sheet.getDataRange().getValues();
+  
+  var categories = [];
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      categories.push({
+        rowIndex: i + 1,
+        nombre: data[i][0],
+        tipo: data[i][1]
+      });
+    }
+  }
+  
+  return { success: true, categories: categories };
+}
+
+/**
  * Obtiene todas las cuotas de una compra específica
  */
 function getInstallmentsByPurchase(idCompra) {
@@ -862,6 +1050,14 @@ function addIncome(data) {
 
 /**
  * Agrega un nuevo gasto (sin cuotas)
+ * 
+ * Parámetros:
+ * - fecha: fecha del gasto (yyyy-mm-dd)
+ * - monto: monto del gasto
+ * - cuenta: nombre de la cuenta
+ * - categoria: categoría del gasto
+ * - nota: descripción opcional
+ * - moneda: (opcional) 'ARS' o 'USD' - Solo para tarjetas de crédito
  */
 function addExpense(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -872,15 +1068,25 @@ function addExpense(data) {
   var cuenta = data.cuenta;
   var categoria = data.categoria;
   var nota = data.nota || '';
+  var moneda = data.moneda || null; // 'ARS' o 'USD' para tarjetas de crédito
   
   if (!fecha || isNaN(monto) || !cuenta || !categoria) {
     return { success: false, error: 'Datos incompletos para gasto' };
   }
   
   var fila = sheet.getLastRow() + 1;
+  
+  // Columnas: A:Fecha, B:Monto, C:Cuenta, D:Categoría, E:MontoPesos, F:MontoDolares, G:Nota
   sheet.getRange(fila, 1, 1, 4).setValues([[fecha, monto, cuenta, categoria]]);
   sheet.getRange(fila, 7).setValue(nota);
   sheet.getRange(fila, 1).setNumberFormat("dd-MM-yyyy");
+  
+  // Si se especifica moneda (para tarjetas de crédito), guardar en la columna correspondiente
+  if (moneda === 'ARS') {
+    sheet.getRange(fila, 5).setValue(monto); // Columna E: Monto Pesos
+  } else if (moneda === 'USD') {
+    sheet.getRange(fila, 6).setValue(monto); // Columna F: Monto Dólares
+  }
   
   return { success: true, message: 'Gasto registrado', fila: fila, id: 'gasto_' + (fila - 1) };
 }
@@ -909,6 +1115,7 @@ function addExpenseWithInstallments(data) {
   var categoria = data.categoria;
   var nota = data.nota || '';
   var cantidadCuotas = parseInt(data.cantidadCuotas || data.cuotas) || 1;
+  var moneda = data.moneda || null; // 'ARS' o 'USD' para especificar la moneda del gasto
   
   if (!fechaCompra || isNaN(montoTotal) || !cuenta || !categoria) {
     return { success: false, error: 'Datos incompletos para gasto en cuotas' };
@@ -925,7 +1132,8 @@ function addExpenseWithInstallments(data) {
       monto: montoTotal,
       cuenta: cuenta,
       categoria: categoria,
-      nota: nota
+      nota: nota,
+      moneda: moneda
     });
   }
   
@@ -980,7 +1188,11 @@ function addExpenseWithInstallments(data) {
       montoEstaCuota = Math.round((montoTotal - montoAcumulado) * 100) / 100;
     }
     
-    filas.push([fechaCuota, montoEstaCuota, cuenta, categoria, '', '', notaCuota, idCompra, numeroCuota]);
+    // Columnas: E:MontoPesos, F:MontoDolares
+    var montoPesos = moneda === 'ARS' ? montoEstaCuota : '';
+    var montoDolares = moneda === 'USD' ? montoEstaCuota : '';
+    
+    filas.push([fechaCuota, montoEstaCuota, cuenta, categoria, montoPesos, montoDolares, notaCuota, idCompra, numeroCuota]);
   }
   
   // Insertar todas las filas de una vez (más eficiente)

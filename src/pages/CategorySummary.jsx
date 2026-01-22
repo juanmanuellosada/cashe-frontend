@@ -33,8 +33,7 @@ function CategorySummary() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('gasto');
   const [showChart, setShowChart] = useState(true);
-  const [barCurrency, setBarCurrency] = useState('ARS');
-  const [pieCurrency, setPieCurrency] = useState('ARS');
+  const [currency, setCurrency] = useState('ARS');
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -114,9 +113,9 @@ function CategorySummary() {
 
   // Datos para el gráfico de barras
   const chartData = useMemo(() => {
-    const total = barCurrency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
+    const total = currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
     return categoryData.categories.slice(0, 8).map(cat => {
-      const value = barCurrency === 'ARS' ? cat.pesos : cat.dolares;
+      const value = currency === 'ARS' ? cat.pesos : cat.dolares;
       return {
         name: cat.name.length > 12 ? cat.name.substring(0, 12) + '...' : cat.name,
         fullName: cat.name,
@@ -126,13 +125,13 @@ function CategorySummary() {
         percentage: total > 0 ? (value / total) * 100 : 0,
       };
     });
-  }, [categoryData, barCurrency]);
+  }, [categoryData, currency]);
 
   // Datos para el gráfico de torta
   const pieChartData = useMemo(() => {
-    const total = pieCurrency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
+    const total = currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
     return categoryData.categories.map(cat => {
-      const value = pieCurrency === 'ARS' ? cat.pesos : cat.dolares;
+      const value = currency === 'ARS' ? cat.pesos : cat.dolares;
       return {
         name: cat.name,
         value: value,
@@ -141,7 +140,7 @@ function CategorySummary() {
         dolares: cat.dolares,
       };
     });
-  }, [categoryData, pieCurrency]);
+  }, [categoryData, currency]);
 
   // Tooltip personalizado para el gráfico de barras
   const CustomTooltip = ({ active, payload }) => {
@@ -241,12 +240,40 @@ function CategorySummary() {
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
           Resumen por Categoria
         </h2>
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          presets={PERIOD_PRESETS}
-          defaultPreset="Este mes"
-        />
+        <div className="flex items-center gap-3">
+          {/* Selector de moneda global */}
+          <div
+            className="inline-flex rounded-lg p-0.5"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <button
+              onClick={() => setCurrency('ARS')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Pesos
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'USD' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Dólares
+            </button>
+          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            presets={PERIOD_PRESETS}
+            defaultPreset="Este mes"
+          />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -283,36 +310,26 @@ function CategorySummary() {
         }}
       />
 
-      {/* Resumen Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
+      {/* Resumen Card */}
+      <div
+        className="rounded-2xl p-4"
+        style={{ backgroundColor: 'var(--bg-secondary)' }}
+      >
+        <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
+          Total {activeTab === 'gasto' ? 'Gastos' : 'Ingresos'}
+        </p>
+        <p
+          className="text-2xl font-bold"
+          style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
         >
-          <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
-            Total en Pesos
-          </p>
-          <p
-            className="text-xl font-bold"
-            style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-          >
-            {formatCurrency(categoryData.totalPesos)}
-          </p>
-        </div>
-        <div
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
-            Total en Dolares
-          </p>
-          <p
-            className="text-xl font-bold"
-            style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-          >
-            {formatCurrency(categoryData.totalDolares, 'USD')}
-          </p>
-        </div>
+          {formatCurrency(
+            currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares,
+            currency
+          )}
+        </p>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          {categoryData.categories.length} categorías
+        </p>
       </div>
 
       {/* Toggle para gráfico en mobile */}
@@ -338,37 +355,9 @@ function CategorySummary() {
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Distribucion por Categoria
-            </h3>
-            {/* Selector de moneda */}
-            <div
-              className="inline-flex rounded-lg p-0.5"
-              style={{ backgroundColor: 'var(--bg-tertiary)' }}
-            >
-              <button
-                onClick={() => setBarCurrency('ARS')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: barCurrency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-                  color: barCurrency === 'ARS' ? 'white' : 'var(--text-secondary)',
-                }}
-              >
-                Pesos
-              </button>
-              <button
-                onClick={() => setBarCurrency('USD')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: barCurrency === 'USD' ? 'var(--accent-primary)' : 'transparent',
-                  color: barCurrency === 'USD' ? 'white' : 'var(--text-secondary)',
-                }}
-              >
-                Dolares
-              </button>
-            </div>
-          </div>
+          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+            Distribucion por Categoria
+          </h3>
           <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 40)}>
             <BarChart
               data={chartData}
@@ -414,37 +403,9 @@ function CategorySummary() {
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {activeTab === 'gasto' ? 'Gastos' : 'Ingresos'} por Categoria
-            </h3>
-            {/* Selector de moneda */}
-            <div
-              className="inline-flex rounded-lg p-0.5"
-              style={{ backgroundColor: 'var(--bg-tertiary)' }}
-            >
-              <button
-                onClick={() => setPieCurrency('ARS')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: pieCurrency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-                  color: pieCurrency === 'ARS' ? 'white' : 'var(--text-secondary)',
-                }}
-              >
-                Pesos
-              </button>
-              <button
-                onClick={() => setPieCurrency('USD')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: pieCurrency === 'USD' ? 'var(--accent-primary)' : 'transparent',
-                  color: pieCurrency === 'USD' ? 'white' : 'var(--text-secondary)',
-                }}
-              >
-                Dolares
-              </button>
-            </div>
-          </div>
+          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+            {activeTab === 'gasto' ? 'Gastos' : 'Ingresos'} por Categoria
+          </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Pie Chart */}
@@ -480,8 +441,8 @@ function CategorySummary() {
                   style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
                 >
                   {formatCurrency(
-                    pieCurrency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares,
-                    pieCurrency
+                    currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares,
+                    currency
                   )}
                 </p>
               </div>
@@ -515,7 +476,7 @@ function CategorySummary() {
                       className="text-sm font-medium min-w-[80px] text-right"
                       style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
                     >
-                      {formatCurrency(entry.value, pieCurrency)}
+                      {formatCurrency(entry.value, currency)}
                     </span>
                   </div>
                 </div>
@@ -564,10 +525,7 @@ function CategorySummary() {
                     Categoria
                   </th>
                   <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                    Pesos
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>
-                    Dolares
+                    Monto
                   </th>
                   <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                     %
@@ -594,12 +552,7 @@ function CategorySummary() {
                         className="font-medium text-sm"
                         style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
                       >
-                        {formatCurrency(cat.pesos)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {formatCurrency(cat.dolares, 'USD')}
+                        {formatCurrency(currency === 'ARS' ? cat.pesos : cat.dolares, currency)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -622,12 +575,7 @@ function CategorySummary() {
                       className="font-bold text-sm"
                       style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
                     >
-                      {formatCurrency(categoryData.totalPesos)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right hidden sm:table-cell">
-                    <span className="font-bold text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {formatCurrency(categoryData.totalDolares, 'USD')}
+                      {formatCurrency(currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares, currency)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">

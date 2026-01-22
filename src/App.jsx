@@ -11,6 +11,7 @@ import Transfers from './pages/Transfers'
 import Statistics from './pages/Statistics'
 import Comparador from './pages/Comparador'
 import CategorySummary from './pages/CategorySummary'
+import CreditCards from './pages/CreditCards'
 
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/estadisticas" element={<Statistics />} />
           <Route path="/comparador" element={<Comparador />} />
           <Route path="/resumen-categorias" element={<CategorySummary />} />
+          <Route path="/tarjetas" element={<CreditCards />} />
         </Routes>
       </Layout>
     </BrowserRouter>

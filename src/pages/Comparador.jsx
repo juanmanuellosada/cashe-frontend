@@ -24,6 +24,7 @@ function Comparador() {
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('ARS');
 
   // Filtros (ahora son arrays para multi-selección)
   const [dateRange, setDateRange] = useState({
@@ -102,13 +103,18 @@ function Comparador() {
 
   // Calcular totales (usando todos los movimientos del período, sin filtro de categoría)
   const totals = useMemo(() => {
-    const totalIngresos = filteredMovements.ingresos.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
-    const totalGastos = filteredMovements.gastos.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalIngresosPesos = filteredMovements.ingresos.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalGastosPesos = filteredMovements.gastos.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalIngresosDolares = filteredMovements.ingresos.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
+    const totalGastosDolares = filteredMovements.gastos.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
+    
+    const totalIngresos = currency === 'ARS' ? totalIngresosPesos : totalIngresosDolares;
+    const totalGastos = currency === 'ARS' ? totalGastosPesos : totalGastosDolares;
     const balance = totalIngresos - totalGastos;
     const ratio = totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0;
 
     return { totalIngresos, totalGastos, balance, ratio };
-  }, [filteredMovements]);
+  }, [filteredMovements, currency]);
 
   // Datos para el gráfico de barras (agrupado por mes si el rango es mayor a 1 mes)
   const barChartData = useMemo(() => {
@@ -130,14 +136,14 @@ function Comparador() {
       filteredMovements.ingresos.forEach(m => {
         const fecha = new Date(m.fecha);
         if (fecha >= monthStart && fecha <= monthEnd) {
-          ingresos += m.montoPesos || m.monto || 0;
+          ingresos += currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
         }
       });
 
       filteredMovements.gastos.forEach(m => {
         const fecha = new Date(m.fecha);
         if (fecha >= monthStart && fecha <= monthEnd) {
-          gastos += m.montoPesos || m.monto || 0;
+          gastos += currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
         }
       });
 
@@ -147,7 +153,7 @@ function Comparador() {
         gastos,
       };
     });
-  }, [dateRange, filteredMovements]);
+  }, [dateRange, filteredMovements, currency]);
 
   // Datos para el pie chart de gastos
   const expensesPieData = useMemo(() => {
@@ -157,7 +163,7 @@ function Comparador() {
     filteredMovements.gastos.forEach(m => {
       const cat = m.categoria || 'Sin categoria';
       const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
-      const amount = m.montoPesos || m.monto || 0;
+      const amount = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
       total += amount;
 
       if (!byCategory[cleanCat]) {
@@ -174,7 +180,7 @@ function Comparador() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [filteredMovements.gastos]);
+  }, [filteredMovements.gastos, currency]);
 
   // Datos para el pie chart de ingresos
   const incomesPieData = useMemo(() => {
@@ -184,7 +190,7 @@ function Comparador() {
     filteredMovements.ingresos.forEach(m => {
       const cat = m.categoria || 'Sin categoria';
       const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
-      const amount = m.montoPesos || m.monto || 0;
+      const amount = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
       total += amount;
 
       if (!byCategory[cleanCat]) {
@@ -201,7 +207,7 @@ function Comparador() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [filteredMovements.ingresos]);
+  }, [filteredMovements.ingresos, currency]);
 
   // Ordenar movimientos por fecha descendente
   const sortedGastos = useMemo(() => {
@@ -225,7 +231,7 @@ function Comparador() {
             {data.name}
           </p>
           <p style={{ color: color || 'var(--accent-primary)' }}>
-            {formatCurrency(data.value)}
+            {formatCurrency(data.value, currency)}
           </p>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             {data.percentage?.toFixed(1)}%
@@ -248,7 +254,7 @@ function Comparador() {
           </p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {formatCurrency(entry.value)}
+              {entry.name}: {formatCurrency(entry.value, currency)}
             </p>
           ))}
           {payload.length === 2 && (
@@ -259,7 +265,7 @@ function Comparador() {
                 color: payload[0].value - payload[1].value >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'
               }}
             >
-              Balance: {formatCurrency(payload[0].value - payload[1].value)}
+              Balance: {formatCurrency(payload[0].value - payload[1].value, currency)}
             </p>
           )}
         </div>
@@ -299,12 +305,40 @@ function Comparador() {
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
           Comparador
         </h2>
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          presets={COMPARADOR_PRESETS}
-          defaultPreset="Este mes"
-        />
+        <div className="flex items-center gap-2">
+          {/* Currency Selector */}
+          <div
+            className="inline-flex rounded-lg p-0.5"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <button
+              onClick={() => setCurrency('ARS')}
+              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Pesos
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Dólares
+            </button>
+          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            presets={COMPARADOR_PRESETS}
+            defaultPreset="Este mes"
+          />
+        </div>
       </div>
 
       {/* Filtro de cuentas (multi-selección) */}
@@ -512,7 +546,7 @@ function Comparador() {
               </p>
             </div>
             <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
-              {formatCurrency(totals.totalIngresos)}
+              {formatCurrency(totals.totalIngresos, currency)}
             </p>
           </div>
         </div>
@@ -541,7 +575,7 @@ function Comparador() {
               </p>
             </div>
             <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
-              {formatCurrency(totals.totalGastos)}
+              {formatCurrency(totals.totalGastos, currency)}
             </p>
           </div>
         </div>
@@ -587,7 +621,7 @@ function Comparador() {
               className="text-xl font-bold"
               style={{ color: totals.balance >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
             >
-              {totals.balance >= 0 ? '+' : ''}{formatCurrency(totals.balance)}
+              {totals.balance >= 0 ? '+' : ''}{formatCurrency(totals.balance, currency)}
             </p>
           </div>
         </div>
@@ -772,7 +806,7 @@ function Comparador() {
                       {entry.percentage.toFixed(1)}%
                     </span>
                     <span className="text-sm font-medium" style={{ color: 'var(--accent-green)' }}>
-                      {formatCurrency(entry.value)}
+                      {formatCurrency(entry.value, currency)}
                     </span>
                   </div>
                 </div>
@@ -898,7 +932,7 @@ function Comparador() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold" style={{ color: 'var(--accent-red)' }}>
-                      -{formatCurrency(gasto.montoPesos || gasto.monto)}
+                      -{formatCurrency(currency === 'ARS' ? (gasto.montoPesos || gasto.monto) : (gasto.montoDolares || 0), currency)}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(gasto.fecha, 'short')}
@@ -917,7 +951,7 @@ function Comparador() {
             >
               <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Total</span>
               <span className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
-                {formatCurrency(sortedGastos.reduce((sum, g) => sum + (g.montoPesos || g.monto || 0), 0))}
+                {formatCurrency(sortedGastos.reduce((sum, g) => sum + (currency === 'ARS' ? (g.montoPesos || g.monto || 0) : (g.montoDolares || 0)), 0), currency)}
               </span>
             </div>
           )}
@@ -1037,7 +1071,7 @@ function Comparador() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold" style={{ color: 'var(--accent-green)' }}>
-                      +{formatCurrency(ingreso.montoPesos || ingreso.monto)}
+                      +{formatCurrency(currency === 'ARS' ? (ingreso.montoPesos || ingreso.monto) : (ingreso.montoDolares || 0), currency)}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(ingreso.fecha, 'short')}
@@ -1056,7 +1090,7 @@ function Comparador() {
             >
               <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Total</span>
               <span className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
-                {formatCurrency(sortedIngresos.reduce((sum, i) => sum + (i.montoPesos || i.monto || 0), 0))}
+                {formatCurrency(sortedIngresos.reduce((sum, i) => sum + (currency === 'ARS' ? (i.montoPesos || i.monto || 0) : (i.montoDolares || 0)), 0), currency)}
               </span>
             </div>
           )}

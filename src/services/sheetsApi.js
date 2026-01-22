@@ -19,6 +19,19 @@ export function clearCache() {
   cache.clear();
 }
 
+// Invalida cache específico por tipo de movimiento
+export function invalidateMovementCache(type) {
+  const keysToDelete = [];
+  if (type === 'gasto' || type === 'expense') {
+    keysToDelete.push('allExpenses');
+  } else if (type === 'ingreso' || type === 'income') {
+    keysToDelete.push('allIncomes');
+  } else if (type === 'transferencia' || type === 'transfer') {
+    keysToDelete.push('allTransfers');
+  }
+  keysToDelete.forEach(key => cache.delete(key));
+}
+
 // Función genérica para GET
 async function fetchGet(action, params = {}) {
   const url = new URL(API_URL);
@@ -103,85 +116,75 @@ export async function getExchangeRate() {
 
 /**
  * Obtiene todas las categorías con rowIndex (para gestión)
- * Fallback: construye desde getCategories
+ * Con caché para mejorar rendimiento
  */
 export async function getCategoriesAll() {
-  try {
-    const data = await fetchGet('getCategoriesAll');
-    if (data.success && data.categories) {
-      return data;
-    }
-  } catch (e) {
-    console.log('getCategoriesAll not available, using fallback');
+  const cacheKey = 'categoriesAll';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const data = await fetchGet('getCategoriesAll');
+  if (data.success && data.categories) {
+    setCache(cacheKey, data);
+    return data;
   }
-  // Fallback - construir lista basica
-  const data = await fetchGet('getCategories');
-  const categories = [];
-  let idx = 2;
-  (data.categorias?.ingresos || []).forEach(nombre => {
-    categories.push({ rowIndex: idx++, nombre, tipo: 'Ingreso' });
-  });
-  (data.categorias?.gastos || []).forEach(nombre => {
-    categories.push({ rowIndex: idx++, nombre, tipo: 'Gasto' });
-  });
-  return { success: true, categories };
+  
+  throw new Error('getCategoriesAll endpoint not available');
 }
 
 /**
  * Obtiene todos los gastos
- * Fallback: usa getRecentMovements y filtra
+ * Con caché para mejorar rendimiento
  */
 export async function getAllExpenses() {
-  try {
-    const data = await fetchGet('getAllExpenses');
-    if (data.success && data.expenses) {
-      return data;
-    }
-  } catch (e) {
-    console.log('getAllExpenses not available, using fallback');
+  const cacheKey = 'allExpenses';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const data = await fetchGet('getAllExpenses');
+  if (data.success && data.expenses) {
+    setCache(cacheKey, data);
+    return data;
   }
-  // Fallback
-  const data = await fetchGet('getRecentMovements', { limit: 1000 });
-  const expenses = (data.movements || []).filter(m => m.tipo === 'gasto');
-  return { success: true, expenses };
+  
+  // Si el endpoint no existe, el servidor devuelve error
+  throw new Error('getAllExpenses endpoint not available');
 }
 
 /**
  * Obtiene todos los ingresos
- * Fallback: usa getRecentMovements y filtra
+ * Con caché para mejorar rendimiento
  */
 export async function getAllIncomes() {
-  try {
-    const data = await fetchGet('getAllIncomes');
-    if (data.success && data.incomes) {
-      return data;
-    }
-  } catch (e) {
-    console.log('getAllIncomes not available, using fallback');
+  const cacheKey = 'allIncomes';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const data = await fetchGet('getAllIncomes');
+  if (data.success && data.incomes) {
+    setCache(cacheKey, data);
+    return data;
   }
-  // Fallback
-  const data = await fetchGet('getRecentMovements', { limit: 1000 });
-  const incomes = (data.movements || []).filter(m => m.tipo === 'ingreso');
-  return { success: true, incomes };
+  
+  throw new Error('getAllIncomes endpoint not available');
 }
 
 /**
  * Obtiene todas las transferencias
- * Fallback: usa getRecentMovements y filtra
+ * Con caché para mejorar rendimiento
  */
 export async function getAllTransfers() {
-  try {
-    const data = await fetchGet('getAllTransfers');
-    if (data.success && data.transfers) {
-      return data;
-    }
-  } catch (e) {
-    console.log('getAllTransfers not available, using fallback');
+  const cacheKey = 'allTransfers';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const data = await fetchGet('getAllTransfers');
+  if (data.success && data.transfers) {
+    setCache(cacheKey, data);
+    return data;
   }
-  // Fallback
-  const data = await fetchGet('getRecentMovements', { limit: 1000 });
-  const transfers = (data.movements || []).filter(m => m.tipo === 'transferencia');
-  return { success: true, transfers };
+  
+  throw new Error('getAllTransfers endpoint not available');
 }
 
 // ============================================
@@ -200,13 +203,14 @@ export async function addIncome({ fecha, monto, cuenta, categoria, nota }) {
   return result;
 }
 
-export async function addExpense({ fecha, monto, cuenta, categoria, nota }) {
+export async function addExpense({ fecha, monto, cuenta, categoria, nota, moneda }) {
   const result = await fetchPost('addExpense', {
     fecha,
     monto,
     cuenta,
     categoria,
     nota,
+    moneda, // 'ARS' o 'USD' para tarjetas de crédito
   });
   clearCache();
   return result;
@@ -255,6 +259,8 @@ export async function updateAccount(account) {
     moneda: account.moneda,
     numeroCuenta: account.numeroCuenta,
     tipo: account.tipo,
+    esTarjetaCredito: account.esTarjetaCredito || false,
+    diaCierre: account.diaCierre || null,
   });
   clearCache();
   return result;
@@ -474,6 +480,52 @@ export async function deleteMovement(movement) {
   return result;
 }
 
+/**
+ * Elimina múltiples movimientos
+ * @param {Array} movements - Array de movimientos a eliminar
+ */
+export async function bulkDeleteMovements(movements) {
+  // Ordenar por rowIndex descendente para borrar de abajo hacia arriba
+  // (evita que cambien los índices al borrar)
+  const sorted = [...movements].sort((a, b) => b.rowIndex - a.rowIndex);
+  
+  const results = [];
+  for (const movement of sorted) {
+    try {
+      const result = await deleteMovement(movement);
+      results.push({ success: true, movement });
+    } catch (err) {
+      results.push({ success: false, movement, error: err.message });
+    }
+  }
+  
+  clearCache();
+  return results;
+}
+
+/**
+ * Actualiza múltiples movimientos con un campo específico
+ * @param {Array} movements - Array de movimientos a actualizar
+ * @param {string} field - Campo a actualizar ('cuenta', 'categoria')
+ * @param {string} value - Nuevo valor
+ */
+export async function bulkUpdateMovements(movements, field, value) {
+  const results = [];
+  
+  for (const movement of movements) {
+    try {
+      const updatedMovement = { ...movement, [field]: value };
+      const result = await updateMovement(updatedMovement);
+      results.push({ success: true, movement });
+    } catch (err) {
+      results.push({ success: false, movement, error: err.message });
+    }
+  }
+  
+  clearCache();
+  return results;
+}
+
 // ============================================
 // FUNCIONES DE CUOTAS (Tarjetas de Crédito)
 // ============================================
@@ -488,7 +540,8 @@ export async function addExpenseWithInstallments({
   cuenta,
   categoria,
   nota,
-  cantidadCuotas
+  cantidadCuotas,
+  moneda
 }) {
   const result = await fetchPost('addExpenseWithInstallments', {
     fechaCompra,
@@ -497,6 +550,7 @@ export async function addExpenseWithInstallments({
     categoria,
     nota,
     cantidadCuotas,
+    moneda, // 'ARS' o 'USD' para tarjetas de crédito
   });
   clearCache();
   return result;

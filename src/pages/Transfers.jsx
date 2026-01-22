@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllTransfers, getAccounts, updateMovement, deleteMovement } from '../services/sheetsApi';
+import { getAllTransfers, getAccounts, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 
@@ -60,6 +60,28 @@ function Transfers() {
     }
   };
 
+  const handleBulkDelete = async (movements) => {
+    // Remover de lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setTransfers(prev => prev.filter(t => !rowIndexes.has(t.rowIndex)));
+
+    // Borrar en background
+    await bulkDeleteMovements(movements);
+    fetchData();
+  };
+
+  const handleBulkUpdate = async (movements, field, value) => {
+    // Actualizar lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setTransfers(prev => prev.map(t => 
+      rowIndexes.has(t.rowIndex) ? { ...t, [field]: value } : t
+    ));
+
+    // Actualizar en background
+    await bulkUpdateMovements(movements, field, value);
+    fetchData();
+  };
+
   return (
     <>
       <MovementsList
@@ -70,6 +92,8 @@ function Transfers() {
         loading={loading}
         onMovementClick={setEditingMovement}
         onMovementDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
+        onBulkUpdate={handleBulkUpdate}
         type="transferencia"
       />
       {editingMovement && (

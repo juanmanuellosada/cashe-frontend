@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/format';
 
 function WeeklySummary({ movements, loading }) {
+  const [currency, setCurrency] = useState('ARS');
+
   // Calculate weekly stats
   const stats = useMemo(() => {
     if (!movements || movements.length === 0) {
@@ -24,15 +26,18 @@ function WeeklySummary({ movements, loading }) {
     if (weekExpenses.length === 0) {
       return {
         avgDaily: 0,
+        avgDailyDolares: 0,
         maxDay: null,
         topCategory: null,
         totalWeek: 0,
+        totalWeekDolares: 0,
         daysWithExpenses: 0
       };
     }
 
-    // Total expenses this week
+    // Total expenses this week (pesos and dollars)
     const totalWeek = weekExpenses.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalWeekDolares = weekExpenses.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
 
     // Calculate days with expenses
     const daysWithExpenses = new Set(
@@ -41,6 +46,7 @@ function WeeklySummary({ movements, loading }) {
 
     // Average daily expense
     const avgDaily = totalWeek / 7;
+    const avgDailyDolares = totalWeekDolares / 7;
 
     // Group by day to find max day
     const byDay = {};
@@ -48,9 +54,10 @@ function WeeklySummary({ movements, loading }) {
       const dayKey = format(new Date(m.fecha), 'yyyy-MM-dd');
       const dayName = format(new Date(m.fecha), 'EEEE', { locale: es });
       if (!byDay[dayKey]) {
-        byDay[dayKey] = { name: dayName, amount: 0, date: dayKey };
+        byDay[dayKey] = { name: dayName, amount: 0, amountDolares: 0, date: dayKey };
       }
       byDay[dayKey].amount += m.montoPesos || m.monto || 0;
+      byDay[dayKey].amountDolares += m.montoDolares || 0;
     });
     const sortedDays = Object.values(byDay).sort((a, b) => b.amount - a.amount);
     const maxDay = sortedDays[0] || null;
@@ -60,18 +67,21 @@ function WeeklySummary({ movements, loading }) {
     weekExpenses.forEach(m => {
       const cat = m.categoria || 'Sin categoría';
       if (!byCategory[cat]) {
-        byCategory[cat] = { name: cat, amount: 0 };
+        byCategory[cat] = { name: cat, amount: 0, amountDolares: 0 };
       }
       byCategory[cat].amount += m.montoPesos || m.monto || 0;
+      byCategory[cat].amountDolares += m.montoDolares || 0;
     });
     const sortedCategories = Object.values(byCategory).sort((a, b) => b.amount - a.amount);
     const topCategory = sortedCategories[0] || null;
 
     return {
       avgDaily,
+      avgDailyDolares,
       maxDay,
       topCategory,
       totalWeek,
+      totalWeekDolares,
       daysWithExpenses
     };
   }, [movements]);
@@ -126,9 +136,37 @@ function WeeklySummary({ movements, loading }) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-        Esta semana
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+          Esta semana
+        </h3>
+        {/* Currency selector */}
+        <div 
+          className="flex rounded-lg p-0.5 text-xs"
+          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+        >
+          <button
+            onClick={() => setCurrency('ARS')}
+            className="px-2 py-0.5 rounded-md transition-colors font-medium"
+            style={{
+              backgroundColor: currency === 'ARS' ? 'var(--accent-blue)' : 'transparent',
+              color: currency === 'ARS' ? 'white' : 'var(--text-secondary)'
+            }}
+          >
+            $
+          </button>
+          <button
+            onClick={() => setCurrency('USD')}
+            className="px-2 py-0.5 rounded-md transition-colors font-medium"
+            style={{
+              backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+              color: currency === 'USD' ? 'white' : 'var(--text-secondary)'
+            }}
+          >
+            US$
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {/* Average daily expense */}
         <div
@@ -149,7 +187,7 @@ function WeeklySummary({ movements, loading }) {
               </span>
             </div>
             <p className="text-base font-bold" style={{ color: 'var(--accent-blue)' }}>
-              {formatCurrency(stats.avgDaily)}
+              {formatCurrency(currency === 'ARS' ? stats.avgDaily : stats.avgDailyDolares, currency)}
             </p>
           </div>
         </div>
@@ -176,7 +214,7 @@ function WeeklySummary({ movements, loading }) {
               {stats.maxDay?.name || '-'}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {stats.maxDay ? formatCurrency(stats.maxDay.amount) : '-'}
+              {stats.maxDay ? formatCurrency(currency === 'ARS' ? stats.maxDay.amount : stats.maxDay.amountDolares, currency) : '-'}
             </p>
           </div>
         </div>
@@ -201,7 +239,7 @@ function WeeklySummary({ movements, loading }) {
               {stats.topCategory?.name?.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || '-'}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {stats.topCategory ? formatCurrency(stats.topCategory.amount) : '-'}
+              {stats.topCategory ? formatCurrency(currency === 'ARS' ? stats.topCategory.amount : stats.topCategory.amountDolares, currency) : '-'}
             </p>
           </div>
         </div>

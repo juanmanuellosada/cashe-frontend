@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/format';
 
-function IncomeExpenseBarChart({ data, loading }) {
+function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
   if (loading) {
     return (
       <div
@@ -31,6 +31,8 @@ function IncomeExpenseBarChart({ data, loading }) {
       </div>
     );
   }
+
+
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -65,9 +67,12 @@ function IncomeExpenseBarChart({ data, loading }) {
   };
 
   const formatYAxis = (value) => {
-    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-    return value;
+    // Redondear para evitar errores de punto flotante
+    const rounded = Math.round(value * 100) / 100;
+    if (Math.abs(rounded) < 0.01) return '0';
+    if (rounded >= 1000000) return `${(rounded / 1000000).toFixed(1)}M`;
+    if (rounded >= 1000) return `${(rounded / 1000).toFixed(0)}K`;
+    return rounded.toFixed(0);
   };
 
   return (

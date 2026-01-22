@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
+import Combobox from './Combobox';
+import ConfirmModal from './ConfirmModal';
 
 function MovementsList({
   title,
@@ -11,6 +13,8 @@ function MovementsList({
   loading,
   onMovementClick,
   onMovementDelete,
+  onBulkDelete,
+  onBulkUpdate,
   type, // 'gasto', 'ingreso', 'transferencia'
 }) {
   const navigate = useNavigate();
@@ -20,6 +24,14 @@ function MovementsList({
   const [searchText, setSearchText] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [currency, setCurrency] = useState('ARS');
+  
+  // Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState(null); // 'delete', 'editAccount', 'editCategory'
+  const [bulkEditValue, setBulkEditValue] = useState('');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Filter movements
   const filteredMovements = useMemo(() => {
@@ -77,14 +89,27 @@ function MovementsList({
   // Calculate subtotals
   const subtotals = useMemo(() => {
     if (type === 'transferencia') {
-      const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
-      const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
-      return { totalSaliente, totalEntrante };
+      // Para transferencias, usar la moneda seleccionada
+      if (currency === 'ARS') {
+        const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
+        const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
+        return { totalSaliente, totalEntrante };
+      } else {
+        const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSalienteDolares || 0), 0);
+        const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntranteDolares || 0), 0);
+        return { totalSaliente, totalEntrante };
+      }
     } else {
-      const totalPesos = filteredMovements.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
-      return { totalPesos };
+      // Para gastos e ingresos, usar la moneda seleccionada
+      if (currency === 'ARS') {
+        const total = filteredMovements.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+        return { total };
+      } else {
+        const total = filteredMovements.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
+        return { total };
+      }
     }
-  }, [filteredMovements, type]);
+  }, [filteredMovements, type, currency]);
 
   const toggleAccount = (accountName) => {
     setSelectedAccounts(prev =>
@@ -115,6 +140,73 @@ function MovementsList({
     selectedCategories.length > 0,
     searchText.trim().length > 0,
   ].filter(Boolean).length;
+
+  // Selection functions
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems(new Set());
+  };
+
+  const toggleItemSelection = (itemId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const selectAll = () => {
+    const allIds = new Set(filteredMovements.map(m => m.rowIndex || m.id));
+    setSelectedItems(allIds);
+  };
+
+  const deselectAll = () => {
+    setSelectedItems(new Set());
+  };
+
+  const getSelectedMovements = () => {
+    return filteredMovements.filter(m => selectedItems.has(m.rowIndex || m.id));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!onBulkDelete) return;
+    
+    setBulkProcessing(true);
+    try {
+      const movementsToDelete = getSelectedMovements();
+      await onBulkDelete(movementsToDelete);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      setBulkAction(null);
+    } catch (err) {
+      console.error('Error in bulk delete:', err);
+      alert('Error al eliminar: ' + err.message);
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!onBulkUpdate || !bulkEditValue) return;
+    
+    setBulkProcessing(true);
+    try {
+      const movementsToUpdate = getSelectedMovements();
+      const field = bulkAction === 'editAccount' ? 'cuenta' : 'categoria';
+      await onBulkUpdate(movementsToUpdate, field, bulkEditValue);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      setBulkAction(null);
+      setBulkEditValue('');
+    } catch (err) {
+      console.error('Error in bulk update:', err);
+      alert('Error al actualizar: ' + err.message);
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
 
   const getTypeColor = () => {
     switch (type) {
@@ -227,15 +319,132 @@ function MovementsList({
 
   return (
     <div className="space-y-4">
+      {/* Selection Mode Bar */}
+      {selectionMode && (
+        <div
+          className="sticky top-14 z-40 rounded-2xl p-3 animate-fade-in"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)' }}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                {selectedItems.size} seleccionado{selectedItems.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={selectedItems.size === filteredMovements.length ? deselectAll : selectAll}
+                className="text-xs px-2 py-1 rounded-lg transition-colors"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+              >
+                {selectedItems.size === filteredMovements.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {selectedItems.size > 0 && (
+                <>
+                  {/* Bulk Delete */}
+                  <button
+                    onClick={() => setBulkAction('delete')}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Eliminar
+                  </button>
+                  
+                  {/* Bulk Edit Account */}
+                  <button
+                    onClick={() => setBulkAction('editAccount')}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(96, 165, 250, 0.15)', color: 'var(--accent-blue)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Cuenta
+                  </button>
+                  
+                  {/* Bulk Edit Category (not for transfers) */}
+                  {type !== 'transferencia' && (
+                    <button
+                      onClick={() => setBulkAction('editCategory')}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Categoría
+                    </button>
+                  )}
+                </>
+              )}
+              
+              <button
+                onClick={toggleSelectionMode}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           {title}
         </h2>
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-        />
+        <div className="flex items-center gap-2">
+          {/* Selection mode toggle */}
+          {!selectionMode && filteredMovements.length > 0 && (
+            <button
+              onClick={toggleSelectionMode}
+              className="p-2 rounded-xl transition-colors"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+              title="Selección múltiple"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
+              </svg>
+            </button>
+          )}
+          
+          {/* Selector de moneda */}
+          <div
+            className="inline-flex rounded-lg p-0.5"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <button
+              onClick={() => setCurrency('ARS')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Pesos
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              style={{
+                backgroundColor: currency === 'USD' ? 'var(--accent-primary)' : 'transparent',
+                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              Dólares
+            </button>
+          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+          />
+        </div>
       </div>
 
       {/* Filters Toggle */}
@@ -388,7 +597,7 @@ function MovementsList({
                   Total saliente
                 </p>
                 <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
-                  {formatCurrency(subtotals.totalSaliente)}
+                  {formatCurrency(subtotals.totalSaliente, currency)}
                 </p>
               </div>
               <div className="text-right">
@@ -399,7 +608,7 @@ function MovementsList({
                   </svg>
                 </p>
                 <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
-                  {formatCurrency(subtotals.totalEntrante)}
+                  {formatCurrency(subtotals.totalEntrante, currency)}
                 </p>
               </div>
             </div>
@@ -410,7 +619,7 @@ function MovementsList({
                 Total
               </p>
               <p className="text-2xl font-bold" style={{ color: getTypeColor() }}>
-                {formatCurrency(subtotals.totalPesos)}
+                {formatCurrency(subtotals.total, currency)}
               </p>
             </div>
           )}
@@ -422,23 +631,48 @@ function MovementsList({
         renderEmptyState()
       ) : (
         <div className="space-y-2">
-          {filteredMovements.map((movement, index) => (
-            <div
-              key={movement.id || movement.rowIndex}
-              className="group rounded-2xl p-4 transition-all duration-200 hover:scale-[1.01]"
-              style={{ backgroundColor: 'var(--bg-secondary)' }}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => onMovementClick?.(movement)}
-                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                  style={{ backgroundColor: 'transparent' }}
-                >
-                  {/* Icon */}
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
-                    style={{ backgroundColor: getTypeBgDim() }}
+          {filteredMovements.map((movement, index) => {
+            const itemId = movement.rowIndex || movement.id;
+            const isSelected = selectedItems.has(itemId);
+            
+            return (
+              <div
+                key={itemId}
+                className={`group rounded-2xl p-4 transition-all duration-200 ${!selectionMode ? 'hover:scale-[1.01]' : ''}`}
+                style={{ 
+                  backgroundColor: isSelected ? getTypeBgDim() : 'var(--bg-secondary)',
+                  border: isSelected ? `1px solid ${getTypeColor()}` : '1px solid transparent',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Checkbox for selection mode */}
+                  {selectionMode && (
+                    <button
+                      onClick={() => toggleItemSelection(itemId)}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                      style={{
+                        backgroundColor: isSelected ? getTypeColor() : 'var(--bg-tertiary)',
+                        border: isSelected ? 'none' : '2px solid var(--border-subtle)',
+                      }}
+                    >
+                      {isSelected && (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => selectionMode ? toggleItemSelection(itemId) : onMovementClick?.(movement)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    style={{ backgroundColor: 'transparent' }}
                   >
+                    {/* Icon */}
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 ${!selectionMode ? 'group-hover:scale-110' : ''}`}
+                      style={{ backgroundColor: getTypeBgDim() }}
+                    >
                     {type === 'transferencia' ? (
                       <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -506,10 +740,10 @@ function MovementsList({
                   <div className="text-right flex-shrink-0">
                     <p className="text-xl font-bold" style={{ color: getTypeColor() }}>
                       {type === 'transferencia'
-                        ? formatCurrency(movement.montoSaliente)
+                        ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
                         : type === 'ingreso'
-                          ? `+${formatCurrency(movement.montoPesos || movement.monto)}`
-                          : `-${formatCurrency(movement.montoPesos || movement.monto)}`}
+                          ? `+${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`
+                          : `-${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
@@ -517,20 +751,23 @@ function MovementsList({
                   </div>
                 </button>
 
-                {/* Delete button - hidden by default */}
-                <button
-                  onClick={(e) => handleDeleteClick(e, movement)}
-                  className="p-2 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
-                  style={{ color: 'var(--text-secondary)' }}
-                  title="Eliminar"
-                >
-                  <svg className="w-5 h-5 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                {/* Delete button - hidden by default and in selection mode */}
+                {!selectionMode && (
+                  <button
+                    onClick={(e) => handleDeleteClick(e, movement)}
+                    className="p-2 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
+                    style={{ color: 'var(--text-secondary)' }}
+                    title="Eliminar"
+                  >
+                    <svg className="w-5 h-5 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -562,8 +799,18 @@ function MovementsList({
                 <br />
                 <span className="font-semibold text-base" style={{ color: getTypeColor() }}>
                   {type === 'transferencia'
-                    ? formatCurrency(deleteConfirm.montoSaliente)
-                    : formatCurrency(deleteConfirm.montoPesos || deleteConfirm.monto)}
+                    ? formatCurrency(
+                        currency === 'ARS' 
+                          ? deleteConfirm.montoSaliente 
+                          : (deleteConfirm.montoSalienteDolares || 0),
+                        currency
+                      )
+                    : formatCurrency(
+                        currency === 'ARS' 
+                          ? (deleteConfirm.montoPesos || deleteConfirm.monto) 
+                          : (deleteConfirm.montoDolares || 0),
+                        currency
+                      )}
                 </span>
               </p>
               <div className="flex gap-3">
@@ -582,6 +829,116 @@ function MovementsList({
                   Eliminar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkAction === 'delete' && (
+        <ConfirmModal
+          isOpen={true}
+          title="Eliminar movimientos"
+          message={`¿Estás seguro de que quieres eliminar ${selectedItems.size} movimiento${selectedItems.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`}
+          confirmText={bulkProcessing ? 'Eliminando...' : 'Eliminar todos'}
+          variant="danger"
+          loading={bulkProcessing}
+          onConfirm={handleBulkDelete}
+          onClose={() => setBulkAction(null)}
+        />
+      )}
+
+      {/* Bulk Edit Account Modal */}
+      {bulkAction === 'editAccount' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              Cambiar cuenta
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Cambiar la cuenta de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="mb-4">
+              <Combobox
+                value={bulkEditValue}
+                onChange={(e) => setBulkEditValue(e.target.value)}
+                options={accounts.map(a => ({ value: a.nombre, label: a.nombre }))}
+                placeholder="Seleccionar cuenta..."
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
+                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkUpdate}
+                disabled={bulkProcessing || !bulkEditValue}
+                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-blue)' }}
+              >
+                {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Category Modal */}
+      {bulkAction === 'editCategory' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              Cambiar categoría
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Cambiar la categoría de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="mb-4">
+              <Combobox
+                value={bulkEditValue}
+                onChange={(e) => setBulkEditValue(e.target.value)}
+                options={categories.map(c => ({ value: c, label: c }))}
+                placeholder="Seleccionar categoría..."
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
+                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkUpdate}
+                disabled={bulkProcessing || !bulkEditValue}
+                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-purple)' }}
+              >
+                {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
+              </button>
             </div>
           </div>
         </div>

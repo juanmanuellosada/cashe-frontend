@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllIncomes, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/sheetsApi';
+import { getAllIncomes, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 
@@ -63,6 +63,28 @@ function Income() {
     }
   };
 
+  const handleBulkDelete = async (movements) => {
+    // Remover de lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setIncomes(prev => prev.filter(i => !rowIndexes.has(i.rowIndex)));
+
+    // Borrar en background
+    await bulkDeleteMovements(movements);
+    fetchData();
+  };
+
+  const handleBulkUpdate = async (movements, field, value) => {
+    // Actualizar lista inmediatamente (optimistic)
+    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    setIncomes(prev => prev.map(i => 
+      rowIndexes.has(i.rowIndex) ? { ...i, [field]: value } : i
+    ));
+
+    // Actualizar en background
+    await bulkUpdateMovements(movements, field, value);
+    fetchData();
+  };
+
   return (
     <>
       <MovementsList
@@ -73,6 +95,8 @@ function Income() {
         loading={loading}
         onMovementClick={setEditingMovement}
         onMovementDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
+        onBulkUpdate={handleBulkUpdate}
         type="ingreso"
       />
       {editingMovement && (
