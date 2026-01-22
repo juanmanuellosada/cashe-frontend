@@ -25,14 +25,15 @@ function Comparador() {
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
   const [loading, setLoading] = useState(true);
 
-  // Filtros
+  // Filtros (ahora son arrays para multi-selección)
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
-  const [selectedAccount, setSelectedAccount] = useState('');
-  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState('');
-  const [selectedIncomeCategory, setSelectedIncomeCategory] = useState('');
+  const [selectedAccounts, setSelectedAccounts] = useState([]);
+  const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
+  const [selectedIncomeCategories, setSelectedIncomeCategories] = useState([]);
+  const [showAccountFilters, setShowAccountFilters] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -55,7 +56,16 @@ function Comparador() {
     loadData();
   }, []);
 
-  // Filtrar movimientos por rango de fechas y cuenta
+  // Toggle para arrays
+  const toggleArrayFilter = (array, setArray, value) => {
+    if (array.includes(value)) {
+      setArray(array.filter(v => v !== value));
+    } else {
+      setArray([...array, value]);
+    }
+  };
+
+  // Filtrar movimientos por rango de fechas y cuentas
   const filteredMovements = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return { gastos: [], ingresos: [] };
 
@@ -67,7 +77,7 @@ function Comparador() {
     const filtered = movements.filter(m => {
       const fecha = new Date(m.fecha);
       if (fecha < startDate || fecha > endDate) return false;
-      if (selectedAccount && m.cuenta !== selectedAccount) return false;
+      if (selectedAccounts.length > 0 && !selectedAccounts.includes(m.cuenta)) return false;
       return true;
     });
 
@@ -75,19 +85,19 @@ function Comparador() {
       gastos: filtered.filter(m => m.tipo === 'gasto'),
       ingresos: filtered.filter(m => m.tipo === 'ingreso'),
     };
-  }, [movements, dateRange, selectedAccount]);
+  }, [movements, dateRange, selectedAccounts]);
 
-  // Filtrar gastos por categoría
+  // Filtrar gastos por categorías
   const filteredGastos = useMemo(() => {
-    if (!selectedExpenseCategory) return filteredMovements.gastos;
-    return filteredMovements.gastos.filter(m => m.categoria === selectedExpenseCategory);
-  }, [filteredMovements.gastos, selectedExpenseCategory]);
+    if (selectedExpenseCategories.length === 0) return filteredMovements.gastos;
+    return filteredMovements.gastos.filter(m => selectedExpenseCategories.includes(m.categoria));
+  }, [filteredMovements.gastos, selectedExpenseCategories]);
 
-  // Filtrar ingresos por categoría
+  // Filtrar ingresos por categorías
   const filteredIngresos = useMemo(() => {
-    if (!selectedIncomeCategory) return filteredMovements.ingresos;
-    return filteredMovements.ingresos.filter(m => m.categoria === selectedIncomeCategory);
-  }, [filteredMovements.ingresos, selectedIncomeCategory]);
+    if (selectedIncomeCategories.length === 0) return filteredMovements.ingresos;
+    return filteredMovements.ingresos.filter(m => selectedIncomeCategories.includes(m.categoria));
+  }, [filteredMovements.ingresos, selectedIncomeCategories]);
 
   // Calcular totales (usando todos los movimientos del período, sin filtro de categoría)
   const totals = useMemo(() => {
@@ -296,29 +306,73 @@ function Comparador() {
         />
       </div>
 
-      {/* Filtro de cuenta */}
+      {/* Filtro de cuentas (multi-selección) */}
       <div
-        className="p-4 rounded-2xl"
+        className="rounded-2xl overflow-hidden"
         style={{ backgroundColor: 'var(--bg-secondary)' }}
       >
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Cuenta:
-          </label>
-          <select
-            value={selectedAccount}
-            onChange={(e) => setSelectedAccount(e.target.value)}
-            className="px-3 py-2 rounded-xl text-sm flex-1 min-w-[200px]"
-            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+        <button
+          onClick={() => setShowAccountFilters(!showAccountFilters)}
+          className="w-full p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Filtrar por cuentas
+            </span>
+            {selectedAccounts.length > 0 && (
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+              >
+                {selectedAccounts.length}
+              </span>
+            )}
+          </div>
+          <svg
+            className={`w-4 h-4 transition-transform ${showAccountFilters ? 'rotate-180' : ''}`}
+            style={{ color: 'var(--text-secondary)' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <option value="">Todas las cuentas</option>
-            {accounts.map(account => (
-              <option key={account.nombre} value={account.nombre}>
-                {account.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showAccountFilters && (
+          <div className="px-4 pb-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {accounts.map((account) => {
+                const selected = selectedAccounts.includes(account.nombre);
+                return (
+                  <button
+                    key={account.nombre}
+                    onClick={() => toggleArrayFilter(selectedAccounts, setSelectedAccounts, account.nombre)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                      color: selected ? 'white' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {account.nombre}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedAccounts.length > 0 && (
+              <button
+                onClick={() => setSelectedAccounts([])}
+                className="text-xs font-medium"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -562,7 +616,7 @@ function Comparador() {
         </div>
       </div>
 
-      {/* Pie Chart de Ingresos */}
+      {/* Pie Chart de Ingresos - Con leyenda más ancha */}
       {incomesPieData.length > 0 && (
         <div
           className="rounded-2xl p-4"
@@ -571,38 +625,45 @@ function Comparador() {
           <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
             Ingresos por Categoria
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={incomesPieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  dataKey="value"
-                  nameKey="name"
-                >
-                  {incomesPieData.map((entry, index) => (
-                    <Cell key={`cell-income-${index}`} fill={COLORS[(index + 3) % COLORS.length]} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip color="var(--accent-green)" />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-col justify-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="md:col-span-2">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={incomesPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    {incomesPieData.map((entry, index) => (
+                      <Cell key={`cell-income-${index}`} fill={COLORS[(index + 3) % COLORS.length]} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip color="var(--accent-green)" />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="md:col-span-3 flex flex-col justify-center gap-2">
               {incomesPieData.map((entry, index) => (
-                <div key={`income-legend-${index}`} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }} />
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                      {entry.name.length > 15 ? entry.name.substring(0, 15) + '...' : entry.name}
+                <div key={`income-legend-${index}`} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }} />
+                    <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }} title={entry.name}>
+                      {entry.name}
                     </span>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: 'var(--accent-green)' }}>
-                    {formatCurrency(entry.value)}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {entry.percentage.toFixed(1)}%
+                    </span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--accent-green)' }}>
+                      {formatCurrency(entry.value)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -617,7 +678,7 @@ function Comparador() {
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <div
                 className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -632,20 +693,43 @@ function Comparador() {
                 ({sortedGastos.length})
               </span>
             </h3>
-            <select
-              value={selectedExpenseCategory}
-              onChange={(e) => setSelectedExpenseCategory(e.target.value)}
-              className="px-2 py-1 rounded-lg text-xs"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-            >
-              <option value="">Todas</option>
-              {categories.gastos?.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
           </div>
 
-          <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+          {/* Filtro de categorías de gastos (multi-selección) */}
+          <div className="mb-4">
+            <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Filtrar por categoria:
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+              {categories.gastos?.map(cat => {
+                const selected = selectedExpenseCategories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
+                    className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
+                      color: selected ? 'white' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedExpenseCategories.length > 0 && (
+              <button
+                onClick={() => setSelectedExpenseCategories([])}
+                className="text-xs font-medium mt-2"
+                style={{ color: 'var(--accent-red)' }}
+              >
+                Limpiar ({selectedExpenseCategories.length})
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
             {sortedGastos.length === 0 ? (
               <p className="text-center py-8 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Sin gastos en este periodo
@@ -701,7 +785,7 @@ function Comparador() {
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <div
                 className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -716,20 +800,43 @@ function Comparador() {
                 ({sortedIngresos.length})
               </span>
             </h3>
-            <select
-              value={selectedIncomeCategory}
-              onChange={(e) => setSelectedIncomeCategory(e.target.value)}
-              className="px-2 py-1 rounded-lg text-xs"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-            >
-              <option value="">Todas</option>
-              {categories.ingresos?.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
           </div>
 
-          <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+          {/* Filtro de categorías de ingresos (multi-selección) */}
+          <div className="mb-4">
+            <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Filtrar por categoria:
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+              {categories.ingresos?.map(cat => {
+                const selected = selectedIncomeCategories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
+                    className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+                      color: selected ? 'white' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedIncomeCategories.length > 0 && (
+              <button
+                onClick={() => setSelectedIncomeCategories([])}
+                className="text-xs font-medium mt-2"
+                style={{ color: 'var(--accent-green)' }}
+              >
+                Limpiar ({selectedIncomeCategories.length})
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
             {sortedIngresos.length === 0 ? (
               <p className="text-center py-8 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Sin ingresos en este periodo
