@@ -2,12 +2,22 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/cashe-frontend/favicon.png" />
+    
+    <!-- Favicon para navegadores -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/cashe-frontend/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/cashe-frontend/icons/icon-192.png" />
+    
+    <!-- Íconos para iOS -->
+    <link rel="apple-touch-icon" href="/cashe-frontend/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/cashe-frontend/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/cashe-frontend/icons/icon-167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/cashe-frontend/icons/icon-180.png" />
+    
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#60a5fa" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta
       name="description"
       content="Cashé - Gestiona tus finanzas personales, controla ingresos, gastos y transferencias"
@@ -21,7 +31,9 @@
       content="black-translucent"
     />
     <meta name="apple-mobile-web-app-title" content="Cashé" />
-    <link rel="apple-touch-icon" href="/cashe-frontend/favicon.png" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/cashe-frontend/manifest.json" />
 
     <!-- Preconnect to API -->
     <link rel="preconnect" href="https://script.google.com" />
