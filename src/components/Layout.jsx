@@ -219,7 +219,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             title="Ir al inicio"
           >
             <img
-              src="/cashe-frontend/favicon.png"
+              src={`${import.meta.env.BASE_URL}favicon.png`}
               alt="Cashé"
               className="w-10 h-10 rounded-xl flex-shrink-0 cursor-pointer"
             />
@@ -372,7 +372,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <img
-                src="/cashe-frontend/favicon.png"
+                src={`${import.meta.env.BASE_URL}favicon.png`}
                 alt="Cashé"
                 className="w-8 h-8 rounded-lg"
               />
