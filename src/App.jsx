@@ -31,7 +31,7 @@ function App() {
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
   return (
-    <BrowserRouter basename="/finanzas-personales">
+    <BrowserRouter basename="/cashe-frontend">
       <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
         <Routes>
           <Route path="/" element={<Home />} />

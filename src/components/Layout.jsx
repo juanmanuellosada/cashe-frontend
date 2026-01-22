@@ -218,18 +218,15 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             className={`p-4 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} hover:opacity-80 transition-opacity`}
             title="Ir al inicio"
           >
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-              style={{ backgroundColor: 'var(--accent-primary)' }}
-            >
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+            <img
+              src="/cashe-frontend/favicon.png"
+              alt="Cashé"
+              className="w-10 h-10 rounded-xl flex-shrink-0 cursor-pointer"
+            />
             {!sidebarCollapsed && (
               <div className="overflow-hidden">
-                <h1 className="font-bold text-lg whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Finanzas</h1>
-                <p className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Personal</p>
+                <h1 className="font-bold text-lg whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Cashé</h1>
+                <p className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Finanzas Personales</p>
               </div>
             )}
           </NavLink>
@@ -371,10 +368,15 @@ function Layout({ children, darkMode, toggleDarkMode }) {
           >
             <button
               onClick={() => navigate('/')}
-              className="text-lg font-bold hover:opacity-80 transition-opacity"
-              style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer' }}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              Finanzas
+              <img
+                src="/cashe-frontend/favicon.png"
+                alt="Cashé"
+                className="w-8 h-8 rounded-lg"
+              />
+              <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Cashé</span>
             </button>
             <div className="flex items-center gap-1">
               <SearchButton onClick={() => setSearchOpen(true)} />

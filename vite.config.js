@@ -10,14 +10,14 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Finanzas Personales',
-        short_name: 'Finanzas',
+        name: 'Cashé',
+        short_name: 'Cashé',
         description: 'Gestión de finanzas personales',
         theme_color: '#60a5fa',
         background_color: '#0a0a0a',
         display: 'standalone',
-        start_url: '/finanzas-personales/',
-        scope: '/finanzas-personales/',
+        start_url: '/cashe-frontend/',
+        scope: '/cashe-frontend/',
         icons: [
           {
             src: 'favicon.svg',
@@ -52,5 +52,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/finanzas-personales/',
+  base: '/cashe-frontend/',
 })
