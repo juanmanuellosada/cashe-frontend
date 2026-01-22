@@ -75,6 +75,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const menuItems = [
     { path: '/estadisticas', label: 'Estadisticas', icon: 'statistics', color: 'var(--accent-purple)' },
     { path: '/comparador', label: 'Comparador', icon: 'comparador', color: 'var(--accent-blue)' },
+    { path: '/resumen-categorias', label: 'Por Categoria', icon: 'categorysum', color: 'var(--accent-primary)' },
     { path: '/gastos', label: 'Gastos', icon: 'expense', color: 'var(--accent-red)' },
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
@@ -124,6 +125,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         return (
           <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+        );
+      case 'categorysum':
+        return (
+          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         );
       default:

@@ -34,6 +34,7 @@ function Comparador() {
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
   const [selectedIncomeCategories, setSelectedIncomeCategories] = useState([]);
   const [showAccountFilters, setShowAccountFilters] = useState(false);
+  const [showCategoryFilters, setShowCategoryFilters] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -375,6 +376,116 @@ function Comparador() {
         )}
       </div>
 
+      {/* Filtro de categorías (multi-selección) */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-secondary)' }}
+      >
+        <button
+          onClick={() => setShowCategoryFilters(!showCategoryFilters)}
+          className="w-full p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Filtrar por categorias
+            </span>
+            {(selectedExpenseCategories.length + selectedIncomeCategories.length) > 0 && (
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+              >
+                {selectedExpenseCategories.length + selectedIncomeCategories.length}
+              </span>
+            )}
+          </div>
+          <svg
+            className={`w-4 h-4 transition-transform ${showCategoryFilters ? 'rotate-180' : ''}`}
+            style={{ color: 'var(--text-secondary)' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showCategoryFilters && (
+          <div className="px-4 pb-4 space-y-4">
+            {/* Categorías de Gastos */}
+            <div>
+              <p className="text-xs font-medium mb-2 flex items-center gap-1.5" style={{ color: 'var(--accent-red)' }}>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                Categorias de gastos
+              </p>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                {categories.gastos?.map((cat) => {
+                  const selected = selectedExpenseCategories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {cat.length > 20 ? cat.substring(0, 20) + '...' : cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Categorías de Ingresos */}
+            <div>
+              <p className="text-xs font-medium mb-2 flex items-center gap-1.5" style={{ color: 'var(--accent-green)' }}>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                Categorias de ingresos
+              </p>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                {categories.ingresos?.map((cat) => {
+                  const selected = selectedIncomeCategories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {cat.length > 20 ? cat.substring(0, 20) + '...' : cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {(selectedExpenseCategories.length + selectedIncomeCategories.length) > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedExpenseCategories([]);
+                  setSelectedIncomeCategories([]);
+                }}
+                className="text-xs font-medium"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Limpiar filtros de categorias
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Total Ingresos */}
@@ -695,36 +806,68 @@ function Comparador() {
             </h3>
           </div>
 
-          {/* Filtro de categorías de gastos (multi-selección) */}
-          <div className="mb-4">
-            <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Filtrar por categoria:
-            </p>
-            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-              {categories.gastos?.map(cat => {
-                const selected = selectedExpenseCategories.includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
-                    className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
-                    style={{
-                      backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
-                      color: selected ? 'white' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
-                  </button>
-                );
-              })}
+          {/* Filtros de gastos */}
+          <div className="mb-4 space-y-3">
+            {/* Filtro por cuentas */}
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Filtrar por cuenta:
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                {accounts.map(account => {
+                  const selected = selectedAccounts.includes(account.nombre);
+                  return (
+                    <button
+                      key={account.nombre}
+                      onClick={() => toggleArrayFilter(selectedAccounts, setSelectedAccounts, account.nombre)}
+                      className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {account.nombre.length > 15 ? account.nombre.substring(0, 15) + '...' : account.nombre}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {selectedExpenseCategories.length > 0 && (
+
+            {/* Filtro por categoría */}
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Filtrar por categoria:
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                {categories.gastos?.map(cat => {
+                  const selected = selectedExpenseCategories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
+                      className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {(selectedAccounts.length > 0 || selectedExpenseCategories.length > 0) && (
               <button
-                onClick={() => setSelectedExpenseCategories([])}
-                className="text-xs font-medium mt-2"
+                onClick={() => {
+                  setSelectedAccounts([]);
+                  setSelectedExpenseCategories([]);
+                }}
+                className="text-xs font-medium"
                 style={{ color: 'var(--accent-red)' }}
               >
-                Limpiar ({selectedExpenseCategories.length})
+                Limpiar filtros
               </button>
             )}
           </div>
@@ -802,36 +945,68 @@ function Comparador() {
             </h3>
           </div>
 
-          {/* Filtro de categorías de ingresos (multi-selección) */}
-          <div className="mb-4">
-            <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Filtrar por categoria:
-            </p>
-            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-              {categories.ingresos?.map(cat => {
-                const selected = selectedIncomeCategories.includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
-                    className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
-                    style={{
-                      backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
-                      color: selected ? 'white' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
-                  </button>
-                );
-              })}
+          {/* Filtros de ingresos */}
+          <div className="mb-4 space-y-3">
+            {/* Filtro por cuentas */}
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Filtrar por cuenta:
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                {accounts.map(account => {
+                  const selected = selectedAccounts.includes(account.nombre);
+                  return (
+                    <button
+                      key={account.nombre}
+                      onClick={() => toggleArrayFilter(selectedAccounts, setSelectedAccounts, account.nombre)}
+                      className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {account.nombre.length > 15 ? account.nombre.substring(0, 15) + '...' : account.nombre}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {selectedIncomeCategories.length > 0 && (
+
+            {/* Filtro por categoría */}
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Filtrar por categoria:
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                {categories.ingresos?.map(cat => {
+                  const selected = selectedIncomeCategories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
+                      className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+                        color: selected ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {(selectedAccounts.length > 0 || selectedIncomeCategories.length > 0) && (
               <button
-                onClick={() => setSelectedIncomeCategories([])}
-                className="text-xs font-medium mt-2"
+                onClick={() => {
+                  setSelectedAccounts([]);
+                  setSelectedIncomeCategories([]);
+                }}
+                className="text-xs font-medium"
                 style={{ color: 'var(--accent-green)' }}
               >
-                Limpiar ({selectedIncomeCategories.length})
+                Limpiar filtros
               </button>
             )}
           </div>
