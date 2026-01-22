@@ -132,20 +132,26 @@ function Home() {
     }
   };
 
-  // Handle movement delete
+  // Handle movement delete (optimistic)
   const handleDeleteMovement = async (movement) => {
+    // Cerrar modal inmediatamente (optimistic)
+    setEditingMovement(null);
+
+    // Remover de la lista local inmediatamente
+    setMovements(prev => prev.filter(m =>
+      !(m.tipo === movement.tipo && m.rowIndex === movement.rowIndex)
+    ));
+
+    // Borrar en background
     try {
-      setSavingMovement(true);
       await deleteMovement(movement);
-      setEditingMovement(null);
-      // Refresh data
+      // Refrescar datos para sincronizar
       fetchDashboard();
-      fetchMovements();
     } catch (err) {
       console.error('Error deleting movement:', err);
       alert('Error al eliminar: ' + err.message);
-    } finally {
-      setSavingMovement(false);
+      // Recargar para recuperar el estado real
+      fetchMovements();
     }
   };
 

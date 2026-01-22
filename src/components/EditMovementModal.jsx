@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import LoadingSpinner from './LoadingSpinner';
+import { formatCurrency } from '../utils/format';
 
 function EditMovementModal({
   movement,
@@ -31,6 +32,9 @@ function EditMovementModal({
     montoEntrante: '',
     nota: '',
   });
+
+  // Estado para modal de confirmación de eliminación
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isTransfer = movement?.tipo === 'transferencia';
 
@@ -92,10 +96,25 @@ function EditMovementModal({
     }
   };
 
-  const handleDelete = () => {
-    if (window.confirm('¿Estas seguro de que quieres eliminar este movimiento?')) {
-      onDelete?.(movement);
+  const handleDeleteClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!movement?.rowIndex) {
+      alert('No se puede eliminar: falta información del movimiento (rowIndex)');
+      return;
     }
+    if (!onDelete) {
+      alert('No se puede eliminar: función de eliminación no disponible');
+      return;
+    }
+    // Mostrar modal de confirmación
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteConfirm(false);
+    onDelete(movement);
   };
 
   const handleDuplicate = () => {
@@ -399,7 +418,7 @@ function EditMovementModal({
           <div className="flex gap-2 pt-2">
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={loading}
               className="p-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
               style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
@@ -440,6 +459,59 @@ function EditMovementModal({
             </button>
           </div>
         </form>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+            <div
+              className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="text-center">
+                <div
+                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
+                >
+                  <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Eliminar movimiento
+                </h3>
+                <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                  ¿Estás seguro de que quieres eliminar este {movement?.tipo === 'transferencia' ? 'transferencia' : movement?.tipo}?
+                  <br />
+                  <span className="font-semibold text-base" style={{ color: getColor() }}>
+                    {movement?.tipo === 'transferencia'
+                      ? formatCurrency(movement?.montoSaliente)
+                      : formatCurrency(movement?.montoPesos || movement?.monto)}
+                  </span>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90"
+                    style={{ backgroundColor: 'var(--accent-red)' }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

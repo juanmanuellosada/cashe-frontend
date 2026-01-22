@@ -99,6 +99,12 @@ function generarIdCompra() {
 
 /**
  * Calcula la fecha de la primera cuota según el día de cierre de la tarjeta
+ *
+ * Lógica:
+ * - La cuota se registra el día ANTERIOR al cierre (si cierra el 29, cuota el 28)
+ * - Si la compra es ANTES del cierre → la cuota entra en ESTE mes
+ * - Si la compra es EN o DESPUÉS del cierre → la cuota entra en el MES SIGUIENTE
+ *
  * @param {Date} fechaCompra - Fecha de la compra
  * @param {number} diaCierre - Día de cierre de la tarjeta (1-31)
  * @return {Date} - Fecha de la primera cuota
@@ -106,29 +112,64 @@ function generarIdCompra() {
 function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
   var fecha = new Date(fechaCompra);
   var diaCompra = fecha.getDate();
-  
-  // Si la compra es antes del cierre, la primera cuota es el mes siguiente
-  // Si la compra es después del cierre, la primera cuota es en 2 meses
-  if (diaCompra <= diaCierre) {
-    // Primera cuota el mes siguiente
-    fecha.setMonth(fecha.getMonth() + 1);
-  } else {
-    // Primera cuota en 2 meses
-    fecha.setMonth(fecha.getMonth() + 2);
+
+  // Día de la cuota = día anterior al cierre
+  var diaCuota = diaCierre - 1;
+
+  // Caso especial: si cierre es día 1, la cuota es el último día del mes anterior
+  if (diaCuota < 1) {
+    diaCuota = 28; // Usamos 28 como día seguro que existe en todos los meses
   }
-  
-  // Setear el día de cierre como día de la cuota
-  fecha.setDate(diaCierre);
-  
+
+  // Determinar el mes de la primera cuota
+  if (diaCompra < diaCierre) {
+    // Compra ANTES del cierre → cuota en ESTE mes
+    // No cambiamos el mes
+  } else {
+    // Compra EN o DESPUÉS del cierre → cuota en el MES SIGUIENTE
+    fecha.setMonth(fecha.getMonth() + 1);
+  }
+
+  // Setear el día de la cuota, ajustando si el día no existe en ese mes
+  fecha = setDiaSeguro(fecha, diaCuota);
+
   return fecha;
 }
 
 /**
- * Agrega N meses a una fecha
+ * Setea el día de una fecha de forma segura, ajustando al último día del mes si es necesario
+ * @param {Date} fecha - Fecha base
+ * @param {number} dia - Día a setear
+ * @return {Date} - Nueva fecha con el día ajustado
+ */
+function setDiaSeguro(fecha, dia) {
+  var nuevaFecha = new Date(fecha);
+  var ultimoDiaMes = new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth() + 1, 0).getDate();
+
+  // Si el día pedido es mayor al último día del mes, usar el último día
+  nuevaFecha.setDate(Math.min(dia, ultimoDiaMes));
+
+  return nuevaFecha;
+}
+
+/**
+ * Agrega N meses a una fecha, manteniendo el día de forma segura
+ * @param {Date} fecha - Fecha base
+ * @param {number} meses - Cantidad de meses a agregar
+ * @return {Date} - Nueva fecha
  */
 function agregarMeses(fecha, meses) {
   var nuevaFecha = new Date(fecha);
+  var diaOriginal = nuevaFecha.getDate();
+
   nuevaFecha.setMonth(nuevaFecha.getMonth() + meses);
+
+  // Si el día cambió (por overflow), ajustar al último día del mes correcto
+  if (nuevaFecha.getDate() !== diaOriginal) {
+    // Retroceder al último día del mes anterior (que es el mes que queríamos)
+    nuevaFecha.setDate(0);
+  }
+
   return nuevaFecha;
 }
 

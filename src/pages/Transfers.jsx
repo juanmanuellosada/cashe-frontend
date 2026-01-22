@@ -45,16 +45,18 @@ function Transfers() {
   };
 
   const handleDelete = async (movement) => {
+    // Cerrar modal y remover de lista inmediatamente (optimistic)
+    setEditingMovement(null);
+    setTransfers(prev => prev.filter(t => t.rowIndex !== movement.rowIndex));
+
+    // Borrar en background
     try {
-      setSaving(true);
       await deleteMovement(movement);
-      setEditingMovement(null);
-      fetchData();
     } catch (err) {
       console.error('Error deleting:', err);
       alert('Error al eliminar: ' + err.message);
-    } finally {
-      setSaving(false);
+      // Recargar para recuperar estado real
+      fetchData();
     }
   };
 

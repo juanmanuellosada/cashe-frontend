@@ -18,6 +18,7 @@ function NewMovement() {
 
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [formKey, setFormKey] = useState(0); // Key para resetear el formulario
 
   const handleSubmit = async ({ type, data }) => {
     setSubmitting(true);
@@ -53,10 +54,15 @@ function NewMovement() {
         type: 'success',
       });
 
-      // Navegar al dashboard después de un breve delay
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      // Resetear el formulario incrementando el key (si no es prefill/duplicar)
+      if (!prefillData) {
+        setFormKey(prev => prev + 1);
+      } else {
+        // Si era duplicar, navegar al inicio después de guardar
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
+      }
     } catch (error) {
       setToast({
         message: error.message || 'Error al registrar el movimiento',
@@ -105,6 +111,7 @@ function NewMovement() {
       )}
 
       <MovementForm
+        key={formKey}
         accounts={accounts}
         categories={categories}
         onSubmit={handleSubmit}

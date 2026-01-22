@@ -59,16 +59,17 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   };
 
   const handleDeleteMovement = async (movement) => {
+    // Cerrar modal inmediatamente (optimistic)
+    setEditingMovement(null);
+
+    // Borrar en background
     try {
-      setSavingMovement(true);
       await deleteMovement(movement);
-      setEditingMovement(null);
+      // Recargar para actualizar datos
       window.location.reload();
     } catch (err) {
       console.error('Error deleting movement:', err);
       alert('Error al eliminar: ' + err.message);
-    } finally {
-      setSavingMovement(false);
     }
   };
 
