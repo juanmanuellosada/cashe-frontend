@@ -927,59 +927,61 @@ export const fetchAllDollarRates = async () => {
 
 export const getExchangeRate = async () => {
   const userId = await getUserId();
-  
-  const { data } = await supabase
+
+  // Request only existing columns to avoid 400s if the table is missing optional fields
+  const { data, error } = await supabase
     .from('user_settings')
-    .select('exchange_rate, exchange_rate_type, exchange_rate_updated_at')
+    .select('exchange_rate')
     .eq('user_id', userId)
     .single();
 
-  // Check if we need to update (more than 1 hour old or no data)
-  const lastUpdate = data?.exchange_rate_updated_at ? new Date(data.exchange_rate_updated_at) : null;
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  
-  if (!data?.exchange_rate || !lastUpdate || lastUpdate < oneHourAgo) {
-    // Fetch fresh rate
-    const tipo = data?.exchange_rate_type || 'oficial';
-    const liveRate = await fetchLiveExchangeRate(tipo);
-    
+  if (error) {
+    console.warn('Could not fetch user_settings (exchange rate)', error.message);
+  }
+
+  // If no rate, refresh; otherwise keep existing value (timestamps not present in schema)
+  const needsRefresh = !data?.exchange_rate;
+
+  if (needsRefresh) {
+    const liveRate = await fetchLiveExchangeRate('oficial');
+
     if (liveRate?.compra) {
-      // Update in database
-      await supabase
+      const { error: upsertError } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
-          exchange_rate: liveRate.compra,
-          exchange_rate_updated_at: new Date().toISOString()
+          exchange_rate: liveRate.compra
         }, { onConflict: 'user_id' });
-      
-      return { 
+
+      if (upsertError) {
+        console.warn('Could not upsert exchange rate', upsertError.message);
+      }
+
+      return {
         tipoCambio: liveRate.compra,
-        tipoUsado: tipo,
+        tipoUsado: 'oficial',
         fechaActualizacion: liveRate.fecha,
         autoUpdated: true
       };
     }
   }
 
-  return { 
+  return {
     tipoCambio: data?.exchange_rate || 1000,
-    tipoUsado: data?.exchange_rate_type || 'oficial',
-    fechaActualizacion: data?.exchange_rate_updated_at,
+    tipoUsado: 'oficial',
+    fechaActualizacion: null,
     autoUpdated: false
   };
 };
 
-export const updateExchangeRate = async (rate, tipo = 'oficial') => {
+export const updateExchangeRate = async (rate) => {
   const userId = await getUserId();
-  
+
   const { error } = await supabase
     .from('user_settings')
     .upsert({
       user_id: userId,
-      exchange_rate: rate,
-      exchange_rate_type: tipo,
-      exchange_rate_updated_at: new Date().toISOString()
+      exchange_rate: rate
     }, { onConflict: 'user_id' });
 
   if (error) throw error;
@@ -990,25 +992,23 @@ export const updateExchangeRate = async (rate, tipo = 'oficial') => {
 export const refreshExchangeRate = async (tipo = 'oficial') => {
   const userId = await getUserId();
   const liveRate = await fetchLiveExchangeRate(tipo);
-  
+
   if (!liveRate?.compra) {
     throw new Error('No se pudo obtener el tipo de cambio');
   }
-  
+
   const { error } = await supabase
     .from('user_settings')
     .upsert({
       user_id: userId,
-      exchange_rate: liveRate.compra,
-      exchange_rate_type: tipo,
-      exchange_rate_updated_at: new Date().toISOString()
+      exchange_rate: liveRate.compra
     }, { onConflict: 'user_id' });
 
   if (error) throw error;
-  
-  return { 
+
+  return {
     tipoCambio: liveRate.compra,
-    tipoUsado: tipo,
+    tipoUsado: 'oficial',
     fechaActualizacion: liveRate.fecha
   };
 };
