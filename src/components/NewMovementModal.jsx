@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
-import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/sheetsApi';
+import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
 import MovementForm from './forms/MovementForm';
 import LoadingSpinner from './LoadingSpinner';
 import Toast from './Toast';
@@ -9,9 +9,9 @@ import Toast from './Toast';
 /**
  * Modal para crear nuevo movimiento (Desktop)
  */
-function NewMovementModal({ isOpen, onClose }) {
+function NewMovementModal({ isOpen, onClose, defaultType }) {
   const { accounts, loading: loadingAccounts, refetch: refetchAccounts } = useAccounts();
-  const { categories, loading: loadingCategories } = useCategories();
+  const { categories, loading: loadingCategories, refetch: refetchCategories } = useCategories();
 
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
@@ -100,55 +100,109 @@ function NewMovementModal({ isOpen, onClose }) {
 
   const isLoading = loadingAccounts || loadingCategories;
 
+  // Determinar título y subtítulo según el tipo
+  const getModalTitle = () => {
+    if (!defaultType) return 'Nuevo Movimiento';
+    switch (defaultType) {
+      case 'expense': return 'Nuevo Gasto';
+      case 'income': return 'Nuevo Ingreso';
+      case 'transfer': return 'Nueva Transferencia';
+      default: return 'Nuevo Movimiento';
+    }
+  };
+
+  const getModalSubtitle = () => {
+    if (!defaultType) return 'Registra ingreso, gasto o transferencia';
+    switch (defaultType) {
+      case 'expense': return 'Registra un gasto';
+      case 'income': return 'Registra un ingreso';
+      case 'transfer': return 'Registra una transferencia';
+      default: return 'Registra ingreso, gasto o transferencia';
+    }
+  };
+
+  const getIconColor = () => {
+    if (!defaultType) return 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)';
+    switch (defaultType) {
+      case 'expense': return 'var(--accent-red)';
+      case 'income': return 'var(--accent-green)';
+      case 'transfer': return 'var(--accent-blue)';
+      default: return 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)';
+    }
+  };
+
+  const getIcon = () => {
+    if (!defaultType) {
+      return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />;
+    }
+    switch (defaultType) {
+      case 'expense':
+        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />;
+      case 'income':
+        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />;
+      case 'transfer':
+        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />;
+      default:
+        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />;
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
       {/* Backdrop with premium blur */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={submitting ? undefined : onClose}
       />
 
       {/* Modal with glass morphism */}
       <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl animate-scale-in card-elevated"
+        className="relative w-full max-w-lg my-auto rounded-2xl animate-scale-in card-elevated"
         style={{ 
-          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 124, 255, 0.1)'
+          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 124, 255, 0.1)',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Gradient accent line at top */}
         <div 
           className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
           style={{ 
-            background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-purple) 50%, var(--accent-green) 100%)'
+            background: defaultType 
+              ? (defaultType === 'expense' ? 'var(--accent-red)' : defaultType === 'income' ? 'var(--accent-green)' : 'var(--accent-blue)')
+              : 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-purple) 50%, var(--accent-green) 100%)'
           }}
         />
 
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b"
+          className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
           style={{ 
             backgroundColor: 'var(--bg-secondary)', 
-            borderColor: 'var(--border-subtle)' 
+            borderColor: 'var(--border-subtle)',
+            borderTopLeftRadius: '1rem',
+            borderTopRightRadius: '1rem'
           }}
         >
           <div className="flex items-center gap-3">
             <div 
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ 
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
+                background: getIconColor(),
                 boxShadow: '0 4px 16px var(--accent-primary-glow)'
               }}
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                {getIcon()}
               </svg>
             </div>
             <div>
               <h2 className="text-lg font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-                Nuevo Movimiento
+                {getModalTitle()}
               </h2>
               <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                Registra ingreso, gasto o transferencia
+                {getModalSubtitle()}
               </p>
             </div>
           </div>
@@ -164,8 +218,8 @@ function NewMovementModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5">
+        {/* Content - scrollable */}
+        <div className="p-5 overflow-y-auto flex-1">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <LoadingSpinner size="lg" />
@@ -177,6 +231,9 @@ function NewMovementModal({ isOpen, onClose }) {
               categories={categories}
               onSubmit={handleSubmit}
               loading={submitting}
+              prefillData={defaultType ? { tipo: defaultType === 'income' ? 'ingreso' : defaultType === 'expense' ? 'gasto' : 'transferencia' } : null}
+              hideTypeSelector={!!defaultType}
+              onCategoryCreated={refetchCategories}
             />
           )}
         </div>

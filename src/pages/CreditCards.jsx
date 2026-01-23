@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAccounts, getAllExpenses, addExpense, addTransfer } from '../services/sheetsApi';
+import { getAccounts, getAllExpenses, addExpense, addTransfer } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
+import { useError } from '../contexts/ErrorContext';
 
 function CreditCards() {
+  const { showError } = useError();
   const [creditCards, setCreditCards] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
@@ -218,7 +220,7 @@ function CreditCards() {
       fetchData();
     } catch (err) {
       console.error('Error adding tax:', err);
-      alert('Error al agregar impuesto: ' + err.message);
+      showError('No se pudo agregar el impuesto de sellos', err.message);
     } finally {
       setSaving(false);
     }
@@ -234,7 +236,7 @@ function CreditCards() {
       : selectedStatement.totalDolares;
     
     if (total <= 0) {
-      alert(`No hay monto en ${paymentCurrency === 'ARS' ? 'pesos' : 'dólares'} para pagar`);
+      showError('No se puede realizar el pago', `No hay monto en ${paymentCurrency === 'ARS' ? 'pesos' : 'dólares'} para pagar`);
       return;
     }
     
@@ -260,7 +262,7 @@ function CreditCards() {
       fetchData();
     } catch (err) {
       console.error('Error paying statement:', err);
-      alert('Error al pagar resumen: ' + err.message);
+      showError('No se pudo registrar el pago del resumen', err.message);
     } finally {
       setSaving(false);
     }

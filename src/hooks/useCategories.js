@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCategories } from '../services/sheetsApi';
+import { getCategories } from '../services/supabaseApi';
 
 export function useCategories() {
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });

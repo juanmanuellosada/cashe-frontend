@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
-import { getRecentMovements, getAccounts, getCategories } from '../services/sheetsApi';
+import { getRecentMovements, getAccounts, getCategories } from '../services/supabaseApi';
 import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from '../components/DateRangePicker';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDashboard, getRecentMovements } from '../services/sheetsApi';
+import { getDashboard, getRecentMovements } from '../services/supabaseApi';
 
 export function useDashboard() {
   const [dashboard, setDashboard] = useState(null);

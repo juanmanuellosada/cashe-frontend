@@ -8,6 +8,8 @@ function Combobox({
   name,
   icon,
   emptyMessage = 'No hay opciones',
+  onCreateNew,
+  createNewLabel = 'Crear nueva',
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -169,6 +171,37 @@ function Combobox({
                   </button>
                 );
               })
+            )}
+            
+            {/* Create new option button */}
+            {onCreateNew && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setSearch('');
+                  onCreateNew(search);
+                }}
+                className="w-full px-4 py-3 text-left text-sm transition-colors flex items-center gap-2"
+                style={{
+                  borderTop: '1px solid var(--border-subtle)',
+                  color: 'var(--accent-primary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--accent-primary-dim)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="font-medium">{createNewLabel}</span>
+                {search && (
+                  <span style={{ color: 'var(--text-secondary)' }}>"{search}"</span>
+                )}
+              </button>
             )}
           </div>
         </div>

@@ -42,11 +42,12 @@ const MOVEMENT_TYPES = [
   },
 ];
 
-function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) {
+function MovementForm({ accounts, categories, onSubmit, loading, prefillData, hideTypeSelector, onCategoryCreated }) {
   // Set initial type based on prefill data
   const getInitialType = () => {
     if (prefillData?.tipo === 'ingreso') return 'ingreso';
     if (prefillData?.tipo === 'transferencia') return 'transferencia';
+    if (prefillData?.tipo === 'gasto') return 'gasto';
     return 'gasto';
   };
 
@@ -57,6 +58,7 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) 
       accounts,
       onSubmit,
       loading,
+      onCategoryCreated,
     };
 
     // Only pass prefillData to matching form type
@@ -106,40 +108,44 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) 
   return (
     <div>
       {/* Movement Type Selector - Premium Segmented Control */}
-      <div
-        className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl mb-6"
-        style={{ backgroundColor: 'var(--bg-tertiary)' }}
-      >
-        {MOVEMENT_TYPES.map((type) => {
-          const isActive = movementType === type.id;
-          return (
-            <button
-              key={type.id}
-              onClick={() => setMovementType(type.id)}
-              className={`relative flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-300 active:scale-[0.98] ${
-                isActive ? '' : 'hover:bg-[var(--bg-secondary)]'
-              }`}
-              style={{
-                backgroundColor: isActive ? type.color : 'transparent',
-                color: isActive ? 'white' : 'var(--text-secondary)',
-                boxShadow: isActive ? `0 4px 20px ${type.glow}` : 'none',
-              }}
-            >
-              {type.icon}
-              <span className="hidden sm:inline">{type.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {!hideTypeSelector && (
+        <>
+          <div
+            className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl mb-6"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            {MOVEMENT_TYPES.map((type) => {
+              const isActive = movementType === type.id;
+              return (
+                <button
+                  key={type.id}
+                  onClick={() => setMovementType(type.id)}
+                  className={`relative flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-300 active:scale-[0.98] ${
+                    isActive ? '' : 'hover:bg-[var(--bg-secondary)]'
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? type.color : 'transparent',
+                    color: isActive ? 'white' : 'var(--text-secondary)',
+                    boxShadow: isActive ? `0 4px 20px ${type.glow}` : 'none',
+                  }}
+                >
+                  {type.icon}
+                  <span className="hidden sm:inline">{type.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Type indicator bar with glow */}
-      <div
-        className="h-1 rounded-full mb-6 transition-all duration-500"
-        style={{
-          backgroundColor: activeType?.color,
-          boxShadow: `0 0 20px ${activeType?.glow}, 0 0 40px ${activeType?.glow}`
-        }}
-      />
+          {/* Type indicator bar with glow */}
+          <div
+            className="h-1 rounded-full mb-6 transition-all duration-500"
+            style={{
+              backgroundColor: activeType?.color,
+              boxShadow: `0 0 20px ${activeType?.glow}, 0 0 40px ${activeType?.glow}`
+            }}
+          />
+        </>
+      )}
 
       {/* Dynamic Form */}
       {renderForm()}

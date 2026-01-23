@@ -1,6 +1,13 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { AuthProvider } from './contexts/AuthContext'
+import { ErrorProvider } from './contexts/ErrorContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import ErrorModal from './components/ErrorModal'
 import Layout from './components/Layout'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
 import Home from './pages/Home'
 import NewMovement from './pages/NewMovement'
 import Accounts from './pages/Accounts'
@@ -31,23 +38,101 @@ function App() {
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
   return (
-    <BrowserRouter basename="/cashe-frontend">
-      <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/nuevo" element={<NewMovement />} />
-          <Route path="/cuentas" element={<Accounts />} />
-          <Route path="/categorias" element={<Categories />} />
-          <Route path="/gastos" element={<Expenses />} />
-          <Route path="/ingresos" element={<Income />} />
-          <Route path="/transferencias" element={<Transfers />} />
-          <Route path="/estadisticas" element={<Statistics />} />
-          <Route path="/comparador" element={<Comparador />} />
-          <Route path="/resumen-categorias" element={<CategorySummary />} />
-          <Route path="/tarjetas" element={<CreditCards />} />
+    <ErrorProvider>
+      <AuthProvider>
+        <BrowserRouter basename="/cashe-frontend">
+          <ErrorModal />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          
+          {/* Protected routes */}
+          <Route path="/home" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Home />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/nuevo" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <NewMovement />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/cuentas" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Accounts />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/categorias" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Categories />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/gastos" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Expenses />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/ingresos" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Income />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/transferencias" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Transfers />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/estadisticas" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Statistics />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/comparador" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <Comparador />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/resumen-categorias" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <CategorySummary />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/tarjetas" element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                <CreditCards />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          {/* Catch all - redirect to landing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Layout>
-    </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorProvider>
   )
 }
 
