@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const isProd = process.env.NODE_ENV === 'production'
+const basePath = isProd ? '/cashe-frontend/' : '/'
+
 // Custom plugin to redirect /cashe-frontend to /cashe-frontend/
 const redirectPlugin = () => ({
   name: 'redirect-plugin',
@@ -32,8 +35,8 @@ export default defineConfig({
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
         display: 'standalone',
-        start_url: '/cashe-frontend/',
-        scope: '/cashe-frontend/',
+        start_url: basePath,
+        scope: basePath,
         icons: [
           {
             src: 'icons/icon-72.png',
@@ -98,5 +101,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/cashe-frontend/',
+  base: basePath,
 })

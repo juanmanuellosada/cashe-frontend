@@ -181,11 +181,11 @@ function Accounts() {
     }
   };
 
-  const toggleDetails = (accountName) => {
+  const toggleDetails = (accountId) => {
     setShowDetails(prev => {
-      const isOpen = !!prev[accountName];
+      const isOpen = !!prev[accountId];
       // Solo dejar abierto el que se clickeó; si ya estaba abierto, cierra todos.
-      return isOpen ? {} : { [accountName]: true };
+      return isOpen ? {} : { [accountId]: true };
     });
   };
 
@@ -387,17 +387,18 @@ function Accounts() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 items-start">
           {accounts.map((account) => {
+            const expansionKey = account.id ?? account.rowIndex ?? account.nombre;
             const percentage = getAccountPercentage(account);
-            const isExpanded = showDetails[account.nombre];
+            const isExpanded = showDetails[expansionKey];
             const displayBalance = getDisplayBalance(account);
             const isSelected = selectedAccounts.has(account.id);
 
             return (
               <div
-                key={account.nombre}
-                className={`rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'ring-2' : ''}`}
+                key={account.id || account.rowIndex || account.nombre}
+                className={`rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'ring-2' : ''} self-start`}
                 style={{ 
                   backgroundColor: 'var(--bg-secondary)',
                   ringColor: 'var(--accent-primary)'
@@ -428,7 +429,7 @@ function Accounts() {
                   )}
                   
                   <button
-                    onClick={() => selectionMode ? toggleAccountSelection(account.id) : toggleDetails(account.nombre)}
+                    onClick={() => selectionMode ? toggleAccountSelection(account.id) : toggleDetails(expansionKey)}
                     className={`flex-1 p-4 ${selectionMode ? 'pl-0' : ''} flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]`}
                   >
                     {/* Currency icon */}

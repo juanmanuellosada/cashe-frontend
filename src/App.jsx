@@ -8,6 +8,7 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import NewMovement from './pages/NewMovement'
 import Accounts from './pages/Accounts'
@@ -37,16 +38,21 @@ function App() {
 
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
+  const basename = import.meta.env.BASE_URL === '/'
+    ? '/'
+    : import.meta.env.BASE_URL.replace(/\/$/, '')
+
   return (
     <ErrorProvider>
       <AuthProvider>
-        <BrowserRouter basename="/cashe-frontend">
+        <BrowserRouter basename={basename}>
           <ErrorModal />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Protected routes */}
           <Route path="/home" element={
