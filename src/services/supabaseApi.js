@@ -232,6 +232,9 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
 
 export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre }) => {
   const accountId = id || rowIndex;
+  if (!accountId) {
+    throw new Error('No se encontró el id de la cuenta para actualizar.');
+  }
   const { data, error } = await supabase
     .from('accounts')
     .update({

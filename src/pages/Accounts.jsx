@@ -933,6 +933,7 @@ function ClosingDayEditor({ account, onSave, loading }) {
     setSaving(true);
     try {
       await onSave({
+        id: account.id,
         rowIndex: account.rowIndex,
         nombre: account.nombre,
         balanceInicial: account.balanceInicial,
