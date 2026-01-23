@@ -23,28 +23,32 @@ function RecentMovements({
       case 'ingreso':
         return {
           color: 'var(--accent-green)',
-          bgColor: 'rgba(34, 197, 94, 0.15)',
+          bgColor: 'rgba(0, 217, 154, 0.12)',
+          glowColor: 'rgba(0, 217, 154, 0.3)',
           prefix: '+',
           icon: 'up',
         };
       case 'gasto':
         return {
           color: 'var(--accent-red)',
-          bgColor: 'rgba(239, 68, 68, 0.15)',
+          bgColor: 'rgba(255, 92, 114, 0.12)',
+          glowColor: 'rgba(255, 92, 114, 0.3)',
           prefix: '-',
           icon: 'down',
         };
       case 'transferencia':
         return {
           color: 'var(--accent-blue)',
-          bgColor: 'rgba(59, 130, 246, 0.15)',
+          bgColor: 'rgba(59, 130, 246, 0.12)',
+          glowColor: 'rgba(59, 130, 246, 0.3)',
           prefix: '',
           icon: 'transfer',
         };
       default:
         return {
           color: 'var(--accent-blue)',
-          bgColor: 'rgba(59, 130, 246, 0.15)',
+          bgColor: 'rgba(59, 130, 246, 0.12)',
+          glowColor: 'rgba(59, 130, 246, 0.3)',
           prefix: '',
           icon: 'down',
         };
@@ -87,24 +91,21 @@ function RecentMovements({
 
   // Skeleton loading
   const renderSkeleton = () => (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-secondary)' }}
-    >
+    <div className="card-glass overflow-hidden">
       {[1, 2, 3].map((i) => (
         <div
           key={i}
           className="flex items-center gap-3 p-4"
           style={{ borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}
         >
-          <div className="w-10 h-10 rounded-full skeleton" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-24 skeleton" />
-            <div className="h-3 w-32 skeleton" />
+          <div className="w-11 h-11 rounded-xl skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="flex-1 space-y-2.5">
+            <div className="h-4 w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            <div className="h-3 w-36 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
           </div>
-          <div className="text-right space-y-2">
-            <div className="h-4 w-20 skeleton ml-auto" />
-            <div className="h-3 w-14 skeleton ml-auto" />
+          <div className="text-right space-y-2.5">
+            <div className="h-5 w-24 skeleton-shimmer rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            <div className="h-3 w-16 skeleton-shimmer rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
           </div>
         </div>
       ))}
@@ -112,15 +113,25 @@ function RecentMovements({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Header con titulo y selector de fechas */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h3
-          className="text-sm font-semibold"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Movimientos
-        </h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: 'var(--accent-primary-dim)' }}
+          >
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <h3
+            className="text-[15px] font-semibold"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Movimientos
+          </h3>
+        </div>
         <DateRangePicker
           value={dateRange}
           onChange={onDateRangeChange}
@@ -140,10 +151,7 @@ function RecentMovements({
       {loading ? (
         renderSkeleton()
       ) : !movements || movements.length === 0 ? (
-        <div
-          className="rounded-2xl p-8 text-center"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
+        <div className="card-glass p-8 text-center">
           <div
             className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
@@ -158,7 +166,7 @@ function RecentMovements({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+          <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
             Sin movimientos
           </p>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -166,17 +174,14 @@ function RecentMovements({
           </p>
         </div>
       ) : (
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
+        <div className="card-glass overflow-hidden">
           {movements.map((movement, index) => {
             const styles = getTypeStyles(movement.tipo);
 
             return (
               <div
                 key={movement.rowIndex || index}
-                className={`group flex items-center gap-3 p-4 transition-all duration-200 hover:bg-[var(--bg-tertiary)] ${
+                className={`group flex items-center gap-3 p-4 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.995] ${
                   index !== movements.length - 1 ? 'border-b' : ''
                 }`}
                 style={{ borderColor: 'var(--border-subtle)' }}
@@ -184,13 +189,18 @@ function RecentMovements({
                 {/* Clickable area for edit */}
                 <button
                   onClick={() => onMovementClick?.(movement)}
-                  className="flex items-center gap-3 flex-1 min-w-0 text-left transition-transform duration-200 group-hover:scale-[1.005]"
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left transition-transform duration-200"
                   style={{ backgroundColor: 'transparent' }}
                 >
-                  {/* Icon */}
+                  {/* Icon with subtle glow on hover */}
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
-                    style={{ backgroundColor: styles.bgColor }}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-110"
+                    style={{ 
+                      backgroundColor: styles.bgColor,
+                      boxShadow: `0 0 0 ${styles.glowColor}`
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = `0 0 20px ${styles.glowColor}`}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = `0 0 0 ${styles.glowColor}`}
                   >
                     {renderIcon(movement.tipo, styles.color)}
                   </div>
@@ -199,7 +209,7 @@ function RecentMovements({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p
-                        className="font-medium truncate"
+                        className="font-semibold truncate text-[15px]"
                         style={{ color: 'var(--text-primary)' }}
                       >
                         {movement.tipo === 'transferencia'
@@ -209,9 +219,9 @@ function RecentMovements({
                       {/* Installment badge */}
                       {movement.cuota && (
                         <span
-                          className="px-1.5 py-0.5 rounded text-xs font-medium flex items-center gap-0.5 flex-shrink-0"
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 flex-shrink-0"
                           style={{
-                            backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                            backgroundColor: 'rgba(139, 92, 246, 0.12)',
                             color: 'var(--accent-purple)',
                           }}
                         >
@@ -223,7 +233,7 @@ function RecentMovements({
                       )}
                     </div>
                     <p
-                      className="text-xs truncate"
+                      className="text-xs truncate mt-0.5"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {movement.tipo === 'transferencia'
@@ -239,7 +249,7 @@ function RecentMovements({
                         ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
                         : `${styles.prefix}${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
                     </p>
-                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
                     </p>
                   </div>
@@ -248,12 +258,12 @@ function RecentMovements({
                 {/* Delete button - hidden by default, visible on hover */}
                 <button
                   onClick={(e) => handleDeleteClick(e, movement)}
-                  className="p-2 rounded-lg flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
+                  className="p-2.5 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/15 active:scale-95"
                   style={{ color: 'var(--text-secondary)' }}
                   title="Eliminar"
                 >
                   <svg className="w-5 h-5 transition-colors hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
@@ -264,7 +274,7 @@ function RecentMovements({
 
       {/* Contador de resultados */}
       {movements && movements.length > 0 && (
-        <p className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-[11px] text-center font-medium" style={{ color: 'var(--text-secondary)' }}>
           Mostrando {movements.length} movimiento{movements.length !== 1 ? 's' : ''}
         </p>
       )}
@@ -273,29 +283,31 @@ function RecentMovements({
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
             onClick={() => setDeleteConfirm(null)}
           />
           <div
-            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in card-elevated"
           >
             <div className="text-center">
               <div
-                className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
+                className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'rgba(255, 92, 114, 0.12)',
+                  boxShadow: '0 0 30px rgba(255, 92, 114, 0.2)'
+                }}
               >
-                <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg className="w-8 h-8" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-lg font-bold font-display mb-2" style={{ color: 'var(--text-primary)' }}>
                 Eliminar movimiento
               </h3>
               <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
-                ¿Estas seguro de que quieres eliminar {deleteConfirm.tipo === 'transferencia' ? 'esta' : 'este'} {deleteConfirm.tipo}?
+                ¿Estás seguro de que quieres eliminar {deleteConfirm.tipo === 'transferencia' ? 'esta' : 'este'} {deleteConfirm.tipo}?
                 <br />
-                <span className="font-semibold text-base" style={{ color: getTypeStyles(deleteConfirm.tipo).color }}>
+                <span className="font-bold text-base mt-1 inline-block" style={{ color: getTypeStyles(deleteConfirm.tipo).color }}>
                   {deleteConfirm.tipo === 'transferencia'
                     ? formatCurrency(deleteConfirm.montoSaliente)
                     : formatCurrency(deleteConfirm.montoPesos || deleteConfirm.monto)}
@@ -308,15 +320,18 @@ function RecentMovements({
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                  className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90"
-                  style={{ backgroundColor: 'var(--accent-red)' }}
+                  className="flex-1 py-3.5 rounded-xl font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                  style={{ 
+                    backgroundColor: 'var(--accent-red)',
+                    boxShadow: '0 4px 20px rgba(255, 92, 114, 0.3)'
+                  }}
                 >
                   Eliminar
                 </button>

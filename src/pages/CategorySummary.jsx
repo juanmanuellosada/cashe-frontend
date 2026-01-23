@@ -32,7 +32,6 @@ function CategorySummary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('gasto');
-  const [showChart, setShowChart] = useState(true);
   const [currency, setCurrency] = useState('ARS');
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
@@ -241,30 +240,32 @@ function CategorySummary() {
           Resumen por categoría
         </h2>
         <div className="flex items-center gap-3">
-          {/* Selector de moneda global */}
+          {/* Currency Selector - Premium design */}
           <div
-            className="inline-flex rounded-lg p-0.5"
+            className="inline-flex rounded-xl p-1"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <button
               onClick={() => setCurrency('ARS')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
                 backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                 color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+                boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
-              Pesos
+              ARS
             </button>
             <button
               onClick={() => setCurrency('USD')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
-                backgroundColor: currency === 'USD' ? 'var(--accent-primary)' : 'transparent',
+                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
                 color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+                boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
-              Dólares
+              USD
             </button>
           </div>
           <DateRangePicker
@@ -332,25 +333,8 @@ function CategorySummary() {
         </p>
       </div>
 
-      {/* Toggle para gráfico en mobile */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Mostrar grafico
-        </span>
-        <button
-          onClick={() => setShowChart(!showChart)}
-          className="relative w-11 h-6 rounded-full transition-colors duration-200"
-          style={{ backgroundColor: showChart ? 'var(--accent-primary)' : 'var(--bg-tertiary)' }}
-        >
-          <span
-            className="absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
-            style={{ transform: showChart ? 'translateX(20px)' : 'translateX(0)' }}
-          />
-        </button>
-      </div>
-
       {/* Gráfico de barras horizontales */}
-      {showChart && chartData.length > 0 && (
+      {chartData.length > 0 && (
         <div
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
@@ -398,7 +382,7 @@ function CategorySummary() {
       )}
 
       {/* Gráfico de torta */}
-      {showChart && pieChartData.length > 0 && (
+      {pieChartData.length > 0 && (
         <div
           className="rounded-2xl p-4"
           style={{ backgroundColor: 'var(--bg-secondary)' }}

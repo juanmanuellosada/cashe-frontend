@@ -179,15 +179,18 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
         <button
           type="button"
           onClick={() => setSameAmount(!sameAmount)}
-          className="relative w-11 h-6 rounded-full transition-colors"
+          className="relative w-12 h-7 rounded-full transition-all duration-300 active:scale-95"
           style={{
-            backgroundColor: sameAmount ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+            backgroundColor: sameAmount ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+            boxShadow: sameAmount ? '0 4px 12px var(--accent-primary-glow)' : 'none',
           }}
         >
           <span
-            className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-              sameAmount ? 'left-6' : 'left-1'
-            }`}
+            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300"
+            style={{
+              left: sameAmount ? 'calc(100% - 24px)' : '4px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
           />
         </button>
         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>

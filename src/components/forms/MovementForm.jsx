@@ -4,9 +4,42 @@ import ExpenseForm from './ExpenseForm';
 import TransferForm from './TransferForm';
 
 const MOVEMENT_TYPES = [
-  { id: 'ingreso', label: 'Ingreso', color: 'var(--accent-green)', bgDim: 'rgba(34, 197, 94, 0.15)' },
-  { id: 'gasto', label: 'Gasto', color: 'var(--accent-red)', bgDim: 'rgba(239, 68, 68, 0.15)' },
-  { id: 'transferencia', label: 'Transfer.', color: 'var(--accent-blue)', bgDim: 'rgba(59, 130, 246, 0.15)' },
+  { 
+    id: 'ingreso', 
+    label: 'Ingreso', 
+    color: 'var(--accent-green)', 
+    bgDim: 'rgba(0, 217, 154, 0.12)',
+    glow: 'rgba(0, 217, 154, 0.4)',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    )
+  },
+  { 
+    id: 'gasto', 
+    label: 'Gasto', 
+    color: 'var(--accent-red)', 
+    bgDim: 'rgba(255, 92, 114, 0.12)',
+    glow: 'rgba(255, 92, 114, 0.4)',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      </svg>
+    )
+  },
+  { 
+    id: 'transferencia', 
+    label: 'Transferir', 
+    color: 'var(--accent-blue)', 
+    bgDim: 'rgba(59, 130, 246, 0.12)',
+    glow: 'rgba(59, 130, 246, 0.4)',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+      </svg>
+    )
+  },
 ];
 
 function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) {
@@ -72,9 +105,9 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) 
 
   return (
     <div>
-      {/* Movement Type Selector - Compact Pills */}
+      {/* Movement Type Selector - Premium Segmented Control */}
       <div
-        className="inline-flex rounded-xl p-1 mb-6"
+        className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl mb-6"
         style={{ backgroundColor: 'var(--bg-tertiary)' }}
       >
         {MOVEMENT_TYPES.map((type) => {
@@ -83,26 +116,28 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData }) 
             <button
               key={type.id}
               onClick={() => setMovementType(type.id)}
-              className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isActive ? 'shadow-md' : 'hover:opacity-80'
+              className={`relative flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-300 active:scale-[0.98] ${
+                isActive ? '' : 'hover:bg-[var(--bg-secondary)]'
               }`}
               style={{
                 backgroundColor: isActive ? type.color : 'transparent',
                 color: isActive ? 'white' : 'var(--text-secondary)',
+                boxShadow: isActive ? `0 4px 20px ${type.glow}` : 'none',
               }}
             >
-              {type.label}
+              {type.icon}
+              <span className="hidden sm:inline">{type.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Type indicator bar */}
+      {/* Type indicator bar with glow */}
       <div
-        className="h-1 rounded-full mb-6 transition-all duration-300"
+        className="h-1 rounded-full mb-6 transition-all duration-500"
         style={{
-          backgroundColor: activeType?.bgDim,
-          boxShadow: `0 0 20px ${activeType?.bgDim}`
+          backgroundColor: activeType?.color,
+          boxShadow: `0 0 20px ${activeType?.glow}, 0 0 40px ${activeType?.glow}`
         }}
       />
 

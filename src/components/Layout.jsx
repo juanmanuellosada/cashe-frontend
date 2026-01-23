@@ -41,7 +41,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'H', ctrl: false, alt: true, label: 'Ir al inicio', action: () => navigate('/') },
     { key: 'E', ctrl: false, alt: true, label: 'Estadísticas', action: () => navigate('/estadisticas') },
     { key: 'C', ctrl: false, alt: true, label: 'Comparador', action: () => navigate('/comparador') },
-    { key: 'R', ctrl: false, alt: true, label: 'Por Categoría', action: () => navigate('/resumen-categorias') },
+    { key: 'R', ctrl: false, alt: true, label: 'Por categoría', action: () => navigate('/resumen-categorias') },
     { key: 'G', ctrl: false, alt: true, label: 'Gastos', action: () => navigate('/gastos') },
     { key: 'I', ctrl: false, alt: true, label: 'Ingresos', action: () => navigate('/ingresos') },
     { key: 'T', ctrl: false, alt: true, label: 'Transferencias', action: () => navigate('/transferencias') },
@@ -145,7 +145,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const menuItems = [
     { path: '/estadisticas', label: 'Estadisticas', icon: 'statistics', color: 'var(--accent-purple)' },
     { path: '/comparador', label: 'Comparador', icon: 'comparador', color: 'var(--accent-blue)' },
-    { path: '/resumen-categorias', label: 'Por Categoria', icon: 'categorysum', color: 'var(--accent-primary)' },
+    { path: '/resumen-categorias', label: 'Por categoría', icon: 'categorysum', color: 'var(--accent-primary)' },
     { path: '/gastos', label: 'Gastos', icon: 'expense', color: 'var(--accent-red)' },
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
@@ -220,40 +220,60 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       {/* Desktop Sidebar */}
       {isDesktop && (
         <aside
-          className={`fixed left-0 top-0 bottom-0 flex flex-col z-40 transition-all duration-300 ${sidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}
-          style={{ backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border-subtle)' }}
+          className={`fixed left-0 top-0 bottom-0 flex flex-col z-40 transition-all duration-300 ${sidebarCollapsed ? 'w-[76px]' : 'w-[260px]'}`}
+          style={{ 
+            backgroundColor: 'var(--bg-secondary)', 
+            borderRight: '1px solid var(--border-subtle)',
+            boxShadow: '4px 0 24px rgba(0, 0, 0, 0.15)'
+          }}
         >
           {/* Sidebar Header */}
           <NavLink 
             to="/"
-            className={`p-4 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} hover:opacity-80 transition-opacity`}
+            className={`p-4 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} hover:opacity-80 transition-all duration-300`}
             title="Ir al inicio"
           >
-            <img
-              src={`${import.meta.env.BASE_URL}favicon.png`}
-              alt="Cashé"
-              className="w-10 h-10 rounded-xl flex-shrink-0 cursor-pointer"
-            />
+            <div className="relative">
+              <img
+                src={`${import.meta.env.BASE_URL}favicon.png`}
+                alt="Cashé"
+                className="w-11 h-11 rounded-2xl flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-105"
+                style={{ boxShadow: '0 4px 12px rgba(139, 124, 255, 0.25)' }}
+              />
+              <div 
+                className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
+                style={{ 
+                  backgroundColor: 'var(--accent-green)', 
+                  borderColor: 'var(--bg-secondary)',
+                  boxShadow: '0 0 8px var(--accent-green-glow)'
+                }}
+              />
+            </div>
             {!sidebarCollapsed && (
               <div className="overflow-hidden">
-                <h1 className="font-bold text-lg whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Cashé</h1>
-                <p className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Finanzas Personales</p>
+                <h1 className="font-display font-bold text-xl tracking-tight whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Cashé</h1>
+                <p className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Finanzas Personales</p>
               </div>
             )}
           </NavLink>
 
           {/* New Movement Button */}
-          <div className={`${sidebarCollapsed ? 'px-3' : 'px-4'} mb-4`}>
+          <div className={`${sidebarCollapsed ? 'px-3' : 'px-4'} mb-5`}>
             <button
               onClick={openNewMovement}
-              className={`flex items-center justify-center ${sidebarCollapsed ? 'w-11 h-11' : 'gap-2 w-full py-3'} rounded-xl font-semibold transition-all hover:opacity-90`}
-              style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+              className={`group relative flex items-center justify-center ${sidebarCollapsed ? 'w-12 h-12' : 'gap-2.5 w-full py-3.5'} rounded-2xl font-semibold transition-all duration-300 overflow-hidden`}
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
+                color: 'white',
+                boxShadow: '0 4px 20px var(--accent-primary-glow)'
+              }}
               title={sidebarCollapsed ? 'Nuevo Movimiento (Alt+N)' : undefined}
             >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <svg className="w-5 h-5 flex-shrink-0 relative z-10 transition-transform duration-300 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
               </svg>
-              {!sidebarCollapsed && <span>Nuevo Movimiento</span>}
+              {!sidebarCollapsed && <span className="relative z-10 text-sm">Nuevo Movimiento</span>}
             </button>
           </div>
 
@@ -263,14 +283,15 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               <NavLink
                 to="/"
                 end
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
+                className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
                 style={({ isActive }) => ({
                   backgroundColor: isActive ? 'var(--accent-primary-dim)' : 'transparent',
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  boxShadow: isActive ? '0 2px 8px var(--accent-primary-dim)' : 'none'
                 })}
                 title={sidebarCollapsed ? 'Inicio' : undefined}
               >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 {!sidebarCollapsed && <span className="font-medium">Inicio</span>}
@@ -370,52 +391,53 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isDesktop ? (sidebarCollapsed ? 'ml-[72px]' : 'ml-[260px]') : ''}`}>
-        {/* Mobile Header */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isDesktop ? (sidebarCollapsed ? 'ml-[76px]' : 'ml-[260px]') : ''}`}>
+        {/* Mobile Header - Refined glass effect */}
         {!isDesktop && (
           <header
-            className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between backdrop-blur-lg"
-            style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}
+            className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between glass"
+            style={{ 
+              backgroundColor: 'var(--bg-glass)', 
+              borderBottom: '1px solid var(--border-subtle)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)'
+            }}
           >
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2.5 active:scale-95 transition-all duration-200"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <img
-                src={`${import.meta.env.BASE_URL}favicon.png`}
-                alt="Cashé"
-                className="w-8 h-8 rounded-lg"
-              />
-              <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Cashé</span>
+              <div className="relative">
+                <img
+                  src={`${import.meta.env.BASE_URL}favicon.png`}
+                  alt="Cashé"
+                  className="w-9 h-9 rounded-xl"
+                  style={{ boxShadow: '0 2px 8px rgba(139, 124, 255, 0.2)' }}
+                />
+              </div>
+              <span className="text-lg font-display font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cashé</span>
             </button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <SearchButton onClick={() => setSearchOpen(true)} />
               <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
             </div>
           </header>
         )}
 
-        {/* Desktop Header */}
+        {/* Desktop Header - Premium styling */}
         {isDesktop && (
           <header
-            className="sticky top-0 z-30 px-8 py-4 flex items-center justify-between backdrop-blur-lg"
-            style={{ backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)' }}
+            className="sticky top-0 z-30 px-8 py-5 flex items-center justify-between"
+            style={{ 
+              backgroundColor: 'var(--bg-primary)', 
+              borderBottom: '1px solid var(--border-subtle)',
+            }}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               {/* Shortcuts button */}
-              <button
-                onClick={() => setShortcutsOpen(true)}
-                className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                title="Atajos de teclado (Shift+?)"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </button>
               <div>
-                <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                <h1 className="text-2xl font-display font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
                   {location.pathname === '/' && 'Dashboard'}
                   {location.pathname === '/nuevo' && 'Nuevo Movimiento'}
                   {location.pathname === '/gastos' && 'Gastos'}
@@ -428,7 +450,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                   {location.pathname === '/categorias' && 'Categorías'}
                   {location.pathname === '/tarjetas' && 'Tarjetas de Crédito'}
                 </h1>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   Gestiona tus finanzas personales
                 </p>
               </div>
@@ -436,14 +458,18 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl transition-colors"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                className="group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 hover:shadow-md"
+                style={{ 
+                  backgroundColor: 'var(--bg-tertiary)', 
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)'
+                }}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span className="text-sm">Buscar...</span>
-                <kbd className="ml-2 px-2 py-0.5 text-xs rounded" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
+                <span className="text-sm font-medium">Buscar...</span>
+                <kbd className="ml-1 px-2 py-1 text-xs rounded-md font-mono" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
                   Alt+K
                 </kbd>
               </button>
@@ -465,7 +491,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         {/* Main Content with fade-in animation */}
         <main 
           key={location.pathname} 
-          className={`flex-1 animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-4 py-4 pb-24'}`}
+          className={`flex-1 animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-4 py-5 pb-28'}`}
         >
           <div className={isDesktop ? 'max-w-6xl mx-auto' : ''}>
             {children}
@@ -473,48 +499,54 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         </main>
       </div>
 
-      {/* Bottom Navigation - Mobile Only */}
+      {/* Bottom Navigation - Mobile Only - Premium Design */}
       {!isDesktop && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg"
-          style={{ backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-subtle)' }}
+          className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
+          style={{ 
+            backgroundColor: 'var(--bg-glass)', 
+            borderTop: '1px solid var(--border-subtle)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)'
+          }}
         >
-          <div className="flex items-center justify-around py-2 max-w-md mx-auto">
+          <div className="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
             {/* Home button */}
             <NavLink
               to="/"
-              className="flex flex-col items-center px-4 py-2 rounded-xl transition-all duration-200"
+              className="flex flex-col items-center px-5 py-2 rounded-2xl transition-all duration-300 active:scale-95"
               style={({ isActive }) => ({
                 color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 backgroundColor: isActive ? 'var(--accent-primary-dim)' : 'transparent',
               })}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              <span className="text-xs mt-1 font-medium">Inicio</span>
+              <span className="text-[10px] mt-1 font-medium tracking-wide">Inicio</span>
             </NavLink>
 
-            {/* New movement button with pulse effect */}
+            {/* New movement button - Premium floating action */}
             <NavLink
               to="/nuevo"
-              className="flex flex-col items-center px-3 py-2"
+              className="flex flex-col items-center px-2"
             >
               <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center -mt-8 shadow-lg transition-all duration-300 hover:scale-105 ${
+                className={`relative w-[60px] h-[60px] rounded-[20px] flex items-center justify-center -mt-7 transition-all duration-300 active:scale-95 ${
                   location.pathname !== '/nuevo' ? 'animate-pulse-glow' : ''
                 }`}
                 style={{
-                  backgroundColor: 'var(--accent-primary)',
-                  boxShadow: '0 4px 20px rgba(96, 165, 250, 0.4)'
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
+                  boxShadow: '0 8px 32px var(--accent-primary-glow), 0 4px 12px rgba(0,0,0,0.3)'
                 }}
               >
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 rounded-[20px] bg-white/20 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                <svg className="w-7 h-7 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
               <span
-                className="text-xs mt-1 font-medium"
+                className="text-[10px] mt-1.5 font-medium tracking-wide"
                 style={{ color: location.pathname === '/nuevo' ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
               >
                 Nuevo
@@ -524,39 +556,63 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             {/* Menu button */}
             <button
               onClick={() => setMenuOpen(true)}
-              className="flex flex-col items-center px-4 py-2 rounded-xl transition-all duration-200"
+              className="flex flex-col items-center px-5 py-2 rounded-2xl transition-all duration-300 active:scale-95"
               style={{
                 color: menuOpen ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 backgroundColor: menuOpen ? 'var(--accent-primary-dim)' : 'transparent',
               }}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span className="text-xs mt-1 font-medium">Menu</span>
+              <span className="text-[10px] mt-1 font-medium tracking-wide">Menú</span>
             </button>
           </div>
         </nav>
       )}
 
-      {/* Menu Drawer - Mobile Only */}
+      {/* Menu Drawer - Mobile Only - Premium Slide Panel */}
       {!isDesktop && menuOpen && (
         <div className="fixed inset-0 z-[60]">
+          {/* Backdrop with blur */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
             onClick={() => setMenuOpen(false)}
           />
+          
+          {/* Slide panel */}
           <div
-            className="absolute right-0 top-0 bottom-0 w-72 p-5 animate-slide-in-right"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
+            className="absolute right-0 top-0 bottom-0 w-[280px] animate-slide-in-right overflow-hidden"
+            style={{ 
+              backgroundColor: 'var(--bg-secondary)',
+              borderLeft: '1px solid var(--border-subtle)',
+              boxShadow: '-20px 0 60px rgba(0,0,0,0.5)'
+            }}
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Menu
-              </h2>
+            {/* Header */}
+            <div 
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src="/cashe-frontend/icons/icon-192.png"
+                  alt="Cashé"
+                  className="w-10 h-10 rounded-xl"
+                  style={{ boxShadow: '0 4px 16px var(--accent-primary-glow)' }}
+                />
+                <div>
+                  <h2 className="text-base font-bold font-display" style={{ color: 'var(--text-primary)' }}>
+                    Menú
+                  </h2>
+                  <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                    Cashé
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setMenuOpen(false)}
-                className="p-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)]"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-95"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -565,37 +621,59 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </button>
             </div>
 
-            <div className="space-y-1">
-              {menuItems.map(item => (
+            {/* Menu items with stagger animation */}
+            <div className="p-3 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+              {menuItems.map((item, index) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 active:scale-[0.98] group"
                   style={({ isActive }) => ({
                     backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                     color: isActive ? item.color : 'var(--text-primary)',
+                    animationDelay: `${index * 40}ms`
                   })}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: `${item.color}20` }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+                    style={{ backgroundColor: `${item.color}15` }}
                   >
                     {renderIcon(item.icon, item.color)}
                   </div>
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium text-[15px]">{item.label}</span>
+                  <svg 
+                    className="w-4 h-4 ml-auto opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-50 group-hover:translate-x-0" 
+                    style={{ color: 'var(--text-secondary)' }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </NavLink>
               ))}
             </div>
 
-            {/* Footer info */}
+            {/* Footer info with branding */}
             <div
-              className="absolute bottom-5 left-5 right-5 pt-4"
-              style={{ borderTop: '1px solid var(--border-subtle)' }}
+              className="absolute bottom-0 left-0 right-0 px-5 py-4"
+              style={{ 
+                borderTop: '1px solid var(--border-subtle)',
+                backgroundColor: 'var(--bg-primary)'
+              }}
             >
-              <p className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
-                Finanzas Personales v1.0
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Cashé
+                </p>
+                <p className="text-[10px] px-2 py-1 rounded-full" style={{ 
+                  backgroundColor: 'var(--accent-primary-dim)',
+                  color: 'var(--accent-primary)'
+                }}>
+                  v1.0
+                </p>
+              </div>
             </div>
           </div>
         </div>

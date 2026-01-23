@@ -101,33 +101,61 @@ function NewMovementModal({ isOpen, onClose }) {
   const isLoading = loadingAccounts || loadingCategories;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+      {/* Backdrop with premium blur */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={submitting ? undefined : onClose}
       />
 
-      {/* Modal */}
+      {/* Modal with glass morphism */}
       <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl animate-scale-in"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
+        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl animate-scale-in card-elevated"
+        style={{ 
+          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 124, 255, 0.1)'
+        }}
       >
+        {/* Gradient accent line at top */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
+          style={{ 
+            background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-purple) 50%, var(--accent-green) 100%)'
+          }}
+        />
+
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between p-4 border-b"
+          className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b"
           style={{ 
             backgroundColor: 'var(--bg-secondary)', 
             borderColor: 'var(--border-subtle)' 
           }}
         >
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            Nuevo Movimiento
-          </h2>
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
+                boxShadow: '0 4px 16px var(--accent-primary-glow)'
+              }}
+            >
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold font-display" style={{ color: 'var(--text-primary)' }}>
+                Nuevo Movimiento
+              </h2>
+              <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                Registra ingreso, gasto o transferencia
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
             disabled={submitting}
-            className="p-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-95 disabled:opacity-50"
             style={{ color: 'var(--text-secondary)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,9 +165,9 @@ function NewMovementModal({ isOpen, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-5">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <LoadingSpinner size="lg" />
             </div>
           ) : (

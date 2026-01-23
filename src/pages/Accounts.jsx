@@ -199,40 +199,43 @@ function Accounts() {
           Cuentas
         </h2>
         <div className="flex items-center gap-3">
-          {/* Selector de moneda */}
+          {/* Currency Selector - Premium design */}
           <div
-            className="inline-flex rounded-lg p-0.5"
+            className="inline-flex rounded-xl p-1"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <button
               onClick={() => setDisplayCurrency('original')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
-                backgroundColor: displayCurrency === 'original' ? 'var(--accent-primary)' : 'transparent',
+                backgroundColor: displayCurrency === 'original' ? 'var(--accent-blue)' : 'transparent',
                 color: displayCurrency === 'original' ? 'white' : 'var(--text-secondary)',
+                boxShadow: displayCurrency === 'original' ? '0 4px 12px var(--accent-blue-glow)' : 'none',
               }}
             >
               Original
             </button>
             <button
               onClick={() => setDisplayCurrency('ARS')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
                 backgroundColor: displayCurrency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                 color: displayCurrency === 'ARS' ? 'white' : 'var(--text-secondary)',
+                boxShadow: displayCurrency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
-              Pesos
+              ARS
             </button>
             <button
               onClick={() => setDisplayCurrency('USD')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
-                backgroundColor: displayCurrency === 'USD' ? 'var(--accent-primary)' : 'transparent',
+                backgroundColor: displayCurrency === 'USD' ? 'var(--accent-green)' : 'transparent',
                 color: displayCurrency === 'USD' ? 'white' : 'var(--text-secondary)',
+                boxShadow: displayCurrency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
-              Dólares
+              USD
             </button>
           </div>
           <button

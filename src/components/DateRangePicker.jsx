@@ -59,22 +59,33 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"
+        className="px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >
-        <svg className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <span>{formatDisplayDate()}</span>
-        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span className="font-medium text-xs">{formatDisplayDate()}</span>
+        <svg 
+          className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+          style={{ color: 'var(--text-secondary)' }}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {isOpen && (
         <div
-          className="absolute z-50 mt-2 rounded-xl shadow-xl p-4 right-0"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--bg-tertiary)', minWidth: '280px' }}
+          className="absolute z-50 mt-2 rounded-2xl shadow-2xl p-4 right-0 animate-scale-in"
+          style={{ 
+            backgroundColor: 'var(--bg-secondary)', 
+            border: '1px solid var(--border-subtle)', 
+            minWidth: '290px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(139, 124, 255, 0.1)'
+          }}
         >
           {/* Presets */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -82,7 +93,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
               <button
                 key={preset.label}
                 onClick={() => handlePresetClick(preset)}
-                className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] hover:text-[var(--accent-primary)] active:scale-95"
                 style={{
                   backgroundColor: 'var(--bg-tertiary)',
                   color: 'var(--text-secondary)',
@@ -111,23 +122,23 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
               months: 'flex flex-col',
               month: 'space-y-3',
               month_caption: 'flex justify-center relative items-center h-10 mb-2',
-              caption_label: 'text-sm font-semibold',
+              caption_label: 'text-sm font-bold font-display',
               nav: 'flex items-center',
-              button_previous: 'absolute left-0 h-7 w-7 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
-              button_next: 'absolute right-0 h-7 w-7 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
+              button_previous: 'absolute left-0 h-8 w-8 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
+              button_next: 'absolute right-0 h-8 w-8 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
               month_grid: 'w-full border-collapse',
               weekdays: 'flex w-full',
-              weekday: 'w-9 h-9 font-medium text-xs flex items-center justify-center',
+              weekday: 'w-9 h-9 font-semibold text-[10px] uppercase tracking-wider flex items-center justify-center',
               week: 'flex w-full',
               day: 'w-9 h-9 text-center text-sm p-0',
-              day_button: 'w-full h-full rounded-full hover:bg-[var(--accent-primary)] hover:bg-opacity-20 flex items-center justify-center cursor-pointer transition-colors',
+              day_button: 'w-full h-full rounded-xl hover:bg-[var(--accent-primary)] hover:bg-opacity-20 flex items-center justify-center cursor-pointer transition-all duration-200 font-medium',
               selected: 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]',
-              range_start: 'rounded-full bg-[var(--accent-primary)] text-white',
-              range_end: 'rounded-full bg-[var(--accent-primary)] text-white',
-              range_middle: 'bg-[var(--accent-primary)] bg-opacity-20 rounded-none',
-              today: 'font-bold',
-              outside: 'opacity-40',
-              disabled: 'opacity-30 cursor-not-allowed',
+              range_start: 'rounded-xl bg-[var(--accent-primary)] text-white',
+              range_end: 'rounded-xl bg-[var(--accent-primary)] text-white',
+              range_middle: 'bg-[var(--accent-primary)] bg-opacity-15 rounded-none',
+              today: 'font-bold ring-2 ring-[var(--accent-primary)] ring-opacity-50',
+              outside: 'opacity-30',
+              disabled: 'opacity-20 cursor-not-allowed',
             }}
             styles={{
               caption_label: { color: 'var(--text-primary)' },
@@ -138,11 +149,15 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
             }}
           />
 
-          <div className="flex justify-end mt-3">
+          <div className="flex justify-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
             <button
               onClick={() => setIsOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm font-medium"
-              style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
+                color: 'white',
+                boxShadow: '0 4px 16px var(--accent-primary-glow)'
+              }}
             >
               Aplicar
             </button>

@@ -191,38 +191,50 @@ function Home() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:space-y-8">
       {/* Balance Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold lg:text-base" style={{ color: 'var(--text-secondary)' }}>
-            Resumen
-          </h2>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            {/* Currency Selector */}
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center hidden md:flex"
+              style={{ backgroundColor: 'var(--accent-primary-dim)' }}
+            >
+              <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h2 className="text-[15px] font-semibold md:text-base" style={{ color: 'var(--text-primary)' }}>
+              Resumen Financiero
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Currency Selector - Premium design */}
             <div
-              className="inline-flex rounded-lg p-0.5"
+              className="inline-flex rounded-xl p-1"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
               <button
                 onClick={() => setCurrency('ARS')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
                 style={{
                   backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                   color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+                  boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
                 }}
               >
-                Pesos
+                ARS
               </button>
               <button
                 onClick={() => setCurrency('USD')}
-                className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
                 style={{
                   backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
                   color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+                  boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
                 }}
               >
-                Dólares
+                USD
               </button>
             </div>
             <DateRangePicker
@@ -234,7 +246,7 @@ function Home() {
         </div>
 
         {loadingDashboard ? (
-          <div className="rounded-2xl p-8" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <div className="card-glass p-12 flex items-center justify-center">
             <LoadingSpinner />
           </div>
         ) : (

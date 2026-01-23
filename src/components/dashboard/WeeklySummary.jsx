@@ -89,21 +89,20 @@ function WeeklySummary({ movements, loading }) {
   // Skeleton loading
   if (loading) {
     return (
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Esta semana
-        </h3>
-        <div className="grid grid-cols-3 gap-2">
-          {[1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="rounded-xl p-3"
-              style={{ backgroundColor: 'var(--bg-secondary)' }}
-            >
-              <div className="h-3 w-16 skeleton-shimmer rounded mb-2" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-              <div className="h-5 w-20 skeleton-shimmer rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-            </div>
-          ))}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="h-4 w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+        </div>
+        <div className="card-glass p-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-16 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+                <div className="h-5 w-20 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -112,15 +111,30 @@ function WeeklySummary({ movements, loading }) {
   // No data
   if (!stats || stats.totalWeek === 0) {
     return (
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Esta semana
-        </h3>
-        <div
-          className="rounded-xl p-4 text-center"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: 'var(--accent-primary-dim)' }}
+          >
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Esta semana
+          </h3>
+        </div>
+        <div className="card-glass p-6 text-center">
+          <div 
+            className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <svg className="w-6 h-6" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
             Sin gastos esta semana
           </p>
         </div>
@@ -135,110 +149,113 @@ function WeeklySummary({ movements, loading }) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Esta semana
-        </h3>
-        {/* Currency selector */}
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: 'var(--accent-primary-dim)' }}
+          >
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Esta semana
+          </h3>
+        </div>
+        {/* Currency Selector - Premium design */}
         <div 
-          className="flex rounded-lg p-0.5 text-xs"
+          className="inline-flex rounded-xl p-1"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           <button
             onClick={() => setCurrency('ARS')}
-            className="px-2 py-0.5 rounded-md transition-colors font-medium"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
             style={{
-              backgroundColor: currency === 'ARS' ? 'var(--accent-blue)' : 'transparent',
-              color: currency === 'ARS' ? 'white' : 'var(--text-secondary)'
+              backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
+              color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+              boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none'
             }}
           >
-            $
+            ARS
           </button>
           <button
             onClick={() => setCurrency('USD')}
-            className="px-2 py-0.5 rounded-md transition-colors font-medium"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
             style={{
               backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
-              color: currency === 'USD' ? 'white' : 'var(--text-secondary)'
+              color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+              boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none'
             }}
           >
-            US$
+            USD
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {/* Average daily expense */}
-        <div
-          className="rounded-xl p-3 relative overflow-hidden"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 70%)' }}
-          />
-          <div className="relative z-10">
-            <div className="flex items-center gap-1 mb-1">
-              <svg className="w-3 h-3" style={{ color: 'var(--accent-blue)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                Promedio/día
+      
+      <div className="card-glass p-4">
+        <div className="grid grid-cols-3 gap-3">
+          {/* Average daily expense */}
+          <div className="group p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }}
+              >
+                <svg className="w-3 h-3" style={{ color: 'var(--accent-blue)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
+                Prom/día
               </span>
             </div>
             <p className="text-base font-bold" style={{ color: 'var(--accent-blue)' }}>
               {formatCurrency(currency === 'ARS' ? stats.avgDaily : stats.avgDailyDolares, currency)}
             </p>
           </div>
-        </div>
 
-        {/* Day with most expenses */}
-        <div
-          className="rounded-xl p-3 relative overflow-hidden"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 70%)' }}
-          />
-          <div className="relative z-10">
-            <div className="flex items-center gap-1 mb-1">
-              <svg className="w-3 h-3" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+          {/* Day with most expenses */}
+          <div className="group p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(255, 92, 114, 0.15)' }}
+              >
+                <svg className="w-3 h-3" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Día pico
               </span>
             </div>
             <p className="text-sm font-bold capitalize truncate" style={{ color: 'var(--accent-red)' }}>
               {stats.maxDay?.name || '-'}
             </p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
               {stats.maxDay ? formatCurrency(currency === 'ARS' ? stats.maxDay.amount : stats.maxDay.amountDolares, currency) : '-'}
             </p>
           </div>
-        </div>
 
-        {/* Top category */}
-        <div
-          className="rounded-xl p-3 relative overflow-hidden"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 70%)' }}
-          />
-          <div className="relative z-10">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs">{getCategoryEmoji(stats.topCategory?.name)}</span>
-              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+          {/* Top category */}
+          <div className="group p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
+                style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}
+              >
+                {getCategoryEmoji(stats.topCategory?.name)}
+              </div>
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Top gasto
               </span>
             </div>
             <p className="text-sm font-bold truncate" style={{ color: 'var(--accent-purple)' }}>
               {stats.topCategory?.name?.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || '-'}
             </p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
               {stats.topCategory ? formatCurrency(currency === 'ARS' ? stats.topCategory.amount : stats.topCategory.amountDolares, currency) : '-'}
             </p>
           </div>

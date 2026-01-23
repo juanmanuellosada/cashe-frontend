@@ -239,30 +239,32 @@ function Statistics() {
           Estadisticas
         </h2>
         <div className="flex items-center gap-2">
-          {/* Currency Selector */}
+          {/* Currency Selector - Premium design */}
           <div
-            className="inline-flex rounded-lg p-0.5"
+            className="inline-flex rounded-xl p-1"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <button
               onClick={() => setCurrency('ARS')}
-              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
                 backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                 color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
+                boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
-              Pesos
+              ARS
             </button>
             <button
               onClick={() => setCurrency('USD')}
-              className="px-3 py-1 rounded-md text-xs font-medium transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
               style={{
                 backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
                 color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
+                boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
-              Dólares
+              USD
             </button>
           </div>
           <DateRangePicker
