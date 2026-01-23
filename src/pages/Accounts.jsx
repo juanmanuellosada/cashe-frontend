@@ -182,10 +182,11 @@ function Accounts() {
   };
 
   const toggleDetails = (accountName) => {
-    setShowDetails(prev => ({
-      ...prev,
-      [accountName]: !prev[accountName]
-    }));
+    setShowDetails(prev => {
+      const isOpen = !!prev[accountName];
+      // Solo dejar abierto el que se clickeó; si ya estaba abierto, cierra todos.
+      return isOpen ? {} : { [accountName]: true };
+    });
   };
 
   const getCurrencyFlag = (moneda) => {
@@ -773,11 +774,11 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
               {!formData.esTarjetaCredito && (
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, moneda: 'Dólar estadounidense' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, moneda: 'Dólar' }))}
                   className="flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: formData.moneda === 'Dólar estadounidense' ? '#3CB371' : 'var(--bg-tertiary)',
-                    color: formData.moneda === 'Dólar estadounidense' ? 'white' : 'var(--text-secondary)',
+                    backgroundColor: formData.moneda === 'Dólar' ? '#3CB371' : 'var(--bg-tertiary)',
+                    color: formData.moneda === 'Dólar' ? 'white' : 'var(--text-secondary)',
                   }}
                 >
                   <span className="font-bold">US$</span>
