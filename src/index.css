@@ -24,11 +24,11 @@
   --text-muted: #5c5e6e;
   --text-accent: #c4c6d4;
   
-  /* Signature Accent - Electric Emerald */
-  --accent-green: #00d99a;
-  --accent-green-light: #2fffb8;
-  --accent-green-dim: rgba(0, 217, 154, 0.12);
-  --accent-green-glow: rgba(0, 217, 154, 0.35);
+  /* Signature Accent - Cashé Teal (matching logo) */
+  --accent-green: #00d9a0;
+  --accent-green-light: #4aedc4;
+  --accent-green-dim: rgba(0, 217, 160, 0.12);
+  --accent-green-glow: rgba(0, 217, 160, 0.35);
   
   /* Alert Red - Coral Flame */
   --accent-red: #ff5c72;
@@ -113,10 +113,10 @@
   --text-muted: #9396a6;
   --text-accent: #3d3f4e;
   
-  /* Adjusted colors for light mode */
-  --accent-green: #00c98a;
-  --accent-green-dim: rgba(0, 201, 138, 0.1);
-  --accent-green-glow: rgba(0, 201, 138, 0.25);
+  /* Adjusted colors for light mode - Cashé Teal */
+  --accent-green: #00c990;
+  --accent-green-dim: rgba(0, 201, 144, 0.1);
+  --accent-green-glow: rgba(0, 201, 144, 0.25);
   
   --accent-red: #f84c63;
   --accent-red-dim: rgba(248, 76, 99, 0.1);

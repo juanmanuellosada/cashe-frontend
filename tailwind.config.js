@@ -23,8 +23,8 @@ export default {
           hover: '#eceef4',
         },
         accent: {
-          green: '#00d99a',
-          'green-light': '#2fffb8',
+          green: '#00d9a0',
+          'green-light': '#4aedc4',
           red: '#ff5c72',
           'red-light': '#ff8a99',
           blue: '#4dabff',

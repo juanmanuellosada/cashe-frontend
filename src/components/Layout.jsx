@@ -235,10 +235,10 @@ function Layout({ children, darkMode, toggleDarkMode }) {
           >
             <div className="relative">
               <img
-                src={`${import.meta.env.BASE_URL}favicon.png`}
+                src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
                 alt="Cashé"
                 className="w-11 h-11 rounded-2xl flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-105"
-                style={{ boxShadow: '0 4px 12px rgba(139, 124, 255, 0.25)' }}
+                style={{ boxShadow: '0 4px 12px rgba(0, 217, 160, 0.3)' }}
               />
               <div 
                 className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
@@ -410,10 +410,10 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             >
               <div className="relative">
                 <img
-                  src={`${import.meta.env.BASE_URL}favicon.png`}
+                  src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
                   alt="Cashé"
                   className="w-9 h-9 rounded-xl"
-                  style={{ boxShadow: '0 2px 8px rgba(139, 124, 255, 0.2)' }}
+                  style={{ boxShadow: '0 2px 8px rgba(0, 217, 160, 0.25)' }}
                 />
               </div>
               <span className="text-lg font-display font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cashé</span>

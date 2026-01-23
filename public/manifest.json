@@ -5,8 +5,8 @@
   "start_url": "/cashe-frontend/",
   "scope": "/cashe-frontend/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#07070a",
+  "theme_color": "#00d9a0",
   "orientation": "portrait",
   "icons": [
     {
