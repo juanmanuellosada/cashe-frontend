@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
+import CreateCategoryModal from '../CreateCategoryModal';
 import { formatCurrency } from '../../utils/format';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
@@ -29,7 +30,7 @@ function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
   return fecha;
 }
 
-function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
+function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -43,6 +44,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
   const [cantidadCuotas, setCantidadCuotas] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   // Encontrar la cuenta seleccionada y verificar si es tarjeta de crédito
   const selectedAccount = useMemo(() => {
@@ -159,23 +161,24 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Fecha */}
-      <div>
-        <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Fecha
-        </label>
-        <DatePicker
-          name="fecha"
-          value={formData.fecha}
-          onChange={handleChange}
-        />
+    <>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Fecha */}
+        <div>
+          <label
+            className="flex items-center gap-2 text-sm font-medium mb-2"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Fecha
+          </label>
+          <DatePicker
+            name="fecha"
+            value={formData.fecha}
+            onChange={handleChange}
+          />
       </div>
 
       {/* Monto - Highlighted */}
@@ -401,6 +404,8 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
           placeholder="Seleccionar categoria"
           icon={categoryIcon}
           emptyMessage="No hay categorias"
+          onCreateNew={() => setShowCreateCategory(true)}
+          createNewLabel="Crear categoría"
         />
       </div>
 
@@ -473,6 +478,18 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData }) {
         )}
       </button>
     </form>
+
+      {/* Create Category Modal - FUERA del form */}
+      <CreateCategoryModal
+        isOpen={showCreateCategory}
+        onClose={() => setShowCreateCategory(false)}
+        type="gasto"
+        onCategoryCreated={(newCat) => {
+          setFormData(prev => ({ ...prev, categoria: newCat }));
+          if (onCategoryCreated) onCategoryCreated();
+        }}
+      />
+    </>
   );
 }
 

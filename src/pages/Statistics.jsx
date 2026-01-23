@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getRecentMovements } from '../services/sheetsApi';
+import { getRecentMovements } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import DateRangePicker from '../components/DateRangePicker';
 import ExpensePieChart from '../components/charts/ExpensePieChart';

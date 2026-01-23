@@ -2,9 +2,25 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Custom plugin to redirect /cashe-frontend to /cashe-frontend/
+const redirectPlugin = () => ({
+  name: 'redirect-plugin',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url === '/cashe-frontend') {
+        res.writeHead(301, { Location: '/cashe-frontend/' });
+        res.end();
+        return;
+      }
+      next();
+    });
+  }
+});
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    redirectPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

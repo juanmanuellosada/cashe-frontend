@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { getAllIncomes, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
+import { getAllIncomes, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
+import NewMovementModal from '../components/NewMovementModal';
+import { useError } from '../contexts/ErrorContext';
 
 function Income() {
+  const { showError } = useError();
   const [incomes, setIncomes] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
   const [loading, setLoading] = useState(true);
   const [editingMovement, setEditingMovement] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -38,10 +42,11 @@ function Income() {
       setSaving(true);
       await updateMovement(movement);
       setEditingMovement(null);
-      fetchData();
+      // Esperar un momento antes de refetch para asegurar que el caché se limpió
+      await fetchData();
     } catch (err) {
       console.error('Error updating:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar el ingreso', err.message);
     } finally {
       setSaving(false);
     }
@@ -57,7 +62,7 @@ function Income() {
       await deleteMovement(movement);
     } catch (err) {
       console.error('Error deleting:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar el ingreso', err.message);
       // Recargar para recuperar estado real
       fetchData();
     }
@@ -97,6 +102,7 @@ function Income() {
         onMovementDelete={handleDelete}
         onBulkDelete={handleBulkDelete}
         onBulkUpdate={handleBulkUpdate}
+        onAddClick={() => setShowAddModal(true)}
         type="ingreso"
       />
       {editingMovement && (
@@ -110,6 +116,14 @@ function Income() {
           loading={saving}
         />
       )}
+      <NewMovementModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          fetchData();
+        }}
+        defaultType="income"
+      />
     </>
   );
 }

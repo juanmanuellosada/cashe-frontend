@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getRecentMovements } from '../services/sheetsApi';
+import { getRecentMovements } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';

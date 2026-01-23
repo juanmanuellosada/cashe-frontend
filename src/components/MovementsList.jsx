@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
+import { useError } from '../contexts/ErrorContext';
 
 function MovementsList({
   title,
@@ -15,9 +16,11 @@ function MovementsList({
   onMovementDelete,
   onBulkDelete,
   onBulkUpdate,
+  onAddClick,
   type, // 'gasto', 'ingreso', 'transferencia'
 }) {
   const navigate = useNavigate();
+  const { showError } = useError();
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -182,7 +185,7 @@ function MovementsList({
       setBulkAction(null);
     } catch (err) {
       console.error('Error in bulk delete:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudieron eliminar los movimientos', err.message);
     } finally {
       setBulkProcessing(false);
     }
@@ -202,7 +205,7 @@ function MovementsList({
       setBulkEditValue('');
     } catch (err) {
       console.error('Error in bulk update:', err);
-      alert('Error al actualizar: ' + err.message);
+      showError('No se pudieron actualizar los movimientos', err.message);
     } finally {
       setBulkProcessing(false);
     }
@@ -296,7 +299,7 @@ function MovementsList({
           : `Aun no has registrado ningun ${type === 'transferencia' ? 'a' : ''} ${type}`}
       </p>
       <button
-        onClick={() => navigate('/nuevo')}
+        onClick={() => onAddClick ? onAddClick() : navigate('/nuevo')}
         className="px-6 py-3 rounded-xl font-medium text-white transition-all duration-200 hover:opacity-90"
         style={{ backgroundColor: getTypeColor() }}
       >

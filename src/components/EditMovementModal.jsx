@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import LoadingSpinner from './LoadingSpinner';
 import { formatCurrency } from '../utils/format';
+import { useError } from '../contexts/ErrorContext';
 
 function EditMovementModal({
   movement,
@@ -96,16 +97,18 @@ function EditMovementModal({
     }
   };
 
+  const { showError } = useError();
+
   const handleDeleteClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!movement?.rowIndex) {
-      alert('No se puede eliminar: falta información del movimiento (rowIndex)');
+      showError('No se puede eliminar el movimiento', 'Falta información del movimiento (rowIndex)');
       return;
     }
     if (!onDelete) {
-      alert('No se puede eliminar: función de eliminación no disponible');
+      showError('No se puede eliminar el movimiento', 'Función de eliminación no disponible');
       return;
     }
     // Mostrar modal de confirmación

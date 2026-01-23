@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns';
-import { getDashboardFiltered, getMovementsFiltered, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/sheetsApi';
+import { getDashboardFiltered, getMovementsFiltered, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/supabaseApi';
 import BalanceCard from '../components/dashboard/BalanceCard';
 import QuickStats from '../components/dashboard/QuickStats';
 import AccountBalances from '../components/dashboard/AccountBalances';
@@ -10,9 +10,11 @@ import RecentMovements from '../components/dashboard/RecentMovements';
 import DateRangePicker from '../components/DateRangePicker';
 import EditMovementModal from '../components/EditMovementModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useError } from '../contexts/ErrorContext';
 
 function Home() {
   const navigate = useNavigate();
+  const { showError } = useError();
 
   // Currency selector for balance section
   const [currency, setCurrency] = useState('ARS');
@@ -129,7 +131,7 @@ function Home() {
       fetchMovements();
     } catch (err) {
       console.error('Error updating movement:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar el movimiento', err.message);
     } finally {
       setSavingMovement(false);
     }
@@ -152,7 +154,7 @@ function Home() {
       fetchDashboard();
     } catch (err) {
       console.error('Error deleting movement:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar el movimiento', err.message);
       // Recargar para recuperar el estado real
       fetchMovements();
     }

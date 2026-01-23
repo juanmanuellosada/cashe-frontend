@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getAccounts, addAccount, updateAccount, deleteAccount } from '../services/sheetsApi';
+import { getAccounts, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
+import { useError } from '../contexts/ErrorContext';
 
 function Accounts() {
+  const { showError } = useError();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingAccount, setEditingAccount] = useState(null);
@@ -12,6 +14,11 @@ function Accounts() {
   const [showDetails, setShowDetails] = useState({});
   const [displayCurrency, setDisplayCurrency] = useState('original'); // 'original', 'ARS', 'USD'
   const [deleteConfirm, setDeleteConfirm] = useState(null); // Cuenta a eliminar
+  
+  // Multi-selection state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedAccounts, setSelectedAccounts] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -85,7 +92,7 @@ function Accounts() {
       fetchAccounts();
     } catch (err) {
       console.error('Error adding account:', err);
-      alert('Error al crear: ' + err.message);
+      showError('No se pudo crear la cuenta', err.message);
     } finally {
       setSaving(false);
     }
@@ -99,7 +106,7 @@ function Accounts() {
       fetchAccounts();
     } catch (err) {
       console.error('Error updating account:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar la cuenta', err.message);
     } finally {
       setSaving(false);
     }
@@ -113,13 +120,62 @@ function Accounts() {
     if (!deleteConfirm) return;
     try {
       setSaving(true);
-      await deleteAccount(deleteConfirm.rowIndex);
+      await deleteAccount(deleteConfirm.id);
       setDeleteConfirm(null);
       setEditingAccount(null);
       fetchAccounts();
     } catch (err) {
       console.error('Error deleting account:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar la cuenta', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Multi-selection functions
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedAccounts(new Set());
+  };
+
+  const toggleAccountSelection = (accountId) => {
+    setSelectedAccounts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(accountId)) {
+        newSet.delete(accountId);
+      } else {
+        newSet.add(accountId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedAccounts.size === accounts.length) {
+      setSelectedAccounts(new Set());
+    } else {
+      setSelectedAccounts(new Set(accounts.map(a => a.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const accountsToDelete = accounts.filter(a => selectedAccounts.has(a.id));
+    if (accountsToDelete.length === 0) return;
+    setBulkDeleteConfirm(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      setSaving(true);
+      const accountsToDelete = accounts.filter(a => selectedAccounts.has(a.id));
+      await bulkDeleteAccounts(accountsToDelete);
+      setBulkDeleteConfirm(false);
+      setSelectedAccounts(new Set());
+      setSelectionMode(false);
+      fetchAccounts();
+    } catch (err) {
+      console.error('Error bulk deleting accounts:', err);
+      showError('No se pudieron eliminar las cuentas', err.message);
     } finally {
       setSaving(false);
     }
@@ -238,6 +294,26 @@ function Accounts() {
               USD
             </button>
           </div>
+          
+          {/* Selection mode toggle */}
+          {accounts.length > 0 && (
+            <button
+              onClick={toggleSelectionMode}
+              className={`p-2.5 rounded-xl transition-all duration-200 ${selectionMode ? 'ring-2 ring-offset-2' : ''}`}
+              style={{ 
+                backgroundColor: selectionMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                color: selectionMode ? 'white' : 'var(--text-secondary)',
+                ringColor: 'var(--accent-primary)',
+                ringOffsetColor: 'var(--bg-primary)'
+              }}
+              title={selectionMode ? 'Cancelar selección' : 'Seleccionar múltiples'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
+              </svg>
+            </button>
+          )}
+          
           <button
             onClick={() => setIsAdding(true)}
             className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:opacity-90 flex items-center gap-2"
@@ -250,6 +326,37 @@ function Accounts() {
           </button>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectionMode && selectedAccounts.size > 0 && (
+        <div
+          className="flex items-center justify-between p-4 rounded-2xl animate-scale-in"
+          style={{ backgroundColor: 'var(--accent-primary-dim)', border: '1px solid var(--accent-primary)' }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              onClick={selectAll}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+            >
+              {selectedAccounts.size === accounts.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+            </button>
+            <span className="text-sm font-medium" style={{ color: 'var(--accent-primary)' }}>
+              {selectedAccounts.size} {selectedAccounts.size === 1 ? 'cuenta seleccionada' : 'cuentas seleccionadas'}
+            </span>
+          </div>
+          <button
+            onClick={handleBulkDelete}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80 flex items-center gap-2"
+            style={{ backgroundColor: 'var(--accent-red)', color: 'white' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Eliminar
+          </button>
+        </div>
+      )}
 
       {accounts.length === 0 ? (
         <div
@@ -284,33 +391,60 @@ function Accounts() {
             const percentage = getAccountPercentage(account);
             const isExpanded = showDetails[account.nombre];
             const displayBalance = getDisplayBalance(account);
+            const isSelected = selectedAccounts.has(account.id);
 
             return (
               <div
                 key={account.nombre}
-                className="rounded-2xl overflow-hidden transition-all duration-200"
-                style={{ backgroundColor: 'var(--bg-secondary)' }}
+                className={`rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'ring-2' : ''}`}
+                style={{ 
+                  backgroundColor: 'var(--bg-secondary)',
+                  ringColor: 'var(--accent-primary)'
+                }}
               >
                 {/* Main row - always visible */}
-                <button
-                  onClick={() => toggleDetails(account.nombre)}
-                  className="w-full p-4 flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]"
-                >
-                  {/* Currency icon */}
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{
-                      backgroundColor: account.moneda === 'Peso'
-                        ? 'rgba(117, 170, 219, 0.15)'
-                        : 'rgba(60, 179, 113, 0.15)',
-                    }}
+                <div className="flex items-center">
+                  {/* Checkbox for selection mode */}
+                  {selectionMode && (
+                    <button
+                      onClick={() => toggleAccountSelection(account.id)}
+                      className="pl-4 pr-2 py-4 flex items-center"
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-200 ${isSelected ? '' : 'border-2'}`}
+                        style={{
+                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+                          borderColor: 'var(--text-secondary)'
+                        }}
+                      >
+                        {isSelected && (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => selectionMode ? toggleAccountSelection(account.id) : toggleDetails(account.nombre)}
+                    className={`flex-1 p-4 ${selectionMode ? 'pl-0' : ''} flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]`}
                   >
-                    <span
-                      className="text-lg font-bold"
+                    {/* Currency icon */}
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{
-                        color: account.moneda === 'Peso' ? '#75AADB' : '#3CB371',
+                        backgroundColor: account.moneda === 'Peso'
+                          ? 'rgba(117, 170, 219, 0.15)'
+                          : 'rgba(60, 179, 113, 0.15)',
                       }}
                     >
+                      <span
+                        className="text-lg font-bold"
+                        style={{
+                          color: account.moneda === 'Peso' ? '#75AADB' : '#3CB371',
+                        }}
+                      >
                       {account.moneda === 'Peso' ? '$' : 'US$'}
                     </span>
                   </div>
@@ -354,9 +488,10 @@ function Accounts() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
+                </div>
 
                 {/* Expanded details */}
-                {isExpanded && (
+                {isExpanded && !selectionMode && (
                   <div
                     className="px-4 pb-4 pt-2 animate-scale-in"
                     style={{ borderTop: '1px solid var(--border-subtle)' }}
@@ -492,6 +627,31 @@ function Accounts() {
           </svg>
         }
       />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm}
+        onClose={() => setBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Eliminar cuentas"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar{' '}
+            <span className="font-semibold" style={{ color: 'var(--accent-red)' }}>
+              {selectedAccounts.size} {selectedAccounts.size === 1 ? 'cuenta' : 'cuentas'}
+            </span>
+            ?<br />
+            <span className="text-xs mt-1 block">Esta acción no se puede deshacer. Los movimientos asociados no se eliminarán.</span>
+          </>
+        }
+        confirmText={`Eliminar ${selectedAccounts.size}`}
+        loading={saving}
+        icon={
+          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        }
+      />
     </div>
   );
 }
@@ -499,6 +659,7 @@ function Accounts() {
 function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   const isEditing = !!account;
   const [formData, setFormData] = useState({
+    id: account?.id,
     rowIndex: account?.rowIndex,
     nombre: account?.nombre || '',
     balanceInicial: account?.balanceInicial?.toString() || '0',
@@ -579,8 +740,13 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               Moneda
+              {formData.esTarjetaCredito && (
+                <span className="ml-2 text-xs font-normal" style={{ color: 'var(--accent-purple)' }}>
+                  (Solo ARS para tarjetas)
+                </span>
+              )}
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${formData.esTarjetaCredito ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, moneda: 'Peso' }))}
@@ -593,18 +759,20 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                 <span className="font-bold">$</span>
                 ARS
               </button>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, moneda: 'Dólar estadounidense' }))}
-                className="flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: formData.moneda === 'Dólar estadounidense' ? '#3CB371' : 'var(--bg-tertiary)',
-                  color: formData.moneda === 'Dólar estadounidense' ? 'white' : 'var(--text-secondary)',
-                }}
-              >
-                <span className="font-bold">US$</span>
-                USD
-              </button>
+              {!formData.esTarjetaCredito && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, moneda: 'Dólar estadounidense' }))}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200"
+                  style={{
+                    backgroundColor: formData.moneda === 'Dólar estadounidense' ? '#3CB371' : 'var(--bg-tertiary)',
+                    color: formData.moneda === 'Dólar estadounidense' ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  <span className="font-bold">US$</span>
+                  USD
+                </button>
+              )}
             </div>
           </div>
 
@@ -646,6 +814,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                       ...prev,
                       tipo: tipo.value,
                       esTarjetaCredito: isCreditCard,
+                      // Tarjetas de crédito solo en pesos
+                      ...(isCreditCard ? { moneda: 'Peso' } : {}),
                     }))}
                     className="flex items-center gap-2 p-3 rounded-xl font-medium transition-all duration-200 text-left"
                     style={{

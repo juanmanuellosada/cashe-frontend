@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAccounts } from '../services/sheetsApi';
+import { getAccounts } from '../services/supabaseApi';
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState([]);

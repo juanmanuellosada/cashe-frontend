@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { getAllTransfers, getAccounts, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
+import { getAllTransfers, getAccounts, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
+import NewMovementModal from '../components/NewMovementModal';
+import { useError } from '../contexts/ErrorContext';
 
 function Transfers() {
+  const { showError } = useError();
   const [transfers, setTransfers] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingMovement, setEditingMovement] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -35,10 +39,10 @@ function Transfers() {
       setSaving(true);
       await updateMovement(movement);
       setEditingMovement(null);
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error('Error updating:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar la transferencia', err.message);
     } finally {
       setSaving(false);
     }
@@ -54,7 +58,7 @@ function Transfers() {
       await deleteMovement(movement);
     } catch (err) {
       console.error('Error deleting:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar la transferencia', err.message);
       // Recargar para recuperar estado real
       fetchData();
     }
@@ -94,6 +98,7 @@ function Transfers() {
         onMovementDelete={handleDelete}
         onBulkDelete={handleBulkDelete}
         onBulkUpdate={handleBulkUpdate}
+        onAddClick={() => setShowAddModal(true)}
         type="transferencia"
       />
       {editingMovement && (
@@ -107,6 +112,14 @@ function Transfers() {
           loading={saving}
         />
       )}
+      <NewMovementModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          fetchData();
+        }}
+        defaultType="transfer"
+      />
     </>
   );
 }

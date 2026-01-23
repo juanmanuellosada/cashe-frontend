@@ -5,9 +5,14 @@ import SearchButton from './SearchButton';
 import SearchModal from './SearchModal';
 import EditMovementModal from './EditMovementModal';
 import NewMovementModal from './NewMovementModal';
-import { getAccounts, getCategories, updateMovement, deleteMovement } from '../services/sheetsApi';
+import Avatar from './Avatar';
+import { getAccounts, getCategories, updateMovement, deleteMovement } from '../services/supabaseApi';
+import { useAuth } from '../contexts/AuthContext';
+import { useError } from '../contexts/ErrorContext';
 
 function Layout({ children, darkMode, toggleDarkMode }) {
+  const { user, profile, signOut } = useAuth();
+  const { showError } = useError();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [newMovementOpen, setNewMovementOpen] = useState(false);
@@ -80,8 +85,10 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         console.error('Error loading data for search:', err);
       }
     }
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   // Global keyboard shortcuts (desktop only)
   useEffect(() => {
@@ -121,7 +128,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       window.location.reload();
     } catch (err) {
       console.error('Error updating movement:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar el movimiento', err.message);
     } finally {
       setSavingMovement(false);
     }
@@ -138,7 +145,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       window.location.reload();
     } catch (err) {
       console.error('Error deleting movement:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar el movimiento', err.message);
     }
   };
 
@@ -367,24 +374,61 @@ function Layout({ children, darkMode, toggleDarkMode }) {
 
           {/* Sidebar Footer */}
           <div className={`${sidebarCollapsed ? 'p-2' : 'p-4'} border-t`} style={{ borderColor: 'var(--border-subtle)' }}>
+            {/* User info */}
+            {!sidebarCollapsed && user && (
+              <div className="mb-3 p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                <div className="flex items-center gap-2">
+                  <Avatar 
+                    src={profile?.avatar_url}
+                    name={profile?.full_name}
+                    email={user.email}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {profile?.full_name || 'Usuario'}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className={`flex ${sidebarCollapsed ? 'flex-col items-center gap-2' : 'items-center justify-between'}`}>
               <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-              {/* Collapse/Expand Button */}
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg transition-all duration-200 hover:opacity-80"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
-              >
-                <svg 
-                  className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+              <div className="flex items-center gap-2">
+                {/* Logout Button */}
+                <button
+                  onClick={async () => {
+                    await signOut();
+                    navigate('/');
+                  }}
+                  className="p-2 rounded-lg transition-all duration-200 hover:opacity-80"
+                  style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}
+                  title="Cerrar sesión"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+                {/* Collapse/Expand Button */}
+                <button
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="p-2 rounded-lg transition-all duration-200 hover:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                  title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+                >
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </aside>
@@ -663,6 +707,39 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                 backgroundColor: 'var(--bg-primary)'
               }}
             >
+              {/* User info */}
+              {user && (
+                <div className="mb-3 flex items-center gap-2">
+                  <Avatar 
+                    src={profile?.avatar_url}
+                    name={profile?.full_name}
+                    email={user.email}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {profile?.full_name || 'Usuario'}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                      {user.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      await signOut();
+                      navigate('/');
+                    }}
+                    className="p-2 rounded-lg transition-all duration-200"
+                    style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}
+                    title="Cerrar sesión"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   Cashé

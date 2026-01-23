@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getCategoriesAll, addCategory, updateCategory, deleteCategory } from '../services/sheetsApi';
+import { getCategoriesAll, addCategory, updateCategory, deleteCategory, bulkDeleteCategories } from '../services/supabaseApi';
 import ConfirmModal from '../components/ConfirmModal';
+import Toast from '../components/Toast';
+import { useError } from '../contexts/ErrorContext';
 
 function Categories() {
+  const { showError } = useError();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -10,10 +13,20 @@ function Categories() {
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState('todos'); // 'todos', 'Ingreso', 'Gasto'
   const [deleteConfirm, setDeleteConfirm] = useState(null); // Categoría a eliminar
+  const [toast, setToast] = useState(null);
+  
+  // Selection mode
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
 
   const fetchCategories = async () => {
     try {
@@ -32,10 +45,11 @@ function Categories() {
       setSaving(true);
       await addCategory(formData);
       setIsAdding(false);
-      fetchCategories();
+      showToast('Categoría creada correctamente');
+      await fetchCategories();
     } catch (err) {
       console.error('Error adding category:', err);
-      alert('Error al crear: ' + err.message);
+      showError('No se pudo crear la categoría', err.message);
     } finally {
       setSaving(false);
     }
@@ -46,10 +60,11 @@ function Categories() {
       setSaving(true);
       await updateCategory(formData);
       setEditingCategory(null);
-      fetchCategories();
+      showToast('Categoría actualizada correctamente');
+      await fetchCategories();
     } catch (err) {
       console.error('Error updating category:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar la categoría', err.message);
     } finally {
       setSaving(false);
     }
@@ -66,10 +81,50 @@ function Categories() {
       await deleteCategory(deleteConfirm.rowIndex);
       setDeleteConfirm(null);
       setEditingCategory(null);
-      fetchCategories();
+      showToast('Categoría eliminada correctamente');
+      await fetchCategories();
     } catch (err) {
       console.error('Error deleting category:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar la categoría', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Selection handlers
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedCategories([]);
+  };
+
+  const toggleCategorySelection = (categoryId) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const selectAll = () => {
+    if (selectedCategories.length === filteredCategories.length) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(filteredCategories.map(c => c.rowIndex));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setSaving(true);
+      await bulkDeleteCategories(selectedCategories);
+      setBulkDeleteConfirm(false);
+      setSelectedCategories([]);
+      setSelectionMode(false);
+      showToast(`${selectedCategories.length} categoría(s) eliminada(s)`);
+      await fetchCategories();
+    } catch (err) {
+      console.error('Error deleting categories:', err);
+      showError('No se pudieron eliminar las categorías', err.message);
     } finally {
       setSaving(false);
     }
@@ -155,14 +210,67 @@ function Categories() {
         <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           Categorias
         </h2>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:shadow-lg hover:scale-105"
-          style={{ backgroundColor: 'var(--accent-primary)' }}
-        >
-          + Nueva
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Selection mode toggle */}
+          {categories.length > 0 && (
+            <button
+              onClick={toggleSelectionMode}
+              className={`p-2.5 rounded-xl transition-all duration-200 ${selectionMode ? 'ring-2 ring-offset-2' : ''}`}
+              style={{ 
+                backgroundColor: selectionMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                color: selectionMode ? 'white' : 'var(--text-secondary)',
+                ringColor: 'var(--accent-primary)',
+                ringOffsetColor: 'var(--bg-primary)'
+              }}
+              title={selectionMode ? 'Cancelar selección' : 'Seleccionar múltiples'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => setIsAdding(true)}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:shadow-lg hover:scale-105"
+            style={{ backgroundColor: 'var(--accent-primary)' }}
+          >
+            + Nueva
+          </button>
+        </div>
       </div>
+
+      {/* Selection actions bar */}
+      {selectionMode && (
+        <div 
+          className="flex items-center justify-between p-3 rounded-xl animate-fade-in"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              onClick={selectAll}
+              className="text-sm font-medium transition-colors"
+              style={{ color: 'var(--accent-primary)' }}
+            >
+              {selectedCategories.length === filteredCategories.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+            </button>
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {selectedCategories.length} seleccionada(s)
+            </span>
+          </div>
+          {selectedCategories.length > 0 && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105"
+              style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Eliminar ({selectedCategories.length})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-2">
@@ -222,20 +330,46 @@ function Categories() {
             const isIngreso = category.tipo === 'Ingreso';
             const emoji = getEmoji(category.nombre);
             const nameWithoutEmoji = getNameWithoutEmoji(category.nombre);
+            const isSelected = selectedCategories.includes(category.rowIndex);
 
             return (
               <div
                 key={category.rowIndex}
-                className="group relative rounded-2xl p-4 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                className={`group relative rounded-2xl p-4 transition-all duration-200 hover:scale-[1.02] cursor-pointer ${isSelected ? 'ring-2 ring-[var(--accent-primary)]' : ''}`}
                 style={{
                   backgroundColor: isIngreso
                     ? 'var(--accent-green-dim)'
                     : 'var(--accent-red-dim)',
                   border: `1px solid ${isIngreso ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
                 }}
-                onClick={() => setEditingCategory(category)}
+                onClick={() => selectionMode ? toggleCategorySelection(category.rowIndex) : setEditingCategory(category)}
               >
-                <div className="flex items-start gap-3">
+                {/* Checkbox for selection mode */}
+                {selectionMode && (
+                  <div 
+                    className="absolute top-2 left-2 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCategorySelection(category.rowIndex);
+                    }}
+                  >
+                    <div 
+                      className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${isSelected ? 'scale-110' : ''}`}
+                      style={{ 
+                        backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        border: isSelected ? 'none' : '2px solid var(--border-subtle)'
+                      }}
+                    >
+                      {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className={`flex items-start gap-3 ${selectionMode ? 'ml-6' : ''}`}>
                   {/* Emoji badge */}
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
@@ -277,19 +411,21 @@ function Categories() {
                   </div>
                 </div>
 
-                {/* Edit button - appears on hover */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingCategory(category);
-                  }}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                >
-                  <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
+                {/* Edit button - appears on hover (only when not in selection mode) */}
+                {!selectionMode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCategory(category);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                  >
+                    <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -334,6 +470,34 @@ function Categories() {
         confirmText="Eliminar"
         loading={saving}
       />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm}
+        onClose={() => setBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Eliminar categorías"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {selectedCategories.length} categoría(s)
+            </span>
+            ? Esta acción no se puede deshacer.
+          </>
+        }
+        confirmText={`Eliminar ${selectedCategories.length}`}
+        loading={saving}
+      />
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

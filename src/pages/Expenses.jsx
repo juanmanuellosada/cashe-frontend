@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/sheetsApi';
+import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
+import NewMovementModal from '../components/NewMovementModal';
+import { useError } from '../contexts/ErrorContext';
 
 function Expenses() {
+  const { showError } = useError();
   const [expenses, setExpenses] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
   const [loading, setLoading] = useState(true);
   const [editingMovement, setEditingMovement] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -38,10 +42,10 @@ function Expenses() {
       setSaving(true);
       await updateMovement(movement);
       setEditingMovement(null);
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error('Error updating:', err);
-      alert('Error al guardar: ' + err.message);
+      showError('No se pudo guardar el gasto', err.message);
     } finally {
       setSaving(false);
     }
@@ -57,7 +61,7 @@ function Expenses() {
       await deleteMovement(movement);
     } catch (err) {
       console.error('Error deleting:', err);
-      alert('Error al eliminar: ' + err.message);
+      showError('No se pudo eliminar el gasto', err.message);
       // Recargar para recuperar estado real
       fetchData();
     }
@@ -97,6 +101,7 @@ function Expenses() {
         onMovementDelete={handleDelete}
         onBulkDelete={handleBulkDelete}
         onBulkUpdate={handleBulkUpdate}
+        onAddClick={() => setShowAddModal(true)}
         type="gasto"
       />
       {editingMovement && (
@@ -110,6 +115,14 @@ function Expenses() {
           loading={saving}
         />
       )}
+      <NewMovementModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          fetchData();
+        }}
+        defaultType="expense"
+      />
     </>
   );
 }
