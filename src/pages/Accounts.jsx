@@ -450,7 +450,18 @@ function Accounts() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    <p
+                      className="font-semibold text-sm leading-tight"
+                      style={{
+                        color: 'var(--text-primary)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word',
+                      }}
+                      title={account.nombre}
+                    >
                       {account.nombre}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
