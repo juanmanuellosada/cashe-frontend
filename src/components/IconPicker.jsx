@@ -32,7 +32,7 @@ const TrashIcon = ({ size = 12 }) => (
   </svg>
 );
 import { EMOJI_CATEGORIES, searchEmojis, getAllEmojis } from '../data/emojis';
-import { uploadIcon, listUserIcons, deleteIcon, getPathFromUrl } from '../services/iconStorage';
+import { uploadIcon, listUserIcons, deleteIcon, getPathFromUrl, resolveIconPath } from '../services/iconStorage';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from './ConfirmModal';
 
@@ -345,7 +345,7 @@ export default function IconPicker({
                   title={icon.name}
                 >
                   <img
-                    src={icon.icon}
+                    src={resolveIconPath(icon.icon)}
                     alt={icon.name}
                     className="w-10 h-10 rounded-lg"
                   />

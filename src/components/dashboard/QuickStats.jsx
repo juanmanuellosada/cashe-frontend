@@ -24,7 +24,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
               boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
             }}
           >
-            <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-4 h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
             ARS
           </button>
           <button
@@ -36,7 +36,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
               boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
             }}
           >
-            <img src="/icons/catalog/USD.svg" alt="USD" className="w-4 h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
             USD
           </button>
         </div>

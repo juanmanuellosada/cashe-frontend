@@ -1,10 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
-// Helper to check if a string is an emoji
-const isEmoji = (str) => {
-  if (!str) return false;
-  return str.length <= 4 && !str.startsWith('data:') && !str.startsWith('http') && !str.startsWith('/');
-};
+import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
 // Component to render an icon (emoji or image)
 const OptionIcon = ({ icon, defaultIcon, size = 'md', className = '' }) => {
@@ -28,7 +23,7 @@ const OptionIcon = ({ icon, defaultIcon, size = 'md', className = '' }) => {
 
   return (
     <img
-      src={iconToShow}
+      src={resolveIconPath(iconToShow)}
       alt=""
       className={`${sizeClasses[size]} rounded object-cover flex-shrink-0 ${className}`}
     />

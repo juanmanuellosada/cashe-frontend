@@ -4,7 +4,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import Toast from '../components/Toast';
 import { useError } from '../contexts/ErrorContext';
 import IconPicker from '../components/IconPicker';
-import { isEmoji } from '../services/iconStorage';
+import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import SortDropdown from '../components/SortDropdown';
 
 function Categories() {
@@ -453,7 +453,7 @@ function Categories() {
                         icon
                       ) : (
                         <img
-                          src={icon}
+                          src={resolveIconPath(icon)}
                           alt={category.nombre}
                           className="w-full h-full object-cover rounded-xl"
                         />
@@ -691,7 +691,7 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
                     <span className="text-2xl">{formData.icon}</span>
                   ) : (
                     <img
-                      src={formData.icon}
+                      src={resolveIconPath(formData.icon)}
                       alt="Ícono"
                       className="w-full h-full object-cover rounded-xl"
                     />

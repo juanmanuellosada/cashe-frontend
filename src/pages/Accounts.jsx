@@ -5,7 +5,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import SortDropdown from '../components/SortDropdown';
 import { useError } from '../contexts/ErrorContext';
 import IconPicker from '../components/IconPicker';
-import { isEmoji, isPredefinedIcon } from '../services/iconStorage';
+import { isEmoji, isPredefinedIcon, resolveIconPath } from '../services/iconStorage';
 
 function Accounts() {
   const { showError } = useError();
@@ -339,8 +339,8 @@ function Accounts() {
           >
             {[
               { id: 'original', label: 'Original', icon: null },
-              { id: 'ARS', label: 'ARS', icon: '/icons/catalog/ARS.svg' },
-              { id: 'USD', label: 'USD', icon: '/icons/catalog/USD.svg' },
+              { id: 'ARS', label: 'ARS', icon: `${import.meta.env.BASE_URL}icons/catalog/ARS.svg` },
+              { id: 'USD', label: 'USD', icon: `${import.meta.env.BASE_URL}icons/catalog/USD.svg` },
             ].map((opt) => (
               <button
                 key={opt.id}
@@ -352,7 +352,7 @@ function Accounts() {
                 }}
               >
                 {opt.icon && (
-                  <img src={opt.icon} alt={opt.label} className="w-4 h-4 rounded-sm" />
+                  <img src={resolveIconPath(opt.icon)} alt={opt.label} className="w-4 h-4 rounded-sm" />
                 )}
                 {opt.label}
               </button>
@@ -703,7 +703,7 @@ function Accounts() {
                           <span className="text-2xl">{account.icon}</span>
                         ) : (
                           <img
-                            src={account.icon}
+                            src={resolveIconPath(account.icon)}
                             alt={account.nombre}
                             className="w-full h-full object-cover rounded-xl"
                           />
@@ -949,7 +949,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                     <span className="text-3xl">{formData.icon}</span>
                   ) : (
                     <img
-                      src={formData.icon}
+                      src={resolveIconPath(formData.icon)}
                       alt="Ícono"
                       className="w-full h-full object-cover rounded-xl"
                     />
@@ -1036,7 +1036,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                   border: formData.moneda === 'Peso' ? '2px solid #75AADB' : '2px solid transparent',
                 }}
               >
-                <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-7 h-7 rounded" />
+                <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-7 h-7 rounded" />
                 <span className="font-semibold">ARS</span>
               </button>
               {!formData.esTarjetaCredito && (
@@ -1050,7 +1050,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                     border: formData.moneda === 'Dólar' ? '2px solid #3CB371' : '2px solid transparent',
                   }}
                 >
-                  <img src="/icons/catalog/USD.svg" alt="USD" className="w-7 h-7 rounded" />
+                  <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-7 h-7 rounded" />
                   <span className="font-semibold">USD</span>
                 </button>
               )}

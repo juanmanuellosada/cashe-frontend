@@ -178,7 +178,7 @@ function WeeklySummary({ movements, loading }) {
               boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none'
             }}
           >
-            <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
             ARS
           </button>
           <button
@@ -190,7 +190,7 @@ function WeeklySummary({ movements, loading }) {
               boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none'
             }}
           >
-            <img src="/icons/catalog/USD.svg" alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
             USD
           </button>
         </div>

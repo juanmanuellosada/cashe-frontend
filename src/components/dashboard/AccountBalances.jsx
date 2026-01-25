@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/format';
-import { isEmoji } from '../../services/iconStorage';
+import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
 function AccountBalances({ accounts, loading, onAccountClick }) {
   const [expanded, setExpanded] = useState(true);
@@ -118,7 +118,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                         <span className="text-xl">{account.icon}</span>
                       ) : (
                         <img
-                          src={account.icon}
+                          src={resolveIconPath(account.icon)}
                           alt={account.nombre}
                           className="w-full h-full object-cover rounded-xl"
                         />
@@ -179,7 +179,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                         <span className="text-lg">{account.icon}</span>
                       ) : (
                         <img
-                          src={account.icon}
+                          src={resolveIconPath(account.icon)}
                           alt={account.nombre}
                           className="w-full h-full object-cover rounded-lg"
                         />

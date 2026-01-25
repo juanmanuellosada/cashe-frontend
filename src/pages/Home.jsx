@@ -213,7 +213,7 @@ function Home() {
                 color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
               }}
             >
-              <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
               ARS
             </button>
             <button
@@ -224,7 +224,7 @@ function Home() {
                 color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
               }}
             >
-              <img src="/icons/catalog/USD.svg" alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
               USD
             </button>
           </div>

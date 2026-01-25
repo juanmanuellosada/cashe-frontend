@@ -6,7 +6,7 @@ import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
 import { useError } from '../contexts/ErrorContext';
-import { isEmoji } from '../services/iconStorage';
+import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
 function CreditCards() {
   const { showError } = useError();
@@ -342,7 +342,7 @@ function CreditCards() {
                 boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
-              <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-4 h-4 rounded-sm" />
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
               ARS
             </button>
             <button
@@ -354,7 +354,7 @@ function CreditCards() {
                 boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
-              <img src="/icons/catalog/USD.svg" alt="USD" className="w-4 h-4 rounded-sm" />
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
               USD
             </button>
           </div>
@@ -389,7 +389,7 @@ function CreditCards() {
                     <span className="text-base">{card.icon}</span>
                   ) : (
                     <img
-                      src={card.icon}
+                      src={resolveIconPath(card.icon)}
                       alt={card.nombre}
                       className="w-5 h-5 rounded object-cover"
                     />
@@ -803,7 +803,7 @@ function CreditCards() {
                       color: currency === curr ? 'white' : 'var(--text-secondary)',
                     }}
                   >
-                    <img src={`/icons/catalog/${curr}.svg`} alt={curr} className="w-5 h-5 rounded-sm" />
+                    <img src={`${import.meta.env.BASE_URL}icons/catalog/${curr}.svg`} alt={curr} className="w-5 h-5 rounded-sm" />
                     {curr === 'ARS' ? `Pesos (${viewingStatement.itemsPesos?.length || 0})` : `Dólares (${viewingStatement.itemsDolares?.length || 0})`}
                   </button>
                 ))}

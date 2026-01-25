@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { addCategory } from '../services/supabaseApi';
 import IconPicker from './IconPicker';
-import { isEmoji } from '../services/iconStorage';
+import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
 function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   const [name, setName] = useState('');
@@ -116,7 +116,7 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
                 isEmoji(icon) ? (
                   <span className="text-xl">{icon}</span>
                 ) : (
-                  <img src={icon} alt="" className="w-7 h-7 rounded object-cover" />
+                  <img src={resolveIconPath(icon)} alt="" className="w-7 h-7 rounded object-cover" />
                 )
               ) : (
                 <svg

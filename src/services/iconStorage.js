@@ -136,7 +136,38 @@ export const isUploadedIcon = (iconValue) => {
  */
 export const isPredefinedIcon = (iconValue) => {
   if (!iconValue) return false;
-  return iconValue.startsWith('/icons/catalog/') || iconValue.startsWith('data:image/svg+xml');
+  return iconValue.includes('/icons/catalog/') || iconValue.startsWith('data:image/svg+xml');
+};
+
+/**
+ * Resuelve la ruta correcta de un ícono, añadiendo BASE_URL si es necesario
+ * @param {string} iconValue - Valor del ícono
+ * @returns {string} - Ruta resuelta del ícono
+ */
+export const resolveIconPath = (iconValue) => {
+  if (!iconValue) return '';
+
+  // Si es un emoji, URL de supabase, data URL o URL absoluta, devolver tal cual
+  if (isEmoji(iconValue) ||
+      iconValue.startsWith('data:') ||
+      iconValue.startsWith('http') ||
+      iconValue.includes('supabase')) {
+    return iconValue;
+  }
+
+  // Si es un ícono predefinido del catálogo local
+  if (iconValue.startsWith('/icons/catalog/')) {
+    // Quitar el / inicial y añadir BASE_URL
+    return `${import.meta.env.BASE_URL}${iconValue.slice(1)}`;
+  }
+
+  // Si ya tiene el BASE_URL o es una ruta relativa
+  if (iconValue.startsWith(import.meta.env.BASE_URL)) {
+    return iconValue;
+  }
+
+  // Por defecto, añadir BASE_URL
+  return `${import.meta.env.BASE_URL}${iconValue}`;
 };
 
 /**
@@ -171,4 +202,5 @@ export default {
   isPredefinedIcon,
   isEmoji,
   getPathFromUrl,
+  resolveIconPath,
 };
