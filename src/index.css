@@ -523,6 +523,88 @@ select {
   }
 }
 
+@keyframes float-slow {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 0.15;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: translateX(-50%) scale(1.1);
+  }
+}
+
+@keyframes float-particle {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(40px, -60px);
+  }
+  50% {
+    transform: translate(-30px, -30px);
+  }
+  75% {
+    transform: translate(50px, 40px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* Landing page animations */
+.animate-float-slow {
+  animation: float-slow 20s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-slow-reverse {
+  animation: float-slow 25s ease-in-out infinite reverse;
+  will-change: transform;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 15s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-float-particle {
+  animation: float-particle 8s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-particle-2 {
+  animation: float-particle 10s ease-in-out infinite reverse;
+  will-change: transform;
+}
+
+.animate-float-particle-3 {
+  animation: float-particle 12s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-particle-4 {
+  animation: float-particle 9s ease-in-out infinite reverse;
+  will-change: transform;
+}
+
+.animate-float-particle-5 {
+  animation: float-particle 11s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* Animation Classes */
 .animate-fade-in {
   animation: fade-in 0.4s var(--ease-out-expo) forwards;

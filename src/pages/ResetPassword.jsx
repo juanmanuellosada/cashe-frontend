@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../config/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 function ResetPassword() {
   const [status, setStatus] = useState('loading'); // loading | ready | done | error | missing
@@ -57,8 +58,10 @@ function ResetPassword() {
   const textSecondary = { color: 'var(--text-secondary)' };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <div className="w-full max-w-md rounded-2xl p-6 shadow-lg" style={cardStyle}>
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Animated Background */}
+      <AnimatedBackground />
+      <div className="w-full max-w-md rounded-2xl p-6 shadow-lg relative z-10" style={cardStyle}>
         <h1 className="text-xl font-semibold mb-2" style={textPrimary}>Recuperar contraseña</h1>
         <p className="text-sm mb-4" style={textSecondary}>
           Define una nueva contraseña para tu cuenta.

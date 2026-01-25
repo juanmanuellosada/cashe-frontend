@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const Register = () => {
   const [fullName, setFullName] = useState('');
@@ -66,7 +67,12 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Animated Background */}
+      <AnimatedBackground />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col min-h-screen">
       {/* Header */}
       <header className="p-4">
         <Link to="/" className="flex items-center gap-3 w-fit">
@@ -299,6 +305,7 @@ const Register = () => {
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 };
