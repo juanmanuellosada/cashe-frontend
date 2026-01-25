@@ -286,9 +286,19 @@ export const bulkDeleteAccounts = async (accounts) => {
 // ============================================
 // CATEGORIES
 // ============================================
+
+// Helper to extract emoji from the start of a string
+const extractLeadingEmoji = (str) => {
+  if (!str) return null;
+  // Match emoji at the start of the string (including compound emojis with ZWJ)
+  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\u200D(\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*/u;
+  const match = str.match(emojiRegex);
+  return match ? match[0] : null;
+};
+
 export const getCategories = () => withDeduplication('categories', async () => {
   const userId = await getUserId();
-  
+
   const { data: categories, error } = await supabase
     .from('categories')
     .select('*')
@@ -297,13 +307,32 @@ export const getCategories = () => withDeduplication('categories', async () => {
 
   if (error) throw error;
 
+  const mapCategory = (c) => {
+    // If there's a custom icon (URL), use it
+    // Otherwise, try to extract an emoji from the name
+    const customIcon = c.icon || null;
+    const emojiFromName = !customIcon ? extractLeadingEmoji(c.name) : null;
+
+    // If we're using an emoji from the name as icon, remove it from the label
+    let displayLabel = c.name;
+    if (emojiFromName && !customIcon) {
+      displayLabel = c.name.slice(emojiFromName.length).trim();
+    }
+
+    return {
+      value: c.name,  // Keep original name as value for saving
+      label: displayLabel,  // Clean label for display
+      icon: customIcon || emojiFromName
+    };
+  };
+
   const ingresos = (categories || [])
     .filter(c => c.type === 'income')
-    .map(c => c.name);
-  
+    .map(mapCategory);
+
   const gastos = (categories || [])
     .filter(c => c.type === 'expense')
-    .map(c => c.name);
+    .map(mapCategory);
 
   const result = { categorias: { ingresos, gastos } };
   setCachedData('categories', result);

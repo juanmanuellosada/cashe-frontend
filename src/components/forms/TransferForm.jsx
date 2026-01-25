@@ -90,7 +90,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
 
   const availableDestinationAccounts = accounts
     .filter((acc) => acc.nombre !== formData.cuentaSaliente)
-    .map(a => ({ value: a.nombre, label: a.nombre }));
+    .map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -132,10 +132,11 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
             name="cuentaSaliente"
             value={formData.cuentaSaliente}
             onChange={handleChange}
-            options={accounts.map(a => ({ value: a.nombre, label: a.nombre }))}
+            options={accounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
             placeholder="Seleccionar cuenta"
             icon={accountIcon}
             emptyMessage="No hay cuentas"
+            defaultOptionIcon="💳"
           />
         </div>
 
@@ -170,6 +171,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
             placeholder="Seleccionar cuenta"
             icon={accountIcon}
             emptyMessage={formData.cuentaSaliente ? "No hay otras cuentas" : "Selecciona cuenta de origen primero"}
+            defaultOptionIcon="💳"
           />
         </div>
       </div>

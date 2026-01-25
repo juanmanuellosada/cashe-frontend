@@ -43,11 +43,11 @@
   --accent-blue-dim: rgba(14, 165, 233, 0.1);
   --accent-blue-glow: rgba(14, 165, 233, 0.2);
 
-  /* Primary Brand - Violet, refined */
-  --accent-primary: #8b5cf6;
-  --accent-primary-light: #a78bfa;
-  --accent-primary-dim: rgba(139, 92, 246, 0.1);
-  --accent-primary-glow: rgba(139, 92, 246, 0.15);
+  /* Primary Brand - Teal, trustworthy & modern */
+  --accent-primary: #14b8a6;
+  --accent-primary-light: #2dd4bf;
+  --accent-primary-dim: rgba(20, 184, 166, 0.1);
+  --accent-primary-glow: rgba(20, 184, 166, 0.15);
 
   /* Secondary - Purple accent */
   --accent-purple: #a855f7;
@@ -127,9 +127,9 @@
   --accent-blue-dim: rgba(2, 132, 199, 0.08);
   --accent-blue-glow: rgba(2, 132, 199, 0.15);
 
-  --accent-primary: #7c3aed;
-  --accent-primary-dim: rgba(124, 58, 237, 0.08);
-  --accent-primary-glow: rgba(124, 58, 237, 0.12);
+  --accent-primary: #0d9488;
+  --accent-primary-dim: rgba(13, 148, 136, 0.08);
+  --accent-primary-glow: rgba(13, 148, 136, 0.12);
 
   --accent-purple: #9333ea;
   --accent-purple-dim: rgba(147, 51, 234, 0.08);

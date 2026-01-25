@@ -1,5 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
 
+// Helper to check if a string is an emoji
+const isEmoji = (str) => {
+  if (!str) return false;
+  return str.length <= 4 && !str.startsWith('data:') && !str.startsWith('http') && !str.startsWith('/');
+};
+
+// Component to render an icon (emoji or image)
+const OptionIcon = ({ icon, defaultIcon, size = 'md', className = '' }) => {
+  const sizeClasses = {
+    sm: 'w-5 h-5 text-sm',
+    md: 'w-6 h-6 text-base',
+    lg: 'w-8 h-8 text-lg',
+  };
+
+  if (!icon && !defaultIcon) return null;
+
+  const iconToShow = icon || defaultIcon;
+
+  if (isEmoji(iconToShow)) {
+    return (
+      <span className={`flex items-center justify-center ${sizeClasses[size]} ${className}`}>
+        {iconToShow}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={iconToShow}
+      alt=""
+      className={`${sizeClasses[size]} rounded object-cover flex-shrink-0 ${className}`}
+    />
+  );
+};
+
 function Combobox({
   options,
   value,
@@ -10,19 +45,21 @@ function Combobox({
   emptyMessage = 'No hay opciones',
   onCreateNew,
   createNewLabel = 'Crear nueva',
+  defaultOptionIcon, // Default icon for options without an icon
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Find selected option label
+  // Find selected option
   const selectedOption = options.find(opt =>
     typeof opt === 'string' ? opt === value : opt.value === value
   );
   const selectedLabel = typeof selectedOption === 'string'
     ? selectedOption
     : selectedOption?.label || '';
+  const selectedIcon = typeof selectedOption === 'object' ? selectedOption?.icon : null;
 
   // Filter options based on search
   const filteredOptions = options.filter(opt => {
@@ -70,11 +107,14 @@ function Combobox({
           color: value ? 'var(--text-primary)' : 'var(--text-secondary)'
         }}
       >
-        {icon && (
+        {/* Show selected option's icon, or default icon, or generic icon */}
+        {value && (selectedIcon || defaultOptionIcon) ? (
+          <OptionIcon icon={selectedIcon} defaultIcon={defaultOptionIcon} size="md" />
+        ) : icon ? (
           <span style={{ color: 'var(--text-secondary)' }}>
             {icon}
           </span>
-        )}
+        ) : null}
         <span className="flex-1 truncate">
           {selectedLabel || placeholder}
         </span>
@@ -135,6 +175,7 @@ function Combobox({
               filteredOptions.map((opt, index) => {
                 const optValue = typeof opt === 'string' ? opt : opt.value;
                 const optLabel = typeof opt === 'string' ? opt : opt.label;
+                const optIcon = typeof opt === 'object' ? opt.icon : null;
                 const isSelected = optValue === value;
 
                 return (
@@ -166,7 +207,10 @@ function Combobox({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
-                      <span className={isSelected ? '' : 'ml-6'}>{optLabel}</span>
+                      {(optIcon || defaultOptionIcon) && (
+                        <OptionIcon icon={optIcon} defaultIcon={defaultOptionIcon} size="sm" />
+                      )}
+                      <span className={isSelected || optIcon || defaultOptionIcon ? '' : 'ml-6'}>{optLabel}</span>
                     </div>
                   </button>
                 );

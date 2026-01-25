@@ -252,7 +252,7 @@ export default function IconPicker({
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === tab.id
-                  ? 'bg-purple-500/20 text-purple-400'
+                  ? 'bg-teal-500/20 text-teal-400'
                   : 'hover:bg-white/5'
               }`}
               style={{ color: activeTab === tab.id ? undefined : 'var(--text-secondary)' }}
@@ -298,7 +298,7 @@ export default function IconPicker({
                 onClick={() => setSelectedCategory('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                   selectedCategory === 'all'
-                    ? 'bg-purple-500/20 text-purple-400'
+                    ? 'bg-teal-500/20 text-teal-400'
                     : 'hover:bg-white/5'
                 }`}
                 style={{ color: selectedCategory === 'all' ? undefined : 'var(--text-secondary)' }}
@@ -311,7 +311,7 @@ export default function IconPicker({
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                     selectedCategory === cat.id
-                      ? 'bg-purple-500/20 text-purple-400'
+                      ? 'bg-teal-500/20 text-teal-400'
                       : 'hover:bg-white/5'
                   }`}
                   style={{ color: selectedCategory === cat.id ? undefined : 'var(--text-secondary)' }}
@@ -340,7 +340,7 @@ export default function IconPicker({
                   key={icon.id}
                   onClick={() => handleSelectPredefined(icon)}
                   className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:bg-white/10 ${
-                    currentValue === icon.icon ? 'ring-2 ring-purple-500 bg-purple-500/10' : ''
+                    currentValue === icon.icon ? 'ring-2 ring-teal-500 bg-teal-500/10' : ''
                   }`}
                   title={icon.name}
                 >
@@ -375,7 +375,7 @@ export default function IconPicker({
                   key={`${emoji.emoji}-${idx}`}
                   onClick={() => handleSelectEmoji(emoji)}
                   className={`flex items-center justify-center p-3 rounded-xl text-2xl transition-all hover:bg-white/10 ${
-                    currentValue === emoji.emoji ? 'ring-2 ring-purple-500 bg-purple-500/10' : ''
+                    currentValue === emoji.emoji ? 'ring-2 ring-teal-500 bg-teal-500/10' : ''
                   }`}
                   title={emoji.keywords.join(', ')}
                 >
@@ -399,12 +399,12 @@ export default function IconPicker({
               <div
                 onClick={() => !isUploading && fileInputRef.current?.click()}
                 className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                  isUploading ? 'opacity-50 cursor-wait' : 'hover:bg-white/5 hover:border-purple-500/50'
+                  isUploading ? 'opacity-50 cursor-wait' : 'hover:bg-white/5 hover:border-teal-500/50'
                 }`}
                 style={{ borderColor: 'var(--border-color)' }}
               >
                 {isUploading ? (
-                  <LoaderIcon size={32} className="animate-spin text-purple-500" />
+                  <LoaderIcon size={32} className="animate-spin text-teal-500" />
                 ) : (
                   <UploadIcon size={32} style={{ color: 'var(--text-muted)' }} />
                 )}
@@ -436,7 +436,7 @@ export default function IconPicker({
                       <div
                         key={icon.path}
                         className={`relative group rounded-xl overflow-hidden transition-all ${
-                          currentValue === icon.url ? 'ring-2 ring-purple-500' : ''
+                          currentValue === icon.url ? 'ring-2 ring-teal-500' : ''
                         }`}
                       >
                         <button
@@ -463,7 +463,7 @@ export default function IconPicker({
 
               {loadingUploaded && (
                 <div className="flex items-center justify-center py-4">
-                  <LoaderIcon size={24} className="animate-spin text-purple-500" />
+                  <LoaderIcon size={24} className="animate-spin text-teal-500" />
                 </div>
               )}
 

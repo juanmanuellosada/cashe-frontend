@@ -303,9 +303,9 @@ function CreditCards() {
         >
           <div
             className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}
+            style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)' }}
           >
-            <svg className="w-10 h-10" style={{ color: 'var(--accent-purple)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-10 h-10" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
@@ -376,7 +376,7 @@ function CreditCards() {
               }`}
               style={{
                 backgroundColor: selectedCard?.nombre === card.nombre
-                  ? 'var(--accent-purple)'
+                  ? 'var(--accent-primary)'
                   : 'var(--bg-secondary)',
                 color: selectedCard?.nombre === card.nombre
                   ? 'white'
@@ -417,7 +417,7 @@ function CreditCards() {
               <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Día de cierre
               </p>
-              <p className="text-xl font-bold" style={{ color: 'var(--accent-purple)' }}>
+              <p className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
                 {selectedCard.diaCierre || 'No configurado'}
               </p>
             </div>
@@ -462,7 +462,7 @@ function CreditCards() {
                   className="p-4 flex items-center justify-between"
                   style={{
                     backgroundColor: statement.isCurrent
-                      ? 'rgba(139, 92, 246, 0.15)'
+                      ? 'rgba(20, 184, 166, 0.15)'
                       : statement.isFuture
                         ? 'rgba(96, 165, 250, 0.1)'
                         : 'transparent',
@@ -473,7 +473,7 @@ function CreditCards() {
                       className="w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{
                         backgroundColor: statement.isCurrent
-                          ? 'var(--accent-purple)'
+                          ? 'var(--accent-primary)'
                           : statement.isFuture
                             ? 'var(--accent-blue)'
                             : 'var(--bg-tertiary)',
@@ -497,7 +497,7 @@ function CreditCards() {
                         {statement.isCurrent && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
-                            style={{ backgroundColor: 'var(--accent-purple)', color: 'white' }}
+                            style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
                           >
                             Actual
                           </span>
@@ -673,13 +673,13 @@ function CreditCards() {
                     paymentCurrency === 'ARS' ? 'ring-2' : ''
                   } ${selectedStatement.totalPesos <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
                   style={{
-                    backgroundColor: paymentCurrency === 'ARS' ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-tertiary)',
-                    borderColor: 'var(--accent-purple)',
-                    '--tw-ring-color': 'var(--accent-purple)',
+                    backgroundColor: paymentCurrency === 'ARS' ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-tertiary)',
+                    borderColor: 'var(--accent-primary)',
+                    '--tw-ring-color': 'var(--accent-primary)',
                   }}
                 >
                   <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Pesos</p>
-                  <p className="text-lg font-bold" style={{ color: paymentCurrency === 'ARS' ? 'var(--accent-purple)' : 'var(--text-primary)' }}>
+                  <p className="text-lg font-bold" style={{ color: paymentCurrency === 'ARS' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
                     {formatCurrency(selectedStatement.totalPesos, 'ARS')}
                   </p>
                 </button>
@@ -799,7 +799,7 @@ function CreditCards() {
                       currency === curr ? 'text-white' : ''
                     }`}
                     style={{
-                      backgroundColor: currency === curr ? 'var(--accent-purple)' : 'var(--bg-tertiary)',
+                      backgroundColor: currency === curr ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                       color: currency === curr ? 'white' : 'var(--text-secondary)',
                     }}
                   >
@@ -847,7 +847,7 @@ function CreditCards() {
                         {item.isInstallment && (
                           <span
                             className="ml-2 px-1.5 py-0.5 rounded text-xs"
-                            style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)', color: 'var(--accent-purple)' }}
+                            style={{ backgroundColor: 'rgba(20, 184, 166, 0.2)', color: 'var(--accent-primary)' }}
                           >
                             {item.cuota}
                           </span>

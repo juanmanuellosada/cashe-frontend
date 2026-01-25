@@ -1237,7 +1237,7 @@ function ClosingDayEditor({ account, onSave, loading }) {
           setIsEditing(true);
         }}
         className="w-full p-3 rounded-xl mb-4 flex items-center justify-between transition-colors hover:opacity-80"
-        style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}
+        style={{ backgroundColor: 'rgba(20, 184, 166, 0.1)' }}
       >
         <div className="flex items-center gap-3">
           <div
@@ -1265,7 +1265,7 @@ function ClosingDayEditor({ account, onSave, loading }) {
   return (
     <div
       className="p-4 rounded-xl mb-4"
-      style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}
+      style={{ backgroundColor: 'rgba(20, 184, 166, 0.1)' }}
       onClick={(e) => e.stopPropagation()}
     >
       <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>

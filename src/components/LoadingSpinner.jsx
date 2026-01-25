@@ -29,7 +29,7 @@ function LoadingSpinner({ size = 'md', className = '' }) {
             borderStyle: 'solid',
             borderColor: 'transparent',
             borderTopColor: 'var(--accent-primary)',
-            borderRightColor: 'var(--accent-purple)',
+            borderRightColor: 'var(--accent-primary)',
             filter: 'drop-shadow(0 0 8px var(--accent-primary-glow))'
           }}
         />

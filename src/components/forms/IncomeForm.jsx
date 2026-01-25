@@ -145,10 +145,11 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
           name="cuenta"
           value={formData.cuenta}
           onChange={handleChange}
-          options={accounts.map(a => ({ value: a.nombre, label: a.nombre }))}
+          options={accounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
           placeholder="Seleccionar cuenta"
           icon={accountIcon}
           emptyMessage="No hay cuentas"
+          defaultOptionIcon="💳"
         />
       </div>
 
@@ -171,6 +172,7 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
           emptyMessage="No hay categorías"
           onCreateNew={() => setShowCreateCategory(true)}
           createNewLabel="Crear categoría"
+          defaultOptionIcon="🏷️"
         />
       </div>
 

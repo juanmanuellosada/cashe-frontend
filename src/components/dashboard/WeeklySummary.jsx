@@ -246,7 +246,7 @@ function WeeklySummary({ movements, loading }) {
             <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
               <div
                 className="w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[10px] sm:text-xs"
-                style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}
+                style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)' }}
               >
                 {getCategoryEmoji(stats.topCategory?.name)}
               </div>
@@ -254,7 +254,7 @@ function WeeklySummary({ movements, loading }) {
                 Top
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-bold truncate" style={{ color: 'var(--accent-purple)' }}>
+            <p className="text-xs sm:text-sm font-bold truncate" style={{ color: 'var(--accent-primary)' }}>
               {stats.topCategory?.name?.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || '-'}
             </p>
             <p className="text-[10px] sm:text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>

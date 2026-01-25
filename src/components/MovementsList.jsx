@@ -454,7 +454,7 @@ function MovementsList({
                     <button
                       onClick={() => setBulkAction('editCategory')}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)' }}
+                      style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -810,8 +810,8 @@ function MovementsList({
                         <span
                           className="px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1"
                           style={{
-                            backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                            color: 'var(--accent-purple)',
+                            backgroundColor: 'rgba(20, 184, 166, 0.15)',
+                            color: 'var(--accent-primary)',
                           }}
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1060,7 +1060,7 @@ function MovementsList({
                 onClick={handleBulkUpdate}
                 disabled={bulkProcessing || !bulkEditValue}
                 className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent-purple)' }}
+                style={{ backgroundColor: 'var(--accent-primary)' }}
               >
                 {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
               </button>

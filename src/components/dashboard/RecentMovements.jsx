@@ -222,8 +222,8 @@ function RecentMovements({
                         <span
                           className="px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-semibold flex-shrink-0"
                           style={{
-                            backgroundColor: 'rgba(139, 92, 246, 0.12)',
-                            color: 'var(--accent-purple)',
+                            backgroundColor: 'rgba(20, 184, 166, 0.12)',
+                            color: 'var(--accent-primary)',
                           }}
                         >
                           {movement.cuota}

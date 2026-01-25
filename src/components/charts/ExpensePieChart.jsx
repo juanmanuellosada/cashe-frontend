@@ -3,7 +3,7 @@ import { formatCurrency } from '../../utils/format';
 
 const COLORS = [
   '#f43f5e', '#f97316', '#eab308', '#10b981', '#14b8a6',
-  '#0ea5e9', '#8b5cf6', '#ec4899', '#6366f1', '#84cc16'
+  '#0ea5e9', '#14b8a6', '#ec4899', '#6366f1', '#84cc16'
 ];
 
 function ExpensePieChart({ data, loading, currency = 'ARS' }) {

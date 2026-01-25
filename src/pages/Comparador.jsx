@@ -8,7 +8,7 @@ import DateRangePicker from '../components/DateRangePicker';
 
 const COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#84cc16'
+  '#3b82f6', '#14b8a6', '#ec4899', '#6366f1', '#84cc16'
 ];
 
 // Presets para el comparador
@@ -637,13 +637,13 @@ function Comparador() {
         >
           <div
             className="absolute inset-0"
-            style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 70%)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, transparent 70%)' }}
           />
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}
+                style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)' }}
               >
                 <svg className="w-4 h-4" style={{ color: 'var(--accent-purple)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

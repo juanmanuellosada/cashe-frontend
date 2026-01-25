@@ -269,8 +269,10 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
           options={accounts.map(a => ({
             value: a.nombre,
             label: a.nombre,
+            icon: a.icon || null,
             badge: a.esTarjetaCredito ? 'TC' : null
           }))}
+          defaultOptionIcon="💳"
           placeholder="Seleccionar cuenta"
           icon={accountIcon}
           emptyMessage="No hay cuentas"
@@ -333,7 +335,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
                   }`}
                   style={{
                     backgroundColor: cantidadCuotas === option
-                      ? 'rgba(139, 92, 246, 0.2)'
+                      ? 'rgba(20, 184, 166, 0.2)'
                       : 'var(--bg-secondary)',
                     color: cantidadCuotas === option
                       ? 'var(--accent-purple)'
@@ -406,6 +408,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
           emptyMessage="No hay categorias"
           onCreateNew={() => setShowCreateCategory(true)}
           createNewLabel="Crear categoría"
+          defaultOptionIcon="🏷️"
         />
       </div>
 
