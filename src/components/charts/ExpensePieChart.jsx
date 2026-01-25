@@ -2,8 +2,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { formatCurrency } from '../../utils/format';
 
 const COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#84cc16'
+  '#f43f5e', '#f97316', '#eab308', '#10b981', '#14b8a6',
+  '#0ea5e9', '#8b5cf6', '#ec4899', '#6366f1', '#84cc16'
 ];
 
 function ExpensePieChart({ data, loading, currency = 'ARS' }) {
@@ -95,20 +95,20 @@ function ExpensePieChart({ data, loading, currency = 'ARS' }) {
 
   return (
     <div
-      className="rounded-2xl p-4"
-      style={{ backgroundColor: 'var(--bg-secondary)' }}
+      className="rounded-xl p-4"
+      style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
     >
-      <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-        Gastos por Categoria
+      <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
+        Gastos por categoría
       </h3>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="45%"
-            innerRadius={50}
-            outerRadius={90}
+            innerRadius={45}
+            outerRadius={80}
             paddingAngle={2}
             dataKey="value"
             nameKey="name"

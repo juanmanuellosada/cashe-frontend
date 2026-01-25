@@ -152,6 +152,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
         esTarjetaCredito: account.is_credit_card,
         diaCierre: account.closing_day,
         balanceActual: balance,
+        icon: account.icon || null,
         // Keep original fields too
         ...account
       };
@@ -207,9 +208,9 @@ const calculateAccountBalance = async (accountId, initialBalance) => {
   return parseFloat(initialBalance) + totalIncomes - totalExpenses + totalTransfersIn - totalTransfersOut;
 };
 
-export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre }) => {
+export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon }) => {
   const userId = await getUserId();
-  
+
   const { data, error } = await supabase
     .from('accounts')
     .insert({
@@ -220,7 +221,8 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
       account_number: numeroCuenta || null,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
-      closing_day: diaCierre || null
+      closing_day: diaCierre || null,
+      icon: icon || null
     })
     .select()
     .single();
@@ -230,7 +232,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
   return { success: true, account: data };
 };
 
-export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre }) => {
+export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon }) => {
   const accountId = id || rowIndex;
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
@@ -244,7 +246,8 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       account_number: numeroCuenta || null,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
-      closing_day: diaCierre || null
+      closing_day: diaCierre || null,
+      icon: icon || null
     })
     .eq('id', accountId)
     .select()
@@ -326,27 +329,29 @@ export const getCategoriesWithId = async () => {
       id: c.id,
       rowIndex: c.id, // compatibility
       nombre: c.name,
-      tipo: c.type === 'income' ? 'Ingreso' : 'Gasto'
+      tipo: c.type === 'income' ? 'Ingreso' : 'Gasto',
+      icon: c.icon || null
     }))
   };
   setCachedData(cacheKey, result);
   return result;
 };
 
-export const addCategory = async ({ nombre, tipo }) => {
+export const addCategory = async ({ nombre, tipo, icon }) => {
   const userId = await getUserId();
-  
+
   // Normalizar el tipo a income/expense
-  const normalizedType = tipo.toLowerCase().includes('ingreso') || tipo.toLowerCase() === 'income' 
-    ? 'income' 
+  const normalizedType = tipo.toLowerCase().includes('ingreso') || tipo.toLowerCase() === 'income'
+    ? 'income'
     : 'expense';
-  
+
   const { data, error } = await supabase
     .from('categories')
     .insert({
       user_id: userId,
       name: nombre,
-      type: normalizedType
+      type: normalizedType,
+      icon: icon || null
     })
     .select()
     .single();
@@ -356,13 +361,14 @@ export const addCategory = async ({ nombre, tipo }) => {
   return { success: true, category: data };
 };
 
-export const updateCategory = async ({ id, rowIndex, nombre, tipo }) => {
+export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon }) => {
   const categoryId = id || rowIndex;
   const { data, error } = await supabase
     .from('categories')
     .update({
       name: nombre,
-      type: tipo === 'Ingreso' ? 'income' : 'expense'
+      type: tipo === 'Ingreso' ? 'income' : 'expense',
+      icon: icon !== undefined ? icon : null
     })
     .eq('id', categoryId)
     .select()

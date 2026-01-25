@@ -77,47 +77,47 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
 
   return (
     <div
-      className="rounded-2xl p-4"
-      style={{ backgroundColor: 'var(--bg-secondary)' }}
+      className="rounded-xl p-4"
+      style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
     >
-      <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+      <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
         Ingresos vs Gastos
       </h3>
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+      <ResponsiveContainer width="100%" height={240}>
+        <BarChart data={data} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.5} vertical={false} />
           <XAxis
             dataKey="month"
-            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
-            axisLine={{ stroke: 'var(--border-subtle)' }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+            axisLine={false}
             tickLine={false}
           />
           <YAxis
             tickFormatter={formatYAxis}
-            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.5 }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.3 }} />
           <Legend
-            wrapperStyle={{ paddingTop: '10px' }}
+            wrapperStyle={{ paddingTop: '8px' }}
             formatter={(value) => (
-              <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{value}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{value}</span>
             )}
           />
           <Bar
             dataKey="ingresos"
             name="Ingresos"
             fill="var(--accent-green)"
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            radius={[3, 3, 0, 0]}
+            maxBarSize={32}
           />
           <Bar
             dataKey="gastos"
             name="Gastos"
             fill="var(--accent-red)"
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            radius={[3, 3, 0, 0]}
+            maxBarSize={32}
           />
         </BarChart>
       </ResponsiveContainer>

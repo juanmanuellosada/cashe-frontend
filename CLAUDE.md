@@ -1,10 +1,10 @@
-# CLAUDE.md - Finanzas Personales Web App
+# CLAUDE.md - Cashé - Finanzas Personales
 
 ## Descripción del Proyecto
 
-Aplicación web para gestión de finanzas personales con soporte para ingresos, gastos (incluyendo cuotas automáticas de tarjeta de crédito), y transferencias. Se conecta a Google Sheets como backend a través de Google Apps Script.
+**Cashé** es una aplicación web para gestión de finanzas personales con soporte para ingresos, gastos (incluyendo cuotas automáticas de tarjeta de crédito), y transferencias. Incluye autenticación con Supabase y se conecta a Google Sheets como backend de datos a través de Google Apps Script.
 
-**Objetivo**: Interfaz moderna, minimalista y mobile-first con dashboard, estadísticas, y gestión completa de movimientos financieros.
+**URL de producción**: https://juanmanuellosada.github.io/cashe-frontend/
 
 ---
 
@@ -15,9 +15,11 @@ Aplicación web para gestión de finanzas personales con soporte para ingresos, 
 | **React 18** + **Vite** | Frontend SPA |
 | **Tailwind CSS** | Estilos |
 | **React Router DOM** | Navegación |
+| **Supabase** | Autenticación (Google OAuth) |
 | **Recharts** | Gráficos |
+| **Lucide React** | Iconos |
 | **React Day Picker** + **date-fns** | Selector de fechas |
-| **Google Apps Script** | API REST |
+| **Google Apps Script** | API REST para datos |
 | **Google Sheets** | Base de datos |
 | **GitHub Pages** | Hosting |
 | **Vite PWA Plugin** | Progressive Web App |
@@ -30,34 +32,21 @@ Aplicación web para gestión de finanzas personales con soporte para ingresos, 
 ┌─────────────────────────────────────────────────────────────────┐
 │                     FRONTEND (GitHub Pages)                      │
 │                                                                  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│
-│  │  Home/   │ │  Nuevo   │ │ Gastos/  │ │  Stats   │ │Cuentas/││
-│  │ Dashboard│ │Movimiento│ │Ingresos  │ │ Gráficos │ │Categor.││
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘│
-│       └────────────┴────────────┴────────────┴───────────┘     │
-│                              │                                  │
-└──────────────────────────────┼──────────────────────────────────┘
-                               │ HTTPS (fetch)
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               GOOGLE APPS SCRIPT V3 (API REST)                   │
-│                                                                  │
-│  GET:  getAccounts, getCategories, getDashboard,                │
-│        getAllMovements, getRecentMovements, getExchangeRate,    │
-│        getInstallmentsByPurchase, getPendingInstallments        │
-│                                                                  │
-│  POST: addIncome, addExpense, addExpenseWithInstallments,       │
-│        addTransfer, updateIncome/Expense/Transfer,              │
-│        deleteIncome/Expense/Transfer, deleteInstallmentsByPurchase │
-└──────────────────────────────┬──────────────────────────────────┘
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────────┐ │
+│  │ Landing │ │ Login/  │ │  Home/  │ │ Análisis│ │Configurac.│ │
+│  │         │ │Register │ │Dashboard│ │         │ │           │ │
+│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └─────┬─────┘ │
+│       └───────────┴───────────┴───────────┴─────────────┘       │
+│                              │                                   │
+└──────────────────────────────┼───────────────────────────────────┘
                                │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       GOOGLE SHEETS                              │
-│                                                                  │
-│  Hojas: Monedas, Cuentas, Categorías, Gastos, Ingresos,         │
-│         Transferencias                                           │
-└─────────────────────────────────────────────────────────────────┘
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+┌──────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│     SUPABASE     │  │ GOOGLE APPS     │  │  GOOGLE SHEETS  │
+│  (Auth + Users)  │  │ SCRIPT (API)    │  │  (Base datos)   │
+└──────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ---
@@ -65,11 +54,8 @@ Aplicación web para gestión de finanzas personales con soporte para ingresos, 
 ## Estructura del Proyecto
 
 ```
-finanzas-personales/
-├── .claude/
-│   └── settings.local.json
+cashe-frontend/
 ├── .gitignore
-├── APPSCRIPT_COMPLETO_V3.js      # ⭐ Código actual del Apps Script
 ├── CLAUDE.md                      # Este archivo
 ├── index.html
 ├── package.json
@@ -77,18 +63,26 @@ finanzas-personales/
 ├── tailwind.config.js
 ├── postcss.config.js
 ├── public/
-│   └── favicon.ico
+│   ├── favicon.ico
+│   ├── logo.svg
+│   └── manifest.json
 ├── dist/                          # Build de producción
 └── src/
     ├── main.jsx                   # Entry point
-    ├── App.jsx                    # Router principal
+    ├── App.jsx                    # Router principal + rutas protegidas
     ├── index.css                  # Estilos globales + Tailwind
     │
     ├── config/
-    │   └── api.js                 # URL del Apps Script
+    │   ├── api.js                 # URL del Apps Script
+    │   └── supabase.js            # Cliente Supabase
+    │
+    ├── contexts/
+    │   ├── AuthContext.jsx        # Contexto de autenticación
+    │   └── ErrorContext.jsx       # Manejo global de errores
     │
     ├── services/
-    │   └── sheetsApi.js           # Funciones para llamar al API
+    │   ├── sheetsApi.js           # Funciones para llamar al API de Sheets
+    │   └── supabaseApi.js         # Funciones de autenticación
     │
     ├── hooks/
     │   ├── useAccounts.js         # Hook para cuentas
@@ -99,17 +93,23 @@ finanzas-personales/
     │   └── format.js              # Formateo de números y fechas
     │
     ├── components/
-    │   ├── Layout.jsx             # Layout con navegación
+    │   ├── Layout.jsx             # Layout con sidebar
+    │   ├── ProtectedRoute.jsx     # HOC para rutas protegidas
+    │   ├── Avatar.jsx             # Avatar de usuario
     │   ├── ThemeToggle.jsx        # Dark/Light mode
     │   ├── LoadingSpinner.jsx     # Spinner de carga
     │   ├── Toast.jsx              # Notificaciones
     │   ├── Combobox.jsx           # Select con búsqueda
-    │   ├── DatePicker.jsx         # Selector de fecha individual
+    │   ├── ConfirmModal.jsx       # Modal de confirmación
+    │   ├── ErrorModal.jsx         # Modal de errores
+    │   ├── DatePicker.jsx         # Selector de fecha
     │   ├── DateRangePicker.jsx    # Selector de rango de fechas
-    │   ├── EditMovementModal.jsx  # Modal para editar movimientos
     │   ├── FilterBar.jsx          # Barra de filtros
     │   ├── MovementsList.jsx      # Lista de movimientos
-    │   ├── SearchButton.jsx       # Botón de búsqueda
+    │   ├── EditMovementModal.jsx  # Modal para editar
+    │   ├── NewMovementModal.jsx   # Modal para nuevo movimiento
+    │   ├── CreateCategoryModal.jsx # Modal para crear categoría
+    │   ├── SearchButton.jsx       # Botón de búsqueda (Alt+K)
     │   ├── SearchModal.jsx        # Modal de búsqueda
     │   │
     │   ├── forms/
@@ -119,9 +119,11 @@ finanzas-personales/
     │   │   └── TransferForm.jsx   # Campos de transferencia
     │   │
     │   ├── dashboard/
-    │   │   ├── BalanceCard.jsx
-    │   │   ├── RecentMovements.jsx
-    │   │   └── QuickStats.jsx
+    │   │   ├── BalanceCard.jsx        # Card de balance total
+    │   │   ├── AccountBalances.jsx    # Lista de balances por cuenta
+    │   │   ├── QuickStats.jsx         # Estadísticas rápidas
+    │   │   ├── RecentMovements.jsx    # Últimos movimientos
+    │   │   └── WeeklySummary.jsx      # Resumen semanal
     │   │
     │   └── charts/
     │       ├── BalanceLineChart.jsx     # Evolución del balance
@@ -129,14 +131,96 @@ finanzas-personales/
     │       └── IncomeExpenseBarChart.jsx # Comparativo mensual
     │
     └── pages/
+        ├── Landing.jsx            # Página de bienvenida (pública)
+        ├── Login.jsx              # Inicio de sesión
+        ├── Register.jsx           # Registro
+        ├── ResetPassword.jsx      # Recuperar contraseña
         ├── Home.jsx               # Dashboard principal
-        ├── NewMovement.jsx        # Formulario de carga
+        ├── NewMovement.jsx        # Página de nuevo movimiento
         ├── Expenses.jsx           # Listado de gastos
         ├── Income.jsx             # Listado de ingresos
         ├── Transfers.jsx          # Listado de transferencias
-        ├── Statistics.jsx         # Página de estadísticas/gráficos
+        ├── Statistics.jsx         # Estadísticas y gráficos
+        ├── Comparador.jsx         # Comparador de períodos
+        ├── CategorySummary.jsx    # Resumen por categoría
+        ├── CreditCards.jsx        # Gestión de tarjetas de crédito
         ├── Accounts.jsx           # Gestión de cuentas
         └── Categories.jsx         # Gestión de categorías
+```
+
+---
+
+## Rutas de la Aplicación
+
+### Rutas Públicas
+| Ruta | Página | Descripción |
+|------|--------|-------------|
+| `/` | Landing | Página de bienvenida |
+| `/login` | Login | Inicio de sesión |
+| `/register` | Register | Registro de usuario |
+| `/reset-password` | ResetPassword | Recuperar contraseña |
+
+### Rutas Protegidas (requieren autenticación)
+| Ruta | Página | Descripción |
+|------|--------|-------------|
+| `/home` | Home | Dashboard principal |
+| `/nuevo` | NewMovement | Formulario de nuevo movimiento |
+| `/gastos` | Expenses | Listado de gastos |
+| `/ingresos` | Income | Listado de ingresos |
+| `/transferencias` | Transfers | Listado de transferencias |
+| `/estadisticas` | Statistics | Gráficos y estadísticas |
+| `/comparador` | Comparador | Comparador de períodos |
+| `/resumen-categorias` | CategorySummary | Resumen por categoría |
+| `/tarjetas` | CreditCards | Gestión de tarjetas |
+| `/cuentas` | Accounts | Gestión de cuentas |
+| `/categorias` | Categories | Gestión de categorías |
+
+---
+
+## Autenticación (Supabase)
+
+### Configuración
+```javascript
+// src/config/supabase.js
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+```
+
+### Variables de Entorno
+```bash
+# .env.local
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+VITE_API_URL=https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec
+```
+
+### Métodos de Autenticación
+- Google OAuth (principal)
+- Email/Password (alternativo)
+
+---
+
+## Sidebar - Estructura de Navegación
+
+```
+📊 ANÁLISIS
+   ├── Estadísticas      /estadisticas
+   ├── Comparador        /comparador
+   └── Por categoría     /resumen-categorias
+
+💰 MOVIMIENTOS
+   ├── Gastos            /gastos
+   ├── Ingresos          /ingresos
+   └── Transferencias    /transferencias
+
+⚙️ CONFIGURACIÓN
+   ├── Tarjetas          /tarjetas
+   ├── Cuentas           /cuentas
+   └── Categorías        /categorias
 ```
 
 ---
@@ -148,247 +232,93 @@ finanzas-personales/
 1ZKoPArVyfG45J23g0AH9skvlYRhIyXZROcMRmgOUML0
 ```
 
-### Hoja: Monedas
-| Col | Nombre | Tipo | Notas |
-|-----|--------|------|-------|
-| A | Nombre | string | Ej: "Peso", "Dólar estadounidense" |
-| B | Símbolo | string | Ej: "$", "US$" |
-| C | Es moneda base | boolean | |
-| D | Tipo de cambio | number | **D3 = Dólar oficial** (se actualiza automáticamente) |
+### Hojas y Columnas
 
-### Hoja: Cuentas
-| Col | Nombre | Tipo | Origen |
-|-----|--------|------|--------|
-| A | Nombre de la cuenta | string | Manual |
-| B | Balance inicial | number | Manual |
-| C | Moneda | string | Manual |
-| D | Número de cuenta | string | Manual (opcional) |
-| E | Tipo de cuenta | string | Manual: "Caja de ahorro", "Cuenta corriente", **"Tarjeta de crédito"** |
-| F | Día de cierre | number | Manual (1-31, **solo para tarjetas**) |
-| G | Total ingresos | number | Fórmula |
-| H | Total gastos | number | Fórmula |
-| I | Total transf. entrantes | number | Fórmula |
-| J | Total transf. salientes | number | Fórmula |
-| K | Balance actual | number | Fórmula |
-| L | Balance en pesos | string | Fórmula |
-| M | Balance en dólares | string | Fórmula |
-
-### Hoja: Categorías
+#### Hoja: Monedas
 | Col | Nombre | Tipo |
 |-----|--------|------|
-| A | Nombre de la categoría | string |
-| B | Tipo | "Ingreso" o "Gasto" |
+| A | Nombre | string |
+| B | Símbolo | string |
+| C | Es moneda base | boolean |
+| D | Tipo de cambio | number (D3 = Dólar oficial) |
 
-### Hoja: Gastos ⭐ (con soporte para cuotas)
-| Col | Nombre | Tipo | Origen |
-|-----|--------|------|--------|
-| A | Fecha | date | API |
-| B | Monto | number | API |
-| C | Cuenta | string | API |
-| D | Categoría | string | API |
-| E | Monto en pesos | number | **Fórmula (NO TOCAR)** |
-| F | Monto en dólares | number | **Fórmula (NO TOCAR)** |
-| G | Nota | string | API |
-| H | ID Compra | string | API (para agrupar cuotas) |
-| I | Cuota | string | API (ej: "1/12", "2/12") |
+#### Hoja: Cuentas
+| Col | Nombre | Tipo |
+|-----|--------|------|
+| A | Nombre | string |
+| B | Balance inicial | number |
+| C | Moneda | string |
+| D | Número de cuenta | string |
+| E | Tipo de cuenta | string |
+| F | Día de cierre | number (solo tarjetas) |
+| G-M | Fórmulas calculadas | - |
 
-### Hoja: Ingresos
-| Col | Nombre | Tipo | Origen |
-|-----|--------|------|--------|
-| A | Fecha | date | API |
-| B | Monto | number | API |
-| C | Cuenta | string | API |
-| D | Categoría | string | API |
-| E | Monto en pesos | number | **Fórmula (NO TOCAR)** |
-| F | Monto en dólares | number | **Fórmula (NO TOCAR)** |
-| G | Nota | string | API |
+#### Hoja: Gastos
+| Col | Nombre | Tipo |
+|-----|--------|------|
+| A | Fecha | date |
+| B | Monto | number |
+| C | Cuenta | string |
+| D | Categoría | string |
+| E | Monto en pesos | number (fórmula) |
+| F | Monto en dólares | number (fórmula) |
+| G | Nota | string |
+| H | ID Compra | string (para cuotas) |
+| I | Cuota | string (ej: "1/12") |
 
-### Hoja: Transferencias
-| Col | Nombre | Tipo | Origen |
-|-----|--------|------|--------|
-| A | Fecha | date | API |
-| B | Cuenta saliente | string | API |
-| C | Cuenta entrante | string | API |
-| D | Monto saliente | number | API |
-| E | Monto entrante | number | API |
-| F | Nota | string | API |
+#### Hoja: Ingresos
+| Col | Nombre | Tipo |
+|-----|--------|------|
+| A | Fecha | date |
+| B | Monto | number |
+| C | Cuenta | string |
+| D | Categoría | string |
+| E | Monto en pesos | number (fórmula) |
+| F | Monto en dólares | number (fórmula) |
+| G | Nota | string |
 
----
-
-## API REST - Endpoints
-
-### Archivo: `APPSCRIPT_COMPLETO_V3.js`
-
-El archivo completo está en la raíz del proyecto. **Copiar todo su contenido** al Apps Script de Google Sheets.
-
-### Endpoints GET
-
-```javascript
-// Obtener todas las cuentas (incluye info de tarjetas de crédito)
-GET ?action=getAccounts
-
-// Obtener categorías agrupadas por tipo
-GET ?action=getCategories
-
-// Obtener tipo de cambio actual
-GET ?action=getExchangeRate
-
-// Obtener datos del dashboard
-GET ?action=getDashboard
-
-// Obtener últimos N movimientos
-GET ?action=getRecentMovements&limit=10
-
-// Obtener TODOS los movimientos
-GET ?action=getAllMovements
-
-// Obtener cuotas de una compra específica
-GET ?action=getInstallmentsByPurchase&idCompra=C1234567890
-
-// Obtener todas las compras con cuotas pendientes
-GET ?action=getPendingInstallments
-```
-
-### Endpoints POST
-
-```javascript
-// Agregar ingreso
-POST { action: 'addIncome', fecha, monto, cuenta, categoria, nota }
-
-// Agregar gasto simple
-POST { action: 'addExpense', fecha, monto, cuenta, categoria, nota }
-
-// ⭐ Agregar gasto en cuotas (genera todas las cuotas automáticamente)
-POST { 
-  action: 'addExpenseWithInstallments',
-  fechaCompra: '2026-01-20',
-  montoTotal: 120000,
-  cuenta: 'Tarjeta VISA',
-  categoria: 'Tecnología',
-  nota: 'Notebook',
-  cantidadCuotas: 12
-}
-
-// Agregar transferencia
-POST { action: 'addTransfer', fecha, cuentaSaliente, cuentaEntrante, montoSaliente, montoEntrante, nota }
-
-// Actualizar movimientos (requiere rowIndex)
-POST { action: 'updateIncome', rowIndex, fecha, monto, cuenta, categoria, nota }
-POST { action: 'updateExpense', rowIndex, fecha, monto, cuenta, categoria, nota }
-POST { action: 'updateTransfer', rowIndex, fecha, cuentaSaliente, cuentaEntrante, montoSaliente, montoEntrante, nota }
-
-// Eliminar movimientos (requiere rowIndex)
-POST { action: 'deleteIncome', rowIndex }
-POST { action: 'deleteExpense', rowIndex }
-POST { action: 'deleteTransfer', rowIndex }
-
-// Eliminar todas las cuotas de una compra
-POST { action: 'deleteInstallmentsByPurchase', idCompra: 'C1234567890' }
-```
-
-### Configuración del Apps Script
-
-1. Ir a `Extensiones > Apps Script` en Google Sheets
-2. Reemplazar todo el código con el contenido de `APPSCRIPT_COMPLETO_V3.js`
-3. Guardar (Ctrl+S)
-4. Hacer clic en `Implementar > Nueva implementación`
-5. Seleccionar tipo: `Aplicación web`
-6. Configurar:
-   - Ejecutar como: **Yo**
-   - Quién tiene acceso: **Cualquier persona**
-7. Copiar la URL de la implementación
-
-**⚠️ IMPORTANTE**: Cada vez que modifiques el código, debes crear una **NUEVA implementación** para que los cambios se reflejen.
+#### Hoja: Transferencias
+| Col | Nombre | Tipo |
+|-----|--------|------|
+| A | Fecha | date |
+| B | Cuenta saliente | string |
+| C | Cuenta entrante | string |
+| D | Monto saliente | number |
+| E | Monto entrante | number |
+| F | Nota | string |
 
 ---
 
-## Diseño UI/UX
+## Funcionalidades Implementadas
 
-### Paleta de Colores
+### ✅ Core
+- [x] Autenticación con Google (Supabase)
+- [x] Landing page pública
+- [x] Dashboard con resumen financiero
+- [x] Registro de ingresos, gastos y transferencias
+- [x] Sistema de cuotas automáticas para tarjetas
+- [x] Multi-moneda (ARS/USD) con tipo de cambio en tiempo real
+- [x] Dark/Light mode
 
-```css
-/* Dark Mode (default) */
---bg-primary: #0f0f0f;
---bg-secondary: #1a1a1a;
---bg-tertiary: #252525;
---text-primary: #ffffff;
---text-secondary: #a0a0a0;
---accent-green: #22c55e;    /* Ingresos */
---accent-red: #ef4444;      /* Gastos */
---accent-blue: #3b82f6;     /* Transferencias */
---accent-purple: #8b5cf6;   /* Acciones primarias */
+### ✅ Análisis
+- [x] Estadísticas con gráficos (Recharts)
+- [x] Comparador de períodos
+- [x] Resumen por categoría
+- [x] Filtros por fecha, cuenta y categoría
 
-/* Light Mode */
---bg-primary: #ffffff;
---bg-secondary: #f5f5f5;
---bg-tertiary: #e5e5e5;
---text-primary: #0f0f0f;
---text-secondary: #6b7280;
-```
+### ✅ Gestión
+- [x] CRUD de movimientos
+- [x] Gestión de cuentas
+- [x] Gestión de categorías
+- [x] Gestión de tarjetas de crédito
+- [x] Búsqueda global (Alt+K)
+- [x] Atajos de teclado
 
-### Principios de Diseño
-- **Mobile-first**: Diseñar primero para móvil
-- **Minimalista**: Sin elementos innecesarios
-- **Dark mode por defecto**: Con toggle para light mode
-- **Feedback inmediato**: Loaders, toasts, animaciones sutiles
-
----
-
-## Funcionalidades
-
-### ✅ Implementadas
-
-- [x] Formulario de carga con 3 tipos de movimiento
-- [x] Listas dinámicas de cuentas y categorías
-- [x] Dashboard con balance y últimos movimientos
-- [x] Dark/Light mode con toggle
+### ✅ UX
+- [x] PWA instalable
 - [x] Responsive (mobile-first)
-- [x] Feedback visual (loading, success, error)
-- [x] **Gastos en cuotas automáticas** (tarjeta de crédito)
-- [x] **Edición de movimientos**
-- [x] **Eliminación de movimientos**
-- [x] **Gráficos estadísticos** (Recharts)
-- [x] **Filtros por fecha y categoría**
-- [x] **Búsqueda de movimientos**
-- [x] **Listados separados** (Gastos, Ingresos, Transferencias)
-- [x] **PWA** (instalable)
-
-### 📋 Pendientes / Nice to have
-
-- [ ] Autenticación con Google (solo email autorizado)
-- [ ] Notificaciones push para cuotas próximas
-- [ ] Exportar a CSV/Excel
-- [ ] Presupuestos mensuales por categoría
-- [ ] Metas de ahorro
-- [ ] Modo offline con sincronización
-
----
-
-## Configuración del Frontend
-
-### `src/config/api.js`
-
-```javascript
-// URL del Apps Script deployment
-export const API_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
-
-// Email autorizado (opcional, para futura autenticación)
-export const AUTHORIZED_EMAIL = 'juanmalosada11@gmail.com';
-```
-
-### Variables de Entorno (opcional)
-
-Para no exponer la URL del API en el código, puedes usar variables de entorno:
-
-```bash
-# .env.local
-VITE_API_URL=https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec
-```
-
-```javascript
-// src/config/api.js
-export const API_URL = import.meta.env.VITE_API_URL;
-```
+- [x] Feedback visual (toasts, loaders)
+- [x] Empty states
 
 ---
 
@@ -413,79 +343,54 @@ npm run deploy
 
 ---
 
-## Testing del API
+## Atajos de Teclado
 
-```javascript
-const API = 'TU_URL_APPS_SCRIPT';
+| Atajo | Acción |
+|-------|--------|
+| `Alt + K` | Abrir búsqueda |
+| `?` | Ver atajos disponibles |
+| `N` | Nuevo movimiento |
 
-// GET - Dashboard
-fetch(`${API}?action=getDashboard`)
-  .then(r => r.json())
-  .then(console.log);
+---
 
-// POST - Gasto simple
-fetch(API, {
-  method: 'POST',
-  body: JSON.stringify({
-    action: 'addExpense',
-    fecha: '2026-01-21',
-    monto: 5000,
-    cuenta: 'Caja de ahorro Pesos',
-    categoria: 'Supermercado',
-    nota: 'Compras semanales'
-  })
-}).then(r => r.json()).then(console.log);
+## Paleta de Colores
 
-// POST - Gasto en 12 cuotas
-fetch(API, {
-  method: 'POST',
-  body: JSON.stringify({
-    action: 'addExpenseWithInstallments',
-    fechaCompra: '2026-01-21',
-    montoTotal: 120000,
-    cuenta: 'VISA Galicia',
-    categoria: 'Tecnología',
-    nota: 'Monitor nuevo',
-    cantidadCuotas: 12
-  })
-}).then(r => r.json()).then(console.log);
+```css
+/* Colores principales */
+--accent-green: #22c55e;    /* Ingresos, éxito */
+--accent-red: #ef4444;      /* Gastos, error */
+--accent-blue: #3b82f6;     /* Transferencias, info */
+--accent-purple: #8b5cf6;   /* Acciones primarias */
+
+/* Dark Mode */
+--bg-primary: #0a0a0a;
+--bg-secondary: #141414;
+--bg-card: #1a1a1a;
+--border: #262626;
+--text-primary: #fafafa;
+--text-secondary: #a1a1aa;
+
+/* Light Mode */
+--bg-primary: #ffffff;
+--bg-secondary: #f4f4f5;
+--bg-card: #ffffff;
+--border: #e4e4e7;
+--text-primary: #09090b;
+--text-secondary: #71717a;
 ```
 
 ---
 
-## Notas Importantes
+## Notas para Desarrollo
 
 ### ⚠️ Reglas Críticas
-
-1. **No sobrescribir columnas E y F** en Gastos e Ingresos (contienen fórmulas de conversión)
-2. **Formato de fecha**: El API recibe ISO (`yyyy-mm-dd`) y lo convierte a Date de JS
-3. **Montos**: Enviar como número, NO como string con símbolos
-4. **Cuotas**: El sistema calcula automáticamente la fecha de cada cuota basándose en el día de cierre de la tarjeta
-5. **rowIndex**: Para editar/eliminar, usar el `rowIndex` devuelto por `getAllMovements` o `getRecentMovements`
-
-### Límites de Google Apps Script
-
-- Tiempo de ejecución: 6 minutos máximo
-- Llamadas/día: ~20,000 (cuentas gratuitas)
-- Considerar cachear datos frecuentes en localStorage
+1. **No sobrescribir columnas E y F** en Gastos e Ingresos (fórmulas)
+2. **Formato de fecha**: ISO `yyyy-mm-dd`
+3. **Montos**: Enviar como número, sin símbolos
+4. Cada modificación en Apps Script requiere **nueva implementación**
 
 ### Sistema de Cuotas
-
-Cuando se registra un gasto en cuotas:
-1. Se genera un `idCompra` único
-2. Se calcula la fecha de la primera cuota según el día de cierre de la tarjeta
-3. Se crean N filas en la hoja Gastos, una por cada cuota
-4. Cada fila tiene el mismo `idCompra` para agruparlas
-5. La columna I indica "1/12", "2/12", etc.
-
-Para eliminar una compra en cuotas completa, usar `deleteInstallmentsByPurchase` con el `idCompra`.
-
----
-
-## Historial de Versiones
-
-| Versión | Fecha | Cambios |
-|---------|-------|---------|
-| V1 | - | API básica (GET/POST simples) |
-| V2 | - | Agregado CRUD completo |
-| V3 | Actual | **Sistema de cuotas automáticas**, soporte tarjetas de crédito |
+1. Se genera `idCompra` único
+2. Se calcula fecha según día de cierre de tarjeta
+3. Se crean N filas con el mismo `idCompra`
+4. Eliminar con `deleteInstallmentsByPurchase`

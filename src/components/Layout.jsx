@@ -161,60 +161,61 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/categorias', label: 'Categorias', icon: 'categories', color: 'var(--accent-primary)' },
   ];
 
-  const renderIcon = (icon, color) => {
+  const renderIcon = (icon) => {
+    const iconClass = "w-full h-full";
     switch (icon) {
       case 'statistics':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         );
       case 'comparador':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
           </svg>
         );
       case 'expense':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         );
       case 'income':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M5 10l7-7m0 0l7 7m-7-7v18" />
           </svg>
         );
       case 'transfer':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
         );
       case 'accounts':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
         );
       case 'creditcard':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
         );
       case 'categories':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
           </svg>
         );
       case 'categorysum':
         return (
-          <svg className="w-5 h-5" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         );
       default:
@@ -227,205 +228,183 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       {/* Desktop Sidebar */}
       {isDesktop && (
         <aside
-          className={`fixed left-0 top-0 bottom-0 flex flex-col z-40 transition-all duration-300 ${sidebarCollapsed ? 'w-[76px]' : 'w-[260px]'}`}
-          style={{ 
-            backgroundColor: 'var(--bg-secondary)', 
-            borderRight: '1px solid var(--border-subtle)',
-            boxShadow: '4px 0 24px rgba(0, 0, 0, 0.15)'
+          className={`fixed left-0 top-0 bottom-0 flex flex-col z-40 transition-all duration-200 ${sidebarCollapsed ? 'w-[68px]' : 'w-[240px]'}`}
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRight: '1px solid var(--border-subtle)'
           }}
         >
           {/* Sidebar Header */}
-          <NavLink 
+          <NavLink
             to="/"
-            className={`p-4 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} hover:opacity-80 transition-all duration-300`}
+            className={`p-3 flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'} hover:opacity-80 transition-all duration-200`}
             title="Ir al inicio"
           >
-            <div className="relative">
-              <img
-                src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
-                alt="Cashé"
-                className="w-11 h-11 rounded-2xl flex-shrink-0 cursor-pointer transition-transform duration-300 hover:scale-105"
-                style={{ boxShadow: '0 4px 12px rgba(0, 217, 160, 0.3)' }}
-              />
-              <div 
-                className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-                style={{ 
-                  backgroundColor: 'var(--accent-green)', 
-                  borderColor: 'var(--bg-secondary)',
-                  boxShadow: '0 0 8px var(--accent-green-glow)'
-                }}
-              />
-            </div>
+            <img
+              src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
+              alt="Cashé"
+              className="w-9 h-9 rounded-xl flex-shrink-0"
+            />
             {!sidebarCollapsed && (
               <div className="overflow-hidden">
-                <h1 className="font-display font-bold text-xl tracking-tight whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Cashé</h1>
-                <p className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Finanzas Personales</p>
+                <h1 className="font-medium text-base tracking-tight whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>Cashé</h1>
               </div>
             )}
           </NavLink>
 
           {/* New Movement Button */}
-          <div className={`${sidebarCollapsed ? 'px-3' : 'px-4'} mb-5`}>
+          <div className={`${sidebarCollapsed ? 'px-2' : 'px-3'} mb-4`}>
             <button
               onClick={openNewMovement}
-              className={`group relative flex items-center justify-center ${sidebarCollapsed ? 'w-12 h-12' : 'gap-2.5 w-full py-3.5'} rounded-2xl font-semibold transition-all duration-300 overflow-hidden`}
-              style={{ 
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
-                color: 'white',
-                boxShadow: '0 4px 20px var(--accent-primary-glow)'
+              className={`group flex items-center justify-center ${sidebarCollapsed ? 'w-11 h-11' : 'gap-2 w-full py-2.5'} rounded-lg font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-medium)'
               }}
               title={sidebarCollapsed ? 'Nuevo Movimiento (Alt+N)' : undefined}
             >
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <svg className="w-5 h-5 flex-shrink-0 relative z-10 transition-transform duration-300 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              <svg className="w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:rotate-90" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              {!sidebarCollapsed && <span className="relative z-10 text-sm">Nuevo Movimiento</span>}
+              {!sidebarCollapsed && <span className="text-sm">Nuevo</span>}
             </button>
           </div>
 
           {/* Navigation Links */}
           <nav className={`flex-1 ${sidebarCollapsed ? 'px-2' : 'px-3'} overflow-y-auto`}>
-            <div className="mb-2">
+            <div className="mb-1">
               <NavLink
                 to="/"
                 end
-                className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
+                className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg transition-all duration-150`}
                 style={({ isActive }) => ({
-                  backgroundColor: isActive ? 'var(--accent-primary-dim)' : 'transparent',
-                  color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  boxShadow: isActive ? '0 2px 8px var(--accent-primary-dim)' : 'none'
+                  backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
                 title={sidebarCollapsed ? 'Inicio' : undefined}
               >
-                <svg className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                <svg className="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                {!sidebarCollapsed && <span className="font-medium">Inicio</span>}
+                {!sidebarCollapsed && <span className="text-sm">Inicio</span>}
               </NavLink>
             </div>
 
             {!sidebarCollapsed && (
-              <p className="text-xs font-semibold uppercase tracking-wider px-3 mb-2 mt-4" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[10px] font-medium uppercase tracking-widest px-2.5 mb-1.5 mt-4" style={{ color: 'var(--text-muted)' }}>
                 Análisis
               </p>
             )}
-            {sidebarCollapsed && <div className="my-3 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
+            {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
             {menuItems.slice(0, 3).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg transition-all duration-150 mb-0.5`}
                 style={({ isActive }) => ({
-                  backgroundColor: isActive ? `${item.color}20` : 'transparent',
-                  color: isActive ? item.color : 'var(--text-primary)',
+                  backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
                 title={sidebarCollapsed ? item.label : undefined}
               >
-                {renderIcon(item.icon, item.color)}
-                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, isActive => isActive ? 'var(--text-primary)' : 'currentColor')}</div>
+                {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
               </NavLink>
             ))}
 
             {!sidebarCollapsed && (
-              <p className="text-xs font-semibold uppercase tracking-wider px-3 mb-2 mt-4" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[10px] font-medium uppercase tracking-widest px-2.5 mb-1.5 mt-4" style={{ color: 'var(--text-muted)' }}>
                 Movimientos
               </p>
             )}
-            {sidebarCollapsed && <div className="my-3 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
+            {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
             {menuItems.slice(3, 6).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg transition-all duration-150 mb-0.5`}
                 style={({ isActive }) => ({
-                  backgroundColor: isActive ? `${item.color}20` : 'transparent',
-                  color: isActive ? item.color : 'var(--text-primary)',
+                  backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
                 title={sidebarCollapsed ? item.label : undefined}
               >
-                {renderIcon(item.icon, item.color)}
-                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, 'currentColor')}</div>
+                {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
               </NavLink>
             ))}
 
             {!sidebarCollapsed && (
-              <p className="text-xs font-semibold uppercase tracking-wider px-3 mb-2 mt-4" style={{ color: 'var(--text-secondary)' }}>
-                Configuración
+              <p className="text-[10px] font-medium uppercase tracking-widest px-2.5 mb-1.5 mt-4" style={{ color: 'var(--text-muted)' }}>
+                Ajustes
               </p>
             )}
-            {sidebarCollapsed && <div className="my-3 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
+            {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
             {menuItems.slice(6).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 mb-1`}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg transition-all duration-150 mb-0.5`}
                 style={({ isActive }) => ({
-                  backgroundColor: isActive ? `${item.color}20` : 'transparent',
-                  color: isActive ? item.color : 'var(--text-primary)',
+                  backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
                 title={sidebarCollapsed ? item.label : undefined}
               >
-                {renderIcon(item.icon, item.color)}
-                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, 'currentColor')}</div>
+                {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
               </NavLink>
             ))}
           </nav>
 
           {/* Sidebar Footer */}
-          <div className={`${sidebarCollapsed ? 'p-2' : 'p-4'} border-t`} style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className={`${sidebarCollapsed ? 'p-2' : 'p-3'} border-t`} style={{ borderColor: 'var(--border-subtle)' }}>
             {/* User info */}
             {!sidebarCollapsed && user && (
-              <div className="mb-3 p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                <div className="flex items-center gap-2">
-                  <Avatar 
-                    src={profile?.avatar_url}
-                    name={profile?.full_name}
-                    email={user.email}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                      {profile?.full_name || 'Usuario'}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                      {user.email}
-                    </p>
-                  </div>
+              <div className="mb-2 flex items-center gap-2">
+                <Avatar
+                  src={profile?.avatar_url}
+                  name={profile?.full_name}
+                  email={user.email}
+                  size="sm"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                    {profile?.full_name || 'Usuario'}
+                  </p>
                 </div>
               </div>
             )}
-            <div className={`flex ${sidebarCollapsed ? 'flex-col items-center gap-2' : 'items-center justify-between'}`}>
+            <div className={`flex ${sidebarCollapsed ? 'flex-col items-center gap-1' : 'items-center justify-between'}`}>
               <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-              <div className="flex items-center gap-2">
-                {/* Logout Button */}
+              <div className="flex items-center gap-1">
                 <button
                   onClick={async () => {
                     await signOut();
                     navigate('/');
                   }}
-                  className="p-2 rounded-lg transition-all duration-200 hover:opacity-80"
-                  style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}
+                  className="p-1.5 rounded-md transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-muted)' }}
                   title="Cerrar sesión"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                 </button>
-                {/* Collapse/Expand Button */}
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="p-2 rounded-lg transition-all duration-200 hover:opacity-80"
-                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                  className="p-1.5 rounded-md transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-muted)' }}
                   title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
                 >
-                  <svg 
-                    className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                   </svg>
                 </button>
               </div>
@@ -435,293 +414,222 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isDesktop ? (sidebarCollapsed ? 'ml-[76px]' : 'ml-[260px]') : ''}`}>
-        {/* Mobile Header - Refined glass effect */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
+        {/* Mobile Header */}
         {!isDesktop && (
           <header
-            className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between glass"
-            style={{ 
-              backgroundColor: 'var(--bg-glass)', 
+            className="sticky top-0 z-50 px-4 py-2.5 flex items-center justify-between"
+            style={{
+              backgroundColor: 'var(--bg-glass)',
               borderBottom: '1px solid var(--border-subtle)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)'
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)'
             }}
           >
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2.5 active:scale-95 transition-all duration-200"
+              className="flex items-center gap-2 active:scale-95 transition-transform duration-150"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <div className="relative">
-                <img
-                  src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
-                  alt="Cashé"
-                  className="w-9 h-9 rounded-xl"
-                  style={{ boxShadow: '0 2px 8px rgba(0, 217, 160, 0.25)' }}
-                />
-              </div>
-              <span className="text-lg font-display font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Cashé</span>
+              <img
+                src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
+                alt="Cashé"
+                className="w-8 h-8 rounded-lg"
+              />
+              <span className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Cashé</span>
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <SearchButton onClick={() => setSearchOpen(true)} />
               <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
             </div>
           </header>
         )}
 
-        {/* Desktop Header - Premium styling */}
+        {/* Desktop Header - Minimal */}
         {isDesktop && (
           <header
-            className="sticky top-0 z-30 px-8 py-5 flex items-center justify-between"
-            style={{ 
-              backgroundColor: 'var(--bg-primary)', 
+            className="sticky top-0 z-30 px-6 py-3 flex items-center justify-between"
+            style={{
+              backgroundColor: 'var(--bg-primary)',
               borderBottom: '1px solid var(--border-subtle)',
             }}
           >
-            <div className="flex items-center gap-5">
-              {/* Shortcuts button */}
-              <div>
-                <h1 className="text-2xl font-display font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                  {location.pathname === '/' && 'Dashboard'}
-                  {location.pathname === '/nuevo' && 'Nuevo Movimiento'}
-                  {location.pathname === '/gastos' && 'Gastos'}
-                  {location.pathname === '/ingresos' && 'Ingresos'}
-                  {location.pathname === '/transferencias' && 'Transferencias'}
-                  {location.pathname === '/estadisticas' && 'Estadísticas'}
-                  {location.pathname === '/comparador' && 'Comparador'}
-                  {location.pathname === '/resumen-categorias' && 'Resumen por categoría'}
-                  {location.pathname === '/cuentas' && 'Cuentas'}
-                  {location.pathname === '/categorias' && 'Categorías'}
-                  {location.pathname === '/tarjetas' && 'Tarjetas de Crédito'}
-                </h1>
-                <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  Gestiona tus finanzas personales
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
+            <div />
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 hover:shadow-md"
-                style={{ 
-                  backgroundColor: 'var(--bg-tertiary)', 
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                style={{
                   color: 'var(--text-secondary)',
                   border: '1px solid var(--border-subtle)'
                 }}
               >
-                <svg className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span className="text-sm font-medium">Buscar...</span>
-                <kbd className="ml-1 px-2 py-1 text-xs rounded-md font-mono" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+                <span className="text-sm">Buscar...</span>
+                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
                   Alt+K
                 </kbd>
               </button>
               <button
                 onClick={() => setShortcutsOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                title="Atajos de teclado (Shift+?)"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                style={{
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)'
+                }}
+                title="Atajos de teclado"
               >
                 <span className="text-sm">Atajos</span>
-                <kbd className="px-2 py-0.5 text-xs rounded font-mono" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                  ?
+                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                  Shift+?
                 </kbd>
               </button>
             </div>
           </header>
         )}
 
-        {/* Main Content with fade-in animation */}
-        <main 
-          key={location.pathname} 
-          className={`flex-1 animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-4 py-5 pb-28'}`}
+        {/* Main Content */}
+        <main
+          key={location.pathname}
+          className={`flex-1 animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-4 py-4 pb-24'}`}
         >
-          <div className={isDesktop ? 'max-w-6xl mx-auto' : ''}>
-            {children}
-          </div>
+          {children}
         </main>
       </div>
 
-      {/* Bottom Navigation - Mobile Only - Premium Design */}
+      {/* Bottom Navigation - Mobile Only */}
       {!isDesktop && (
         <nav
           className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
-          style={{ 
-            backgroundColor: 'var(--bg-glass)', 
+          style={{
+            backgroundColor: 'var(--bg-glass)',
             borderTop: '1px solid var(--border-subtle)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)'
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)'
           }}
         >
-          <div className="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
-            {/* Home button */}
+          <div className="flex items-center justify-around py-1.5 px-2 max-w-md mx-auto">
             <NavLink
               to="/"
-              className="flex flex-col items-center px-5 py-2 rounded-2xl transition-all duration-300 active:scale-95"
+              className="flex flex-col items-center px-4 py-1.5 rounded-lg transition-colors duration-150 active:scale-95"
               style={({ isActive }) => ({
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                backgroundColor: isActive ? 'var(--accent-primary-dim)' : 'transparent',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
               })}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              <span className="text-[10px] mt-1 font-medium tracking-wide">Inicio</span>
+              <span className="text-[10px] mt-0.5">Inicio</span>
             </NavLink>
 
-            {/* New movement button - Premium floating action */}
             <NavLink
               to="/nuevo"
               className="flex flex-col items-center px-2"
             >
               <div
-                className={`relative w-[60px] h-[60px] rounded-[20px] flex items-center justify-center -mt-7 transition-all duration-300 active:scale-95 ${
-                  location.pathname !== '/nuevo' ? 'animate-pulse-glow' : ''
-                }`}
+                className="w-12 h-12 rounded-xl flex items-center justify-center -mt-4 transition-transform duration-150 active:scale-95"
                 style={{
-                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
-                  boxShadow: '0 8px 32px var(--accent-primary-glow), 0 4px 12px rgba(0,0,0,0.3)'
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-medium)'
                 }}
               >
-                <div className="absolute inset-0 rounded-[20px] bg-white/20 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                <svg className="w-7 h-7 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                <svg className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
               <span
-                className="text-[10px] mt-1.5 font-medium tracking-wide"
-                style={{ color: location.pathname === '/nuevo' ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                className="text-[10px] mt-1"
+                style={{ color: location.pathname === '/nuevo' ? 'var(--text-primary)' : 'var(--text-muted)' }}
               >
                 Nuevo
               </span>
             </NavLink>
 
-            {/* Menu button */}
             <button
               onClick={() => setMenuOpen(true)}
-              className="flex flex-col items-center px-5 py-2 rounded-2xl transition-all duration-300 active:scale-95"
+              className="flex flex-col items-center px-4 py-1.5 rounded-lg transition-colors duration-150 active:scale-95"
               style={{
-                color: menuOpen ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                backgroundColor: menuOpen ? 'var(--accent-primary-dim)' : 'transparent',
+                color: menuOpen ? 'var(--text-primary)' : 'var(--text-muted)',
               }}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span className="text-[10px] mt-1 font-medium tracking-wide">Menú</span>
+              <span className="text-[10px] mt-0.5">Menú</span>
             </button>
           </div>
         </nav>
       )}
 
-      {/* Menu Drawer - Mobile Only - Premium Slide Panel */}
+      {/* Menu Drawer - Mobile Only */}
       {!isDesktop && menuOpen && (
         <div className="fixed inset-0 z-[60]">
-          {/* Backdrop with blur */}
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
             onClick={() => setMenuOpen(false)}
           />
-          
-          {/* Slide panel */}
+
           <div
-            className="absolute right-0 top-0 bottom-0 w-[280px] animate-slide-in-right overflow-hidden"
-            style={{ 
+            className="absolute right-0 top-0 bottom-0 w-[260px] animate-slide-in-right overflow-hidden"
+            style={{
               backgroundColor: 'var(--bg-secondary)',
-              borderLeft: '1px solid var(--border-subtle)',
-              boxShadow: '-20px 0 60px rgba(0,0,0,0.5)'
+              borderLeft: '1px solid var(--border-subtle)'
             }}
           >
-            {/* Header */}
-            <div 
-              className="flex items-center justify-between px-5 py-4"
+            <div
+              className="flex items-center justify-between px-4 py-3"
               style={{ borderBottom: '1px solid var(--border-subtle)' }}
             >
-              <div className="flex items-center gap-3">
-                <img
-                  src="/cashe-frontend/icons/icon-192.png"
-                  alt="Cashé"
-                  className="w-10 h-10 rounded-xl"
-                  style={{ boxShadow: '0 4px 16px var(--accent-primary-glow)' }}
-                />
-                <div>
-                  <h2 className="text-base font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-                    Menú
-                  </h2>
-                  <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                    Cashé
-                  </p>
-                </div>
-              </div>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Menú</span>
               <button
                 onClick={() => setMenuOpen(false)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-95"
-                style={{ color: 'var(--text-secondary)' }}
+                className="p-1.5 rounded-md transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                style={{ color: 'var(--text-muted)' }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            {/* Menu items with stagger animation */}
-            <div className="p-3 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
-              {menuItems.map((item, index) => (
+            <div className="p-2 space-y-0.5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+              {menuItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 active:scale-[0.98] group"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors duration-150 active:scale-[0.98]"
                   style={({ isActive }) => ({
                     backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
-                    color: isActive ? item.color : 'var(--text-primary)',
-                    animationDelay: `${index * 40}ms`
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                   })}
                 >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-                    style={{ backgroundColor: `${item.color}15` }}
-                  >
-                    {renderIcon(item.icon, item.color)}
-                  </div>
-                  <span className="font-medium text-[15px]">{item.label}</span>
-                  <svg 
-                    className="w-4 h-4 ml-auto opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-50 group-hover:translate-x-0" 
-                    style={{ color: 'var(--text-secondary)' }}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <div className="w-[18px] h-[18px]">{renderIcon(item.icon)}</div>
+                  <span className="text-sm">{item.label}</span>
                 </NavLink>
               ))}
             </div>
 
-            {/* Footer info with branding */}
             <div
-              className="absolute bottom-0 left-0 right-0 px-5 py-4"
-              style={{ 
+              className="absolute bottom-0 left-0 right-0 px-4 py-3"
+              style={{
                 borderTop: '1px solid var(--border-subtle)',
                 backgroundColor: 'var(--bg-primary)'
               }}
             >
-              {/* User info */}
               {user && (
-                <div className="mb-3 flex items-center gap-2">
-                  <Avatar 
+                <div className="flex items-center gap-2">
+                  <Avatar
                     src={profile?.avatar_url}
                     name={profile?.full_name}
                     email={user.email}
-                    size="md"
+                    size="sm"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                    <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                       {profile?.full_name || 'Usuario'}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                      {user.email}
                     </p>
                   </div>
                   <button
@@ -730,27 +638,16 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                       await signOut();
                       navigate('/');
                     }}
-                    className="p-2 rounded-lg transition-all duration-200"
-                    style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}
+                    className="p-1.5 rounded-md transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-muted)' }}
                     title="Cerrar sesión"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                   </button>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Cashé
-                </p>
-                <p className="text-[10px] px-2 py-1 rounded-full" style={{ 
-                  backgroundColor: 'var(--accent-primary-dim)',
-                  color: 'var(--accent-primary)'
-                }}>
-                  v1.0
-                </p>
-              </div>
             </div>
           </div>
         </div>

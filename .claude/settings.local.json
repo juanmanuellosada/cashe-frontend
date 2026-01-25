@@ -13,7 +13,12 @@
       "Bash(git branch:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npx vite)"
+      "Bash(npx vite)",
+      "WebFetch(domain:app.gasti.pro)",
+      "WebSearch",
+      "WebFetch(domain:icons.com.ar)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:basehub.com)"
     ]
   }
 }

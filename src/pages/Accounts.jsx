@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { getAccounts, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
+import SortDropdown from '../components/SortDropdown';
 import { useError } from '../contexts/ErrorContext';
+import IconPicker from '../components/IconPicker';
+import { isEmoji, isPredefinedIcon } from '../services/iconStorage';
 
 function Accounts() {
   const { showError } = useError();
@@ -19,6 +22,38 @@ function Accounts() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedAccounts, setSelectedAccounts] = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+
+  // Sort state
+  const sortStorageKey = 'cashe-sort-accounts';
+  const [sortConfig, setSortConfig] = useState({ sortBy: 'balance', sortOrder: 'desc' });
+
+  // Sort options for accounts
+  const sortOptions = [
+    { id: 'balance', label: 'Saldo', defaultOrder: 'desc' },
+    { id: 'name', label: 'Nombre', defaultOrder: 'asc' },
+    { id: 'type', label: 'Tipo', defaultOrder: 'asc' },
+    { id: 'currency', label: 'Moneda', defaultOrder: 'asc' },
+  ];
+
+  // Load sort preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(sortStorageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.sortBy && parsed.sortOrder) {
+          setSortConfig(parsed);
+        }
+      } catch (e) {
+        console.error('Error parsing sort preference:', e);
+      }
+    }
+  }, []);
+
+  // Save sort preference to localStorage
+  useEffect(() => {
+    localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
+  }, [sortConfig]);
 
   useEffect(() => {
     fetchAccounts();
@@ -66,6 +101,47 @@ function Accounts() {
       }
     }, 0);
   }, [accounts, displayCurrency]);
+
+  // Sorted accounts based on sort config
+  const sortedAccounts = useMemo(() => {
+    const sorted = [...accounts];
+    const { sortBy, sortOrder } = sortConfig;
+    const multiplier = sortOrder === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'balance':
+          // Sort by balance in display currency for consistency
+          const balanceA = a.balanceActual || 0;
+          const balanceB = b.balanceActual || 0;
+          // Convert to same currency for comparison (use pesos as base)
+          const tipoCambioA = a.tipoCambio || 1000;
+          const tipoCambioB = b.tipoCambio || 1000;
+          const normalizedA = a.moneda === 'Peso' ? balanceA : balanceA * tipoCambioA;
+          const normalizedB = b.moneda === 'Peso' ? balanceB : balanceB * tipoCambioB;
+          comparison = normalizedA - normalizedB;
+          break;
+        case 'name':
+          comparison = (a.nombre || '').localeCompare(b.nombre || '');
+          break;
+        case 'type':
+          comparison = (a.tipo || '').localeCompare(b.tipo || '');
+          break;
+        case 'currency':
+          // ARS before USD when ascending
+          comparison = (a.moneda || '').localeCompare(b.moneda || '');
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return comparison * multiplier;
+    });
+
+    return sorted;
+  }, [accounts, sortConfig]);
 
   // Helper para obtener el balance de una cuenta en la moneda seleccionada
   const getDisplayBalance = (account) => {
@@ -252,75 +328,74 @@ function Accounts() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <h2 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>
           Cuentas
         </h2>
-        <div className="flex items-center gap-3">
-          {/* Currency Selector - Premium design */}
+        <div className="flex items-center gap-2">
+          {/* Currency Selector */}
           <div
-            className="inline-flex rounded-xl p-1"
+            className="inline-flex p-1 rounded-lg"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
-            <button
-              onClick={() => setDisplayCurrency('original')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
-              style={{
-                backgroundColor: displayCurrency === 'original' ? 'var(--accent-blue)' : 'transparent',
-                color: displayCurrency === 'original' ? 'white' : 'var(--text-secondary)',
-                boxShadow: displayCurrency === 'original' ? '0 4px 12px var(--accent-blue-glow)' : 'none',
-              }}
-            >
-              Original
-            </button>
-            <button
-              onClick={() => setDisplayCurrency('ARS')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
-              style={{
-                backgroundColor: displayCurrency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-                color: displayCurrency === 'ARS' ? 'white' : 'var(--text-secondary)',
-                boxShadow: displayCurrency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
-              }}
-            >
-              ARS
-            </button>
-            <button
-              onClick={() => setDisplayCurrency('USD')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
-              style={{
-                backgroundColor: displayCurrency === 'USD' ? 'var(--accent-green)' : 'transparent',
-                color: displayCurrency === 'USD' ? 'white' : 'var(--text-secondary)',
-                boxShadow: displayCurrency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
-              }}
-            >
-              USD
-            </button>
+            {[
+              { id: 'original', label: 'Original', icon: null },
+              { id: 'ARS', label: 'ARS', icon: '/icons/catalog/ARS.svg' },
+              { id: 'USD', label: 'USD', icon: '/icons/catalog/USD.svg' },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => setDisplayCurrency(opt.id)}
+                className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
+                style={{
+                  backgroundColor: displayCurrency === opt.id ? 'var(--bg-elevated)' : 'transparent',
+                  color: displayCurrency === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                {opt.icon && (
+                  <img src={opt.icon} alt={opt.label} className="w-4 h-4 rounded-sm" />
+                )}
+                {opt.label}
+              </button>
+            ))}
           </div>
-          
+
+          {/* Sort Dropdown */}
+          {accounts.length > 0 && (
+            <SortDropdown
+              options={sortOptions}
+              value={sortConfig}
+              onChange={setSortConfig}
+              storageKey={sortStorageKey}
+            />
+          )}
+
           {/* Selection mode toggle */}
           {accounts.length > 0 && (
             <button
               onClick={toggleSelectionMode}
-              className={`p-2.5 rounded-xl transition-all duration-200 ${selectionMode ? 'ring-2 ring-offset-2' : ''}`}
-              style={{ 
-                backgroundColor: selectionMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: selectionMode ? 'white' : 'var(--text-secondary)',
-                ringColor: 'var(--accent-primary)',
-                ringOffsetColor: 'var(--bg-primary)'
+              className="p-2 rounded-lg transition-colors duration-150"
+              style={{
+                backgroundColor: selectionMode ? 'var(--accent-primary-dim)' : 'var(--bg-tertiary)',
+                color: selectionMode ? 'var(--accent-primary)' : 'var(--text-muted)',
               }}
-              title={selectionMode ? 'Cancelar selección' : 'Seleccionar múltiples'}
+              title={selectionMode ? 'Cancelar selección' : 'Seleccionar'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
               </svg>
             </button>
           )}
-          
+
           <button
             onClick={() => setIsAdding(true)}
-            className="px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 hover:opacity-90 flex items-center gap-2"
-            style={{ backgroundColor: 'var(--accent-primary)' }}
+            className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 flex items-center gap-1.5"
+            style={{
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-medium)'
+            }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Nueva
@@ -387,23 +462,203 @@ function Accounts() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0 items-start">
-          {accounts.map((account) => {
-            const expansionKey = account.id ?? account.rowIndex ?? account.nombre;
-            const percentage = getAccountPercentage(account);
-            const isExpanded = showDetails[expansionKey];
-            const displayBalance = getDisplayBalance(account);
-            const isSelected = selectedAccounts.has(account.id);
+        <>
+          {/* Mobile: Single column */}
+          <div className="space-y-3 lg:hidden">
+            {sortedAccounts.map((account) => {
+              const expansionKey = account.id ?? account.rowIndex ?? account.nombre;
+              const percentage = getAccountPercentage(account);
+              const isExpanded = showDetails[expansionKey];
+              const displayBalance = getDisplayBalance(account);
+              const isSelected = selectedAccounts.has(account.id);
 
-            return (
-              <div
-                key={account.id || account.rowIndex || account.nombre}
-                className={`rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'ring-2' : ''} self-start`}
-                style={{ 
-                  backgroundColor: 'var(--bg-secondary)',
-                  ringColor: 'var(--accent-primary)'
-                }}
-              >
+              return (
+                <AccountCard
+                  key={account.id || account.rowIndex || account.nombre}
+                  account={account}
+                  expansionKey={expansionKey}
+                  percentage={percentage}
+                  isExpanded={isExpanded}
+                  displayBalance={displayBalance}
+                  isSelected={isSelected}
+                  selectionMode={selectionMode}
+                  toggleAccountSelection={toggleAccountSelection}
+                  toggleDetails={toggleDetails}
+                  setEditingAccount={setEditingAccount}
+                  handleSave={handleSave}
+                  saving={saving}
+                />
+              );
+            })}
+          </div>
+
+          {/* Desktop lg: 2 columns */}
+          <div className="hidden lg:flex xl:hidden gap-4">
+            {[0, 1].map((colIndex) => (
+              <div key={colIndex} className="flex-1 space-y-4">
+                {sortedAccounts
+                  .filter((_, i) => i % 2 === colIndex)
+                  .map((account) => {
+                    const expansionKey = account.id ?? account.rowIndex ?? account.nombre;
+                    const percentage = getAccountPercentage(account);
+                    const isExpanded = showDetails[expansionKey];
+                    const displayBalance = getDisplayBalance(account);
+                    const isSelected = selectedAccounts.has(account.id);
+
+                    return (
+                      <AccountCard
+                        key={account.id || account.rowIndex || account.nombre}
+                        account={account}
+                        expansionKey={expansionKey}
+                        percentage={percentage}
+                        isExpanded={isExpanded}
+                        displayBalance={displayBalance}
+                        isSelected={isSelected}
+                        selectionMode={selectionMode}
+                        toggleAccountSelection={toggleAccountSelection}
+                        toggleDetails={toggleDetails}
+                        setEditingAccount={setEditingAccount}
+                        handleSave={handleSave}
+                        saving={saving}
+                      />
+                    );
+                  })}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop xl: 3 columns */}
+          <div className="hidden xl:flex gap-4">
+            {[0, 1, 2].map((colIndex) => (
+              <div key={colIndex} className="flex-1 space-y-4">
+                {sortedAccounts
+                  .filter((_, i) => i % 3 === colIndex)
+                  .map((account) => {
+                    const expansionKey = account.id ?? account.rowIndex ?? account.nombre;
+                    const percentage = getAccountPercentage(account);
+                    const isExpanded = showDetails[expansionKey];
+                    const displayBalance = getDisplayBalance(account);
+                    const isSelected = selectedAccounts.has(account.id);
+
+                    return (
+                      <AccountCard
+                        key={account.id || account.rowIndex || account.nombre}
+                        account={account}
+                        expansionKey={expansionKey}
+                        percentage={percentage}
+                        isExpanded={isExpanded}
+                        displayBalance={displayBalance}
+                        isSelected={isSelected}
+                        selectionMode={selectionMode}
+                        toggleAccountSelection={toggleAccountSelection}
+                        toggleDetails={toggleDetails}
+                        setEditingAccount={setEditingAccount}
+                        handleSave={handleSave}
+                        saving={saving}
+                      />
+                    );
+                  })}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Add Modal */}
+      {isAdding && (
+        <AccountModal
+          onSave={handleAdd}
+          onClose={() => setIsAdding(false)}
+          loading={saving}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editingAccount && (
+        <AccountModal
+          account={editingAccount}
+          onSave={handleSave}
+          onDelete={() => handleDelete(editingAccount)}
+          onClose={() => setEditingAccount(null)}
+          loading={saving}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar cuenta"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar la cuenta{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {deleteConfirm?.nombre}
+            </span>
+            ?<br />
+            <span className="text-xs mt-1 block">Los movimientos asociados no se eliminarán.</span>
+          </>
+        }
+        confirmText="Eliminar"
+        loading={saving}
+        icon={
+          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        }
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm}
+        onClose={() => setBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Eliminar cuentas"
+        message={
+          <>
+            ¿Estás seguro de que quieres eliminar{' '}
+            <span className="font-semibold" style={{ color: 'var(--accent-red)' }}>
+              {selectedAccounts.size} {selectedAccounts.size === 1 ? 'cuenta' : 'cuentas'}
+            </span>
+            ?<br />
+            <span className="text-xs mt-1 block">Esta acción no se puede deshacer. Los movimientos asociados no se eliminarán.</span>
+          </>
+        }
+        confirmText={`Eliminar ${selectedAccounts.size}`}
+        loading={saving}
+        icon={
+          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        }
+      />
+    </div>
+  );
+
+  // Account Card Component
+  function AccountCard({
+    account,
+    expansionKey,
+    percentage,
+    isExpanded,
+    displayBalance,
+    isSelected,
+    selectionMode,
+    toggleAccountSelection,
+    toggleDetails,
+    setEditingAccount,
+    handleSave,
+    saving,
+  }) {
+    return (
+      <div
+        className={`rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'ring-2' : ''}`}
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          ringColor: 'var(--accent-primary)'
+        }}
+      >
                 {/* Main row - always visible */}
                 <div className="flex items-center">
                   {/* Checkbox for selection mode */}
@@ -432,23 +687,37 @@ function Accounts() {
                     onClick={() => selectionMode ? toggleAccountSelection(account.id) : toggleDetails(expansionKey)}
                     className={`flex-1 p-4 ${selectionMode ? 'pl-0' : ''} flex items-center gap-3 text-left transition-colors hover:bg-[var(--bg-tertiary)]`}
                   >
-                    {/* Currency icon */}
+                    {/* Account icon or currency fallback */}
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
                       style={{
-                        backgroundColor: account.moneda === 'Peso'
-                          ? 'rgba(117, 170, 219, 0.15)'
-                          : 'rgba(60, 179, 113, 0.15)',
+                        backgroundColor: account.icon
+                          ? (isEmoji(account.icon) ? 'var(--bg-tertiary)' : 'transparent')
+                          : account.moneda === 'Peso'
+                            ? 'rgba(117, 170, 219, 0.15)'
+                            : 'rgba(60, 179, 113, 0.15)',
                       }}
                     >
-                      <span
-                        className="text-lg font-bold"
-                        style={{
-                          color: account.moneda === 'Peso' ? '#75AADB' : '#3CB371',
-                        }}
-                      >
-                      {account.moneda === 'Peso' ? '$' : 'US$'}
-                    </span>
+                      {account.icon ? (
+                        isEmoji(account.icon) ? (
+                          <span className="text-2xl">{account.icon}</span>
+                        ) : (
+                          <img
+                            src={account.icon}
+                            alt={account.nombre}
+                            className="w-full h-full object-cover rounded-xl"
+                          />
+                        )
+                      ) : (
+                        <span
+                          className="text-lg font-bold"
+                          style={{
+                            color: account.moneda === 'Peso' ? '#75AADB' : '#3CB371',
+                          }}
+                        >
+                          {account.moneda === 'Peso' ? '$' : 'US$'}
+                        </span>
+                      )}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -590,83 +859,9 @@ function Accounts() {
                     </button>
                   </div>
                 )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Add Modal */}
-      {isAdding && (
-        <AccountModal
-          onSave={handleAdd}
-          onClose={() => setIsAdding(false)}
-          loading={saving}
-        />
-      )}
-
-      {/* Edit Modal */}
-      {editingAccount && (
-        <AccountModal
-          account={editingAccount}
-          onSave={handleSave}
-          onDelete={() => handleDelete(editingAccount)}
-          onClose={() => setEditingAccount(null)}
-          loading={saving}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={!!deleteConfirm}
-        onClose={() => setDeleteConfirm(null)}
-        onConfirm={confirmDelete}
-        title="Eliminar cuenta"
-        message={
-          <>
-            ¿Estás seguro de que quieres eliminar la cuenta{' '}
-            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {deleteConfirm?.nombre}
-            </span>
-            ?<br />
-            <span className="text-xs mt-1 block">Los movimientos asociados no se eliminarán.</span>
-          </>
-        }
-        confirmText="Eliminar"
-        loading={saving}
-        icon={
-          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg>
-        }
-      />
-
-      {/* Bulk Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={bulkDeleteConfirm}
-        onClose={() => setBulkDeleteConfirm(false)}
-        onConfirm={confirmBulkDelete}
-        title="Eliminar cuentas"
-        message={
-          <>
-            ¿Estás seguro de que quieres eliminar{' '}
-            <span className="font-semibold" style={{ color: 'var(--accent-red)' }}>
-              {selectedAccounts.size} {selectedAccounts.size === 1 ? 'cuenta' : 'cuentas'}
-            </span>
-            ?<br />
-            <span className="text-xs mt-1 block">Esta acción no se puede deshacer. Los movimientos asociados no se eliminarán.</span>
-          </>
-        }
-        confirmText={`Eliminar ${selectedAccounts.size}`}
-        loading={saving}
-        icon={
-          <svg className="w-7 h-7" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        }
-      />
-    </div>
-  );
+      </div>
+    );
+  }
 }
 
 function AccountModal({ account, onSave, onDelete, onClose, loading }) {
@@ -681,7 +876,9 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     tipo: account?.tipo || '',
     esTarjetaCredito: account?.esTarjetaCredito || false,
     diaCierre: account?.diaCierre?.toString() || '1',
+    icon: account?.icon || null,
   });
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -694,7 +891,12 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
       ...formData,
       balanceInicial: parseFloat(formData.balanceInicial) || 0,
       diaCierre: formData.esTarjetaCredito ? parseInt(formData.diaCierre) || 1 : null,
+      icon: formData.icon,
     });
+  };
+
+  const handleIconSelect = (iconValue) => {
+    setFormData(prev => ({ ...prev, icon: iconValue }));
   };
 
   return (
@@ -720,6 +922,70 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Icon selector */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Ícono
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowIconPicker(true)}
+              className="w-full px-4 py-4 rounded-xl transition-all duration-200 border-2 border-dashed hover:border-solid flex items-center gap-4"
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                borderColor: formData.icon ? 'var(--accent-primary)' : 'var(--border-medium)',
+              }}
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+                style={{
+                  backgroundColor: formData.icon
+                    ? (isEmoji(formData.icon) ? 'var(--bg-secondary)' : 'transparent')
+                    : 'var(--bg-secondary)',
+                }}
+              >
+                {formData.icon ? (
+                  isEmoji(formData.icon) ? (
+                    <span className="text-3xl">{formData.icon}</span>
+                  ) : (
+                    <img
+                      src={formData.icon}
+                      alt="Ícono"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  )
+                ) : (
+                  <svg
+                    className="w-7 h-7"
+                    style={{ color: 'var(--text-muted)' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {formData.icon ? 'Cambiar ícono' : 'Seleccionar ícono'}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Bancos, fintechs, emojis o imagen
+                </p>
+              </div>
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                style={{ color: 'var(--text-muted)' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               Nombre
@@ -763,27 +1029,29 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, moneda: 'Peso' }))}
-                className="flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200"
+                className="flex items-center justify-center gap-3 py-3 rounded-xl font-medium transition-all duration-200"
                 style={{
-                  backgroundColor: formData.moneda === 'Peso' ? '#75AADB' : 'var(--bg-tertiary)',
-                  color: formData.moneda === 'Peso' ? 'white' : 'var(--text-secondary)',
+                  backgroundColor: formData.moneda === 'Peso' ? 'rgba(117, 170, 219, 0.2)' : 'var(--bg-tertiary)',
+                  color: formData.moneda === 'Peso' ? '#75AADB' : 'var(--text-secondary)',
+                  border: formData.moneda === 'Peso' ? '2px solid #75AADB' : '2px solid transparent',
                 }}
               >
-                <span className="font-bold">$</span>
-                ARS
+                <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-7 h-7 rounded" />
+                <span className="font-semibold">ARS</span>
               </button>
               {!formData.esTarjetaCredito && (
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, moneda: 'Dólar' }))}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200"
+                  className="flex items-center justify-center gap-3 py-3 rounded-xl font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: formData.moneda === 'Dólar' ? '#3CB371' : 'var(--bg-tertiary)',
-                    color: formData.moneda === 'Dólar' ? 'white' : 'var(--text-secondary)',
+                    backgroundColor: formData.moneda === 'Dólar' ? 'rgba(60, 179, 113, 0.2)' : 'var(--bg-tertiary)',
+                    color: formData.moneda === 'Dólar' ? '#3CB371' : 'var(--text-secondary)',
+                    border: formData.moneda === 'Dólar' ? '2px solid #3CB371' : '2px solid transparent',
                   }}
                 >
-                  <span className="font-bold">US$</span>
-                  USD
+                  <img src="/icons/catalog/USD.svg" alt="USD" className="w-7 h-7 rounded" />
+                  <span className="font-semibold">USD</span>
                 </button>
               )}
             </div>
@@ -910,6 +1178,16 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
             </button>
           </div>
         </form>
+
+        {/* Icon Picker Modal */}
+        <IconPicker
+          isOpen={showIconPicker}
+          onClose={() => setShowIconPicker(false)}
+          onSelect={handleIconSelect}
+          currentValue={formData.icon}
+          showPredefined={true}
+          title="Ícono de cuenta"
+        />
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
+import SortDropdown from './SortDropdown';
 import { useError } from '../contexts/ErrorContext';
 
 function MovementsList({
@@ -35,6 +36,48 @@ function MovementsList({
   const [bulkAction, setBulkAction] = useState(null); // 'delete', 'editAccount', 'editCategory'
   const [bulkEditValue, setBulkEditValue] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  // Sort state - different storage key per type
+  const sortStorageKey = `cashe-sort-${type}`;
+  const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
+
+  // Load sort preference from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(sortStorageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.sortBy && parsed.sortOrder) {
+          setSortConfig(parsed);
+        }
+      } catch (e) {
+        console.error('Error parsing sort preference:', e);
+      }
+    }
+  }, [sortStorageKey]);
+
+  // Save sort preference to localStorage
+  useEffect(() => {
+    localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
+  }, [sortConfig, sortStorageKey]);
+
+  // Sort options based on movement type
+  const sortOptions = useMemo(() => {
+    if (type === 'transferencia') {
+      return [
+        { id: 'date', label: 'Fecha', defaultOrder: 'desc' },
+        { id: 'amount', label: 'Monto', defaultOrder: 'desc' },
+        { id: 'accountFrom', label: 'Cuenta origen', defaultOrder: 'asc' },
+        { id: 'accountTo', label: 'Cuenta destino', defaultOrder: 'asc' },
+      ];
+    }
+    return [
+      { id: 'date', label: 'Fecha', defaultOrder: 'desc' },
+      { id: 'amount', label: 'Monto', defaultOrder: 'desc' },
+      { id: 'category', label: 'Categoría', defaultOrder: 'asc' },
+      { id: 'account', label: 'Cuenta', defaultOrder: 'asc' },
+    ];
+  }, [type]);
 
   // Filter movements
   const filteredMovements = useMemo(() => {
@@ -86,8 +129,45 @@ function MovementsList({
       });
     }
 
+    // Apply sorting
+    const { sortBy, sortOrder } = sortConfig;
+    const multiplier = sortOrder === 'asc' ? 1 : -1;
+
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.fecha) - new Date(b.fecha);
+          break;
+        case 'amount':
+          if (type === 'transferencia') {
+            comparison = (a.montoSaliente || 0) - (b.montoSaliente || 0);
+          } else {
+            comparison = (a.monto || 0) - (b.monto || 0);
+          }
+          break;
+        case 'category':
+          comparison = (a.categoria || '').localeCompare(b.categoria || '');
+          break;
+        case 'account':
+          comparison = (a.cuenta || '').localeCompare(b.cuenta || '');
+          break;
+        case 'accountFrom':
+          comparison = (a.cuentaSaliente || '').localeCompare(b.cuentaSaliente || '');
+          break;
+        case 'accountTo':
+          comparison = (a.cuentaEntrante || '').localeCompare(b.cuentaEntrante || '');
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return comparison * multiplier;
+    });
+
     return filtered;
-  }, [movements, dateRange, selectedAccounts, selectedCategories, searchText, type]);
+  }, [movements, dateRange, selectedAccounts, selectedCategories, searchText, type, sortConfig]);
 
   // Calculate subtotals
   const subtotals = useMemo(() => {
@@ -424,24 +504,26 @@ function MovementsList({
           >
             <button
               onClick={() => setCurrency('ARS')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
               style={{
                 backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                 color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
                 boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
+              <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-4 h-4 rounded-sm" />
               ARS
             </button>
             <button
               onClick={() => setCurrency('USD')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
               style={{
                 backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
                 color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
                 boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
+              <img src="/icons/catalog/USD.svg" alt="USD" className="w-4 h-4 rounded-sm" />
               USD
             </button>
           </div>
@@ -452,28 +534,39 @@ function MovementsList({
         </div>
       </div>
 
-      {/* Filters Toggle */}
-      <button
-        onClick={() => setShowFilters(!showFilters)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-        style={{
-          backgroundColor: showFilters ? getTypeBgDim() : 'var(--bg-tertiary)',
-          color: showFilters ? getTypeColor() : 'var(--text-secondary)'
-        }}
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-        </svg>
-        <span>Filtros</span>
-        {activeFiltersCount > 0 && (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-            style={{ backgroundColor: getTypeColor() }}
-          >
-            {activeFiltersCount}
-          </span>
-        )}
-      </button>
+      {/* Filters and Sort Row */}
+      <div className="flex items-center gap-2">
+        {/* Filters Toggle */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+          style={{
+            backgroundColor: showFilters ? getTypeBgDim() : 'var(--bg-tertiary)',
+            color: showFilters ? getTypeColor() : 'var(--text-secondary)'
+          }}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          <span>Filtros</span>
+          {activeFiltersCount > 0 && (
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+              style={{ backgroundColor: getTypeColor() }}
+            >
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
+
+        {/* Sort Dropdown */}
+        <SortDropdown
+          options={sortOptions}
+          value={sortConfig}
+          onChange={setSortConfig}
+          storageKey={sortStorageKey}
+        />
+      </div>
 
       {/* Filters Panel */}
       {showFilters && (

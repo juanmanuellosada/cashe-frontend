@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ErrorProvider } from './contexts/ErrorContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorModal from './components/ErrorModal'
+import SessionExpiryWarning from './components/SessionExpiryWarning'
 import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -47,6 +48,7 @@ function App() {
       <AuthProvider>
         <BrowserRouter basename={basename}>
           <ErrorModal />
+          <SessionExpiryWarning />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />

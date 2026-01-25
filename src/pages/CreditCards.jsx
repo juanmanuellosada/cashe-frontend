@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
 import { useError } from '../contexts/ErrorContext';
+import { isEmoji } from '../services/iconStorage';
 
 function CreditCards() {
   const { showError } = useError();
@@ -334,24 +335,26 @@ function CreditCards() {
           >
             <button
               onClick={() => setCurrency('ARS')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
               style={{
                 backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
                 color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
                 boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
               }}
             >
+              <img src="/icons/catalog/ARS.svg" alt="ARS" className="w-4 h-4 rounded-sm" />
               ARS
             </button>
             <button
               onClick={() => setCurrency('USD')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
               style={{
                 backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
                 color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
                 boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
               }}
             >
+              <img src="/icons/catalog/USD.svg" alt="USD" className="w-4 h-4 rounded-sm" />
               USD
             </button>
           </div>
@@ -360,30 +363,47 @@ function CreditCards() {
 
       {/* Selector de tarjeta */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {creditCards.map((card) => (
-          <button
-            key={card.nombre}
-            onClick={() => setSelectedCard(card)}
-            className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-              selectedCard?.nombre === card.nombre ? 'scale-[1.02]' : 'opacity-70'
-            }`}
-            style={{
-              backgroundColor: selectedCard?.nombre === card.nombre
-                ? 'var(--accent-purple)'
-                : 'var(--bg-secondary)',
-              color: selectedCard?.nombre === card.nombre
-                ? 'white'
-                : 'var(--text-primary)',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              {card.nombre}
-            </div>
-          </button>
-        ))}
+        {creditCards.map((card) => {
+          const hasIcon = !!card.icon;
+          const iconIsEmoji = hasIcon && isEmoji(card.icon);
+
+          return (
+            <button
+              key={card.nombre}
+              onClick={() => setSelectedCard(card)}
+              className={`px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                selectedCard?.nombre === card.nombre ? 'scale-[1.02]' : 'opacity-70'
+              }`}
+              style={{
+                backgroundColor: selectedCard?.nombre === card.nombre
+                  ? 'var(--accent-purple)'
+                  : 'var(--bg-secondary)',
+                color: selectedCard?.nombre === card.nombre
+                  ? 'white'
+                  : 'var(--text-primary)',
+              }}
+            >
+              <div className="flex items-center gap-2">
+                {hasIcon ? (
+                  iconIsEmoji ? (
+                    <span className="text-base">{card.icon}</span>
+                  ) : (
+                    <img
+                      src={card.icon}
+                      alt={card.nombre}
+                      className="w-5 h-5 rounded object-cover"
+                    />
+                  )
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                )}
+                {card.nombre}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Info de la tarjeta seleccionada */}
@@ -775,7 +795,7 @@ function CreditCards() {
                   <button
                     key={curr}
                     onClick={() => setCurrency(curr)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                       currency === curr ? 'text-white' : ''
                     }`}
                     style={{
@@ -783,7 +803,8 @@ function CreditCards() {
                       color: currency === curr ? 'white' : 'var(--text-secondary)',
                     }}
                   >
-                    {curr === 'ARS' ? `$ Pesos (${viewingStatement.itemsPesos?.length || 0})` : `US$ Dólares (${viewingStatement.itemsDolares?.length || 0})`}
+                    <img src={`/icons/catalog/${curr}.svg`} alt={curr} className="w-5 h-5 rounded-sm" />
+                    {curr === 'ARS' ? `Pesos (${viewingStatement.itemsPesos?.length || 0})` : `Dólares (${viewingStatement.itemsDolares?.length || 0})`}
                   </button>
                 ))}
               </div>

@@ -148,81 +148,49 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
-      {/* Backdrop with premium blur */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
         onClick={submitting ? undefined : onClose}
       />
 
-      {/* Modal with glass morphism */}
+      {/* Modal */}
       <div
-        className="relative w-full max-w-lg my-auto rounded-2xl animate-scale-in card-elevated"
-        style={{ 
-          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 124, 255, 0.1)',
-          maxHeight: '90vh',
+        className="relative w-full max-w-md my-auto rounded-xl animate-scale-in"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-subtle)',
+          maxHeight: '85vh',
           display: 'flex',
           flexDirection: 'column'
         }}
       >
-        {/* Gradient accent line at top */}
-        <div 
-          className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
-          style={{ 
-            background: defaultType 
-              ? (defaultType === 'expense' ? 'var(--accent-red)' : defaultType === 'income' ? 'var(--accent-green)' : 'var(--accent-blue)')
-              : 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-purple) 50%, var(--accent-green) 100%)'
-          }}
-        />
-
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-          style={{ 
-            backgroundColor: 'var(--bg-secondary)', 
-            borderColor: 'var(--border-subtle)',
-            borderTopLeftRadius: '1rem',
-            borderTopRightRadius: '1rem'
-          }}
+          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+          style={{ borderColor: 'var(--border-subtle)' }}
         >
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ 
-                background: getIconColor(),
-                boxShadow: '0 4px 16px var(--accent-primary-glow)'
-              }}
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {getIcon()}
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-                {getModalTitle()}
-              </h2>
-              <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                {getModalSubtitle()}
-              </p>
-            </div>
-          </div>
+          <h2 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>
+            {getModalTitle()}
+          </h2>
           <button
             onClick={onClose}
             disabled={submitting}
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-95 disabled:opacity-50"
-            style={{ color: 'var(--text-secondary)' }}
+            className="p-1.5 rounded-md transition-colors duration-150 hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
+            style={{ color: 'var(--text-muted)' }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Content - scrollable */}
-        <div className="p-5 overflow-y-auto flex-1">
+        {/* Content */}
+        <div className="p-4 overflow-y-auto flex-1">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <LoadingSpinner size="lg" />
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner size="md" />
             </div>
           ) : (
             <MovementForm
@@ -238,9 +206,9 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
           )}
         </div>
 
-        {/* Toast dentro del modal */}
+        {/* Toast */}
         {toast && (
-          <div className="absolute bottom-4 left-4 right-4">
+          <div className="absolute bottom-3 left-3 right-3">
             <Toast
               message={toast.message}
               type={toast.type}

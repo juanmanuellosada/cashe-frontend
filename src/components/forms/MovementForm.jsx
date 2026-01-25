@@ -4,41 +4,23 @@ import ExpenseForm from './ExpenseForm';
 import TransferForm from './TransferForm';
 
 const MOVEMENT_TYPES = [
-  { 
-    id: 'ingreso', 
-    label: 'Ingreso', 
-    color: 'var(--accent-green)', 
-    bgDim: 'rgba(0, 217, 154, 0.12)',
-    glow: 'rgba(0, 217, 154, 0.4)',
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-      </svg>
-    )
+  {
+    id: 'ingreso',
+    label: 'Ingreso',
+    color: 'var(--accent-green)',
+    bgDim: 'var(--accent-green-dim)',
   },
-  { 
-    id: 'gasto', 
-    label: 'Gasto', 
-    color: 'var(--accent-red)', 
-    bgDim: 'rgba(255, 92, 114, 0.12)',
-    glow: 'rgba(255, 92, 114, 0.4)',
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-      </svg>
-    )
+  {
+    id: 'gasto',
+    label: 'Gasto',
+    color: 'var(--accent-red)',
+    bgDim: 'var(--accent-red-dim)',
   },
-  { 
-    id: 'transferencia', 
-    label: 'Transferir', 
-    color: 'var(--accent-blue)', 
-    bgDim: 'rgba(59, 130, 246, 0.12)',
-    glow: 'rgba(59, 130, 246, 0.4)',
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    )
+  {
+    id: 'transferencia',
+    label: 'Transferir',
+    color: 'var(--accent-blue)',
+    bgDim: 'var(--accent-blue-dim)',
   },
 ];
 
@@ -103,48 +85,31 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData, hi
     }
   };
 
-  const activeType = MOVEMENT_TYPES.find(t => t.id === movementType);
-
   return (
     <div>
-      {/* Movement Type Selector - Premium Segmented Control */}
+      {/* Movement Type Selector - Modern Pill Tabs */}
       {!hideTypeSelector && (
-        <>
-          <div
-            className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl mb-6"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
-            {MOVEMENT_TYPES.map((type) => {
-              const isActive = movementType === type.id;
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => setMovementType(type.id)}
-                  className={`relative flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-300 active:scale-[0.98] ${
-                    isActive ? '' : 'hover:bg-[var(--bg-secondary)]'
-                  }`}
-                  style={{
-                    backgroundColor: isActive ? type.color : 'transparent',
-                    color: isActive ? 'white' : 'var(--text-secondary)',
-                    boxShadow: isActive ? `0 4px 20px ${type.glow}` : 'none',
-                  }}
-                >
-                  {type.icon}
-                  <span className="hidden sm:inline">{type.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Type indicator bar with glow */}
-          <div
-            className="h-1 rounded-full mb-6 transition-all duration-500"
-            style={{
-              backgroundColor: activeType?.color,
-              boxShadow: `0 0 20px ${activeType?.glow}, 0 0 40px ${activeType?.glow}`
-            }}
-          />
-        </>
+        <div
+          className="inline-flex p-1 rounded-lg mb-5"
+          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+        >
+          {MOVEMENT_TYPES.map((type) => {
+            const isActive = movementType === type.id;
+            return (
+              <button
+                key={type.id}
+                onClick={() => setMovementType(type.id)}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-150"
+                style={{
+                  backgroundColor: isActive ? type.bgDim : 'transparent',
+                  color: isActive ? type.color : 'var(--text-muted)',
+                }}
+              >
+                {type.label}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* Dynamic Form */}

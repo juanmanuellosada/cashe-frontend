@@ -3,6 +3,9 @@ import { getCategoriesAll, addCategory, updateCategory, deleteCategory, bulkDele
 import ConfirmModal from '../components/ConfirmModal';
 import Toast from '../components/Toast';
 import { useError } from '../contexts/ErrorContext';
+import IconPicker from '../components/IconPicker';
+import { isEmoji } from '../services/iconStorage';
+import SortDropdown from '../components/SortDropdown';
 
 function Categories() {
   const { showError } = useError();
@@ -19,6 +22,28 @@ function Categories() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+
+  // Sorting
+  const [sortConfig, setSortConfig] = useState({ sortBy: 'nombre', sortOrder: 'asc' });
+
+  // Dynamic sort options - hide "tipo" when filtering by specific type
+  const sortOptions = useMemo(() => {
+    const options = [
+      { id: 'nombre', label: 'Nombre', defaultOrder: 'asc' },
+    ];
+    // Only show "tipo" option when viewing all categories
+    if (filter === 'todos') {
+      options.push({ id: 'tipo', label: 'Tipo', defaultOrder: 'asc' });
+    }
+    return options;
+  }, [filter]);
+
+  // Reset sort to "nombre" if "tipo" was selected and filter changed to specific type
+  useEffect(() => {
+    if (filter !== 'todos' && sortConfig.sortBy === 'tipo') {
+      setSortConfig(prev => ({ ...prev, sortBy: 'nombre' }));
+    }
+  }, [filter, sortConfig.sortBy]);
 
   useEffect(() => {
     fetchCategories();
@@ -130,16 +155,48 @@ function Categories() {
     }
   };
 
-  const filteredCategories = filter === 'todos'
-    ? categories
-    : categories.filter(c => c.tipo === filter);
+  const filteredAndSortedCategories = useMemo(() => {
+    // First filter
+    let result = filter === 'todos'
+      ? [...categories]
+      : categories.filter(c => c.tipo === filter);
+
+    // Then sort
+    result.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortConfig.sortBy) {
+        case 'nombre': {
+          const nameA = (a.nombre || '').replace(/^[\p{Emoji}\u200d]+\s*/u, '').toLowerCase();
+          const nameB = (b.nombre || '').replace(/^[\p{Emoji}\u200d]+\s*/u, '').toLowerCase();
+          comparison = nameA.localeCompare(nameB, 'es');
+          break;
+        }
+        case 'tipo':
+          comparison = (a.tipo || '').localeCompare(b.tipo || '', 'es');
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortConfig.sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [categories, filter, sortConfig]);
+
+  // Alias for backwards compatibility
+  const filteredCategories = filteredAndSortedCategories;
 
   const ingresosCount = categories.filter(c => c.tipo === 'Ingreso').length;
   const gastosCount = categories.filter(c => c.tipo === 'Gasto').length;
 
-  // Extract emoji from category name
-  const getEmoji = (nombre) => {
-    const emojiMatch = nombre.match(/^[\p{Emoji}\u200d]+/u);
+  // Extract emoji from category name or icon field
+  const getCategoryIcon = (category) => {
+    // First check if there's an icon field
+    if (category.icon) return category.icon;
+    // Then try to extract emoji from name
+    const emojiMatch = category.nombre.match(/^[\p{Emoji}\u200d]+/u);
     return emojiMatch ? emojiMatch[0] : null;
   };
 
@@ -211,12 +268,21 @@ function Categories() {
           Categorias
         </h2>
         <div className="flex items-center gap-2">
+          {/* Sort dropdown */}
+          {categories.length > 0 && (
+            <SortDropdown
+              options={sortOptions}
+              value={sortConfig}
+              onChange={setSortConfig}
+              storageKey="cashe-sort-categories"
+            />
+          )}
           {/* Selection mode toggle */}
           {categories.length > 0 && (
             <button
               onClick={toggleSelectionMode}
               className={`p-2.5 rounded-xl transition-all duration-200 ${selectionMode ? 'ring-2 ring-offset-2' : ''}`}
-              style={{ 
+              style={{
                 backgroundColor: selectionMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                 color: selectionMode ? 'white' : 'var(--text-secondary)',
                 ringColor: 'var(--accent-primary)',
@@ -328,9 +394,10 @@ function Categories() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
           {filteredCategories.map((category) => {
             const isIngreso = category.tipo === 'Ingreso';
-            const emoji = getEmoji(category.nombre);
+            const icon = getCategoryIcon(category);
             const nameWithoutEmoji = getNameWithoutEmoji(category.nombre);
             const isSelected = selectedCategories.includes(category.rowIndex);
+            const iconIsEmoji = icon && isEmoji(icon);
 
             return (
               <div
@@ -346,16 +413,16 @@ function Categories() {
               >
                 {/* Checkbox for selection mode */}
                 {selectionMode && (
-                  <div 
+                  <div
                     className="absolute top-2 left-2 z-10"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleCategorySelection(category.rowIndex);
                     }}
                   >
-                    <div 
+                    <div
                       className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${isSelected ? 'scale-110' : ''}`}
-                      style={{ 
+                      style={{
                         backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                         border: isSelected ? 'none' : '2px solid var(--border-subtle)'
                       }}
@@ -370,16 +437,30 @@ function Categories() {
                 )}
 
                 <div className={`flex items-start gap-3 ${selectionMode ? 'ml-6' : ''}`}>
-                  {/* Emoji badge */}
+                  {/* Icon badge */}
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden"
                     style={{
-                      backgroundColor: isIngreso
-                        ? 'rgba(34, 197, 94, 0.2)'
-                        : 'rgba(239, 68, 68, 0.2)',
+                      backgroundColor: icon && !iconIsEmoji
+                        ? 'transparent'
+                        : isIngreso
+                          ? 'rgba(34, 197, 94, 0.2)'
+                          : 'rgba(239, 68, 68, 0.2)',
                     }}
                   >
-                    {emoji || (isIngreso ? '💰' : '💸')}
+                    {icon ? (
+                      iconIsEmoji ? (
+                        icon
+                      ) : (
+                        <img
+                          src={icon}
+                          alt={category.nombre}
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      )
+                    ) : (
+                      isIngreso ? '💰' : '💸'
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
@@ -504,20 +585,51 @@ function Categories() {
 
 function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
   const isEditing = !!category;
+
+  // Parse existing category to extract icon if it's stored in the name
+  const parseExistingIcon = () => {
+    if (category?.icon) return category.icon;
+    // Try to extract emoji from name
+    const emojiMatch = category?.nombre?.match(/^[\p{Emoji}\u200d]+/u);
+    return emojiMatch ? emojiMatch[0] : null;
+  };
+
+  const parseExistingName = () => {
+    if (category?.icon) return category?.nombre || '';
+    // Remove emoji from name if present
+    return (category?.nombre || '').replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim();
+  };
+
   const [formData, setFormData] = useState({
     rowIndex: category?.rowIndex,
-    nombre: category?.nombre || '',
+    id: category?.id,
+    nombre: parseExistingName(),
     tipo: category?.tipo || 'Gasto',
+    icon: parseExistingIcon(),
   });
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleIconSelect = (iconValue) => {
+    setFormData(prev => ({ ...prev, icon: iconValue }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    // Combine icon and name for backward compatibility
+    let finalName = formData.nombre;
+    if (formData.icon && isEmoji(formData.icon)) {
+      // If icon is emoji, prepend it to name
+      finalName = `${formData.icon} ${formData.nombre}`;
+    }
+    onSave({
+      ...formData,
+      nombre: finalName,
+    });
   };
 
   return (
@@ -549,6 +661,65 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Icon selector */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ícono
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowIconPicker(true)}
+              className="w-full px-4 py-3 rounded-xl transition-all duration-200 border-2 border-dashed hover:border-solid flex items-center gap-3"
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                borderColor: formData.icon ? 'var(--accent-primary)' : 'var(--border-medium)',
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+                style={{
+                  backgroundColor: formData.icon
+                    ? (isEmoji(formData.icon) ? (formData.tipo === 'Ingreso' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)') : 'transparent')
+                    : 'var(--bg-secondary)',
+                }}
+              >
+                {formData.icon ? (
+                  isEmoji(formData.icon) ? (
+                    <span className="text-2xl">{formData.icon}</span>
+                  ) : (
+                    <img
+                      src={formData.icon}
+                      alt="Ícono"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  )
+                ) : (
+                  <span className="text-2xl">{formData.tipo === 'Ingreso' ? '💰' : '💸'}</span>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {formData.icon ? 'Cambiar ícono' : 'Seleccionar ícono'}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Emoji o imagen personalizada
+                </p>
+              </div>
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                style={{ color: 'var(--text-muted)' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
           <div>
             <label className="flex items-center gap-2 text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -561,14 +732,11 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
               name="nombre"
               value={formData.nombre}
               onChange={handleChange}
-              placeholder="Ej: 🍔 Comida, 🚗 Transporte..."
+              placeholder="Ej: Comida, Transporte..."
               className="w-full px-4 py-3 rounded-xl border-2 border-transparent transition-colors focus:border-[var(--accent-primary)]"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
               required
             />
-            <p className="text-xs mt-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Puedes agregar un emoji al inicio del nombre
-            </p>
           </div>
 
           <div>
@@ -649,6 +817,16 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
             </button>
           </div>
         </form>
+
+        {/* Icon Picker Modal - only emoji and upload for categories */}
+        <IconPicker
+          isOpen={showIconPicker}
+          onClose={() => setShowIconPicker(false)}
+          onSelect={handleIconSelect}
+          currentValue={formData.icon}
+          showPredefined={false}
+          title="Ícono de categoría"
+        />
       </div>
     </div>
   );

@@ -71,37 +71,37 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
 
   return (
     <div
-      className="rounded-2xl p-4"
-      style={{ backgroundColor: 'var(--bg-secondary)' }}
+      className="rounded-xl p-4"
+      style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
     >
-      <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-        Evolucion del Balance
+      <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
+        Evolución del balance
       </h3>
-      <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+      <ResponsiveContainer width="100%" height={240}>
+        <LineChart data={data} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.5} vertical={false} />
           <XAxis
             dataKey="month"
-            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
-            axisLine={{ stroke: 'var(--border-subtle)' }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+            axisLine={false}
             tickLine={false}
           />
           <YAxis
             tickFormatter={formatYAxis}
-            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             domain={[minValue - padding, maxValue + padding]}
           />
           <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine y={0} stroke="var(--text-secondary)" strokeDasharray="3 3" strokeOpacity={0.5} />
+          <ReferenceLine y={0} stroke="var(--text-muted)" strokeDasharray="3 3" strokeOpacity={0.3} />
           <Line
             type="monotone"
             dataKey="balance"
             stroke="var(--accent-primary)"
-            strokeWidth={3}
-            dot={{ fill: 'var(--accent-primary)', strokeWidth: 0, r: 4 }}
-            activeDot={{ r: 6, fill: 'var(--accent-primary)', stroke: 'var(--bg-secondary)', strokeWidth: 2 }}
+            strokeWidth={2}
+            dot={{ fill: 'var(--accent-primary)', strokeWidth: 0, r: 3 }}
+            activeDot={{ r: 5, fill: 'var(--accent-primary)', stroke: 'var(--bg-secondary)', strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>

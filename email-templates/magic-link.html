@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar sesión - Cashé</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #141414; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); overflow: hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #fafafa; letter-spacing: -0.5px;">
+                Cashé
+              </h1>
+              <p style="margin: 8px 0 0; font-size: 13px; color: #71717a;">
+                Finanzas personales
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <!-- Icon -->
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="display: inline-block; width: 64px; height: 64px; background-color: rgba(139, 92, 246, 0.12); border-radius: 16px; line-height: 64px;">
+                  <span style="font-size: 28px;">✨</span>
+                </div>
+              </div>
+
+              <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #fafafa; text-align: center;">
+                Tu enlace mágico
+              </h2>
+
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #a1a1aa; text-align: center;">
+                Solicitaste un enlace para iniciar sesión en Cashé sin necesidad de contraseña.
+              </p>
+
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #a1a1aa; text-align: center;">
+                Hacé click en el siguiente botón para acceder a tu cuenta:
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin-bottom: 24px;">
+                <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 14px 32px; background-color: #8b5cf6; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 10px;">
+                  Iniciar sesión
+                </a>
+              </div>
+
+              <!-- Info box -->
+              <div style="background-color: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #a1a1aa;">
+                  <strong style="color: #8b5cf6;">🔮 Enlace mágico:</strong> Este enlace es de un solo uso y expira en 1 hora. Después de usarlo, serás redirigido automáticamente a tu cuenta.
+                </p>
+              </div>
+
+              <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #52525b; text-align: center;">
+                Si no solicitaste este enlace, podés ignorar este email de forma segura.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06); text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #52525b;">
+                ¿Problemas con el botón? Copiá y pegá este enlace:
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #3f3f46; word-break: break-all;">
+                {{ .ConfirmationURL }}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Legal footer -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #3f3f46;">
+                © 2025 Cashé. Todos los derechos reservados.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
