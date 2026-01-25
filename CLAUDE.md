@@ -2,7 +2,7 @@
 
 ## Descripción del Proyecto
 
-**Cashé** es una aplicación web para gestión de finanzas personales con soporte para ingresos, gastos (incluyendo cuotas automáticas de tarjeta de crédito), y transferencias. Incluye autenticación con Supabase y se conecta a Google Sheets como backend de datos a través de Google Apps Script.
+**Cashé** es una aplicación web para gestión de finanzas personales con soporte para ingresos, gastos (incluyendo cuotas automáticas de tarjeta de crédito), y transferencias. Utiliza Supabase para autenticación y como base de datos.
 
 **URL de producción**: https://juanmanuellosada.github.io/cashe-frontend/
 
@@ -15,12 +15,10 @@
 | **React 18** + **Vite** | Frontend SPA |
 | **Tailwind CSS** | Estilos |
 | **React Router DOM** | Navegación |
-| **Supabase** | Autenticación (Google OAuth) |
+| **Supabase** | Autenticación (Google OAuth) + Base de datos PostgreSQL |
 | **Recharts** | Gráficos |
 | **Lucide React** | Iconos |
 | **React Day Picker** + **date-fns** | Selector de fechas |
-| **Google Apps Script** | API REST para datos |
-| **Google Sheets** | Base de datos |
 | **GitHub Pages** | Hosting |
 | **Vite PWA Plugin** | Progressive Web App |
 
@@ -40,13 +38,14 @@
 │                              │                                   │
 └──────────────────────────────┼───────────────────────────────────┘
                                │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-┌──────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│     SUPABASE     │  │ GOOGLE APPS     │  │  GOOGLE SHEETS  │
-│  (Auth + Users)  │  │ SCRIPT (API)    │  │  (Base datos)   │
-└──────────────────┘  └─────────────────┘  └─────────────────┘
+                               ▼
+              ┌────────────────────────────────┐
+              │           SUPABASE             │
+              │  ┌──────────┐  ┌────────────┐  │
+              │  │   Auth   │  │ PostgreSQL │  │
+              │  │  (OAuth) │  │    (DB)    │  │
+              │  └──────────┘  └────────────┘  │
+              └────────────────────────────────┘
 ```
 
 ---
@@ -73,7 +72,6 @@ cashe-frontend/
     ├── index.css                  # Estilos globales + Tailwind
     │
     ├── config/
-    │   ├── api.js                 # URL del Apps Script
     │   └── supabase.js            # Cliente Supabase
     │
     ├── contexts/
@@ -81,8 +79,7 @@ cashe-frontend/
     │   └── ErrorContext.jsx       # Manejo global de errores
     │
     ├── services/
-    │   ├── sheetsApi.js           # Funciones para llamar al API de Sheets
-    │   └── supabaseApi.js         # Funciones de autenticación
+    │   └── supabaseApi.js         # Funciones de autenticación y datos
     │
     ├── hooks/
     │   ├── useAccounts.js         # Hook para cuentas
@@ -195,7 +192,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 # .env.local
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-anon-key
-VITE_API_URL=https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec
 ```
 
 ### Métodos de Autenticación
@@ -222,70 +218,6 @@ VITE_API_URL=https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec
    ├── Cuentas           /cuentas
    └── Categorías        /categorias
 ```
-
----
-
-## Google Sheets - Estructura de Datos
-
-### ID del Spreadsheet
-```
-1ZKoPArVyfG45J23g0AH9skvlYRhIyXZROcMRmgOUML0
-```
-
-### Hojas y Columnas
-
-#### Hoja: Monedas
-| Col | Nombre | Tipo |
-|-----|--------|------|
-| A | Nombre | string |
-| B | Símbolo | string |
-| C | Es moneda base | boolean |
-| D | Tipo de cambio | number (D3 = Dólar oficial) |
-
-#### Hoja: Cuentas
-| Col | Nombre | Tipo |
-|-----|--------|------|
-| A | Nombre | string |
-| B | Balance inicial | number |
-| C | Moneda | string |
-| D | Número de cuenta | string |
-| E | Tipo de cuenta | string |
-| F | Día de cierre | number (solo tarjetas) |
-| G-M | Fórmulas calculadas | - |
-
-#### Hoja: Gastos
-| Col | Nombre | Tipo |
-|-----|--------|------|
-| A | Fecha | date |
-| B | Monto | number |
-| C | Cuenta | string |
-| D | Categoría | string |
-| E | Monto en pesos | number (fórmula) |
-| F | Monto en dólares | number (fórmula) |
-| G | Nota | string |
-| H | ID Compra | string (para cuotas) |
-| I | Cuota | string (ej: "1/12") |
-
-#### Hoja: Ingresos
-| Col | Nombre | Tipo |
-|-----|--------|------|
-| A | Fecha | date |
-| B | Monto | number |
-| C | Cuenta | string |
-| D | Categoría | string |
-| E | Monto en pesos | number (fórmula) |
-| F | Monto en dólares | number (fórmula) |
-| G | Nota | string |
-
-#### Hoja: Transferencias
-| Col | Nombre | Tipo |
-|-----|--------|------|
-| A | Fecha | date |
-| B | Cuenta saliente | string |
-| C | Cuenta entrante | string |
-| D | Monto saliente | number |
-| E | Monto entrante | number |
-| F | Nota | string |
 
 ---
 
@@ -357,10 +289,10 @@ npm run deploy
 
 ```css
 /* Colores principales */
+--accent-primary: #14b8a6;  /* Acciones primarias (teal) */
 --accent-green: #22c55e;    /* Ingresos, éxito */
 --accent-red: #ef4444;      /* Gastos, error */
 --accent-blue: #3b82f6;     /* Transferencias, info */
---accent-purple: #8b5cf6;   /* Acciones primarias */
 
 /* Dark Mode */
 --bg-primary: #0a0a0a;
@@ -384,10 +316,9 @@ npm run deploy
 ## Notas para Desarrollo
 
 ### ⚠️ Reglas Críticas
-1. **No sobrescribir columnas E y F** en Gastos e Ingresos (fórmulas)
-2. **Formato de fecha**: ISO `yyyy-mm-dd`
-3. **Montos**: Enviar como número, sin símbolos
-4. Cada modificación en Apps Script requiere **nueva implementación**
+1. **Formato de fecha**: ISO `yyyy-mm-dd`
+2. **Montos**: Enviar como número, sin símbolos
+3. Las consultas a Supabase requieren que el usuario esté autenticado (RLS habilitado)
 
 ### Sistema de Cuotas
 1. Se genera `idCompra` único

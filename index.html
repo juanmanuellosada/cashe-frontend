@@ -3,6 +3,43 @@
   <head>
     <meta charset="UTF-8" />
 
+    <!-- Primary Meta Tags -->
+    <title>Cashé - Gestión de Finanzas Personales</title>
+    <meta name="title" content="Cashé - Gestión de Finanzas Personales" />
+    <meta name="description" content="Controlá tus ingresos, gastos y transferencias en un solo lugar. Multi-moneda, tarjetas de crédito, estadísticas y más. Tu app de finanzas personales." />
+    <meta name="keywords" content="finanzas personales, gastos, ingresos, presupuesto, ahorro, dinero, argentina, pesos, dolares, tarjetas de credito, control financiero" />
+    <meta name="author" content="Cashé" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Spanish" />
+    <meta name="revisit-after" content="7 days" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://juanmanuellosada.github.io/cashe-frontend/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://juanmanuellosada.github.io/cashe-frontend/" />
+    <meta property="og:title" content="Cashé - Gestión de Finanzas Personales" />
+    <meta property="og:description" content="Controlá tus ingresos, gastos y transferencias en un solo lugar. Multi-moneda, tarjetas de crédito, estadísticas y más." />
+    <meta property="og:image" content="https://juanmanuellosada.github.io/cashe-frontend/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:site_name" content="Cashé" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://juanmanuellosada.github.io/cashe-frontend/" />
+    <meta property="twitter:title" content="Cashé - Gestión de Finanzas Personales" />
+    <meta property="twitter:description" content="Controlá tus ingresos, gastos y transferencias en un solo lugar. Multi-moneda, tarjetas de crédito, estadísticas y más." />
+    <meta property="twitter:image" content="https://juanmanuellosada.github.io/cashe-frontend/og-image.png" />
+
+    <!-- Viewport & Theme -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#14b8a6" />
+    <meta name="msapplication-TileColor" content="#14b8a6" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+
     <!-- Premium Typography - Satoshi & Cabinet Grotesk -->
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link
@@ -16,12 +53,7 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="192x192"
-      href="/icons/icon-192.png"
-    />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
 
     <!-- Íconos para iOS -->
     <link rel="apple-touch-icon" href="/icons/icon-180.png" />
@@ -29,30 +61,44 @@
     <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
 
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#07070a" />
-    <meta
-      name="description"
-      content="Cashé - Gestiona tus finanzas personales, controla ingresos, gastos y transferencias"
-    />
-    <title>Cashé</title>
-
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Cashé" />
+    <meta name="application-name" content="Cashé" />
+    <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Preconnect to API -->
     <link rel="preconnect" href="https://script.google.com" />
+    <link rel="dns-prefetch" href="https://script.google.com" />
+
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Cashé",
+      "description": "Aplicación de gestión de finanzas personales. Controlá tus ingresos, gastos y transferencias.",
+      "url": "https://juanmanuellosada.github.io/cashe-frontend/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "ARS"
+      },
+      "featureList": [
+        "Control de gastos e ingresos",
+        "Multi-moneda (ARS/USD)",
+        "Gestión de tarjetas de crédito",
+        "Estadísticas y gráficos",
+        "Transferencias entre cuentas"
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
