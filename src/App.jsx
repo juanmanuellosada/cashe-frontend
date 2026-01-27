@@ -26,6 +26,7 @@ const Statistics = lazy(() => import('./pages/Statistics'))
 const Comparador = lazy(() => import('./pages/Comparador'))
 const CategorySummary = lazy(() => import('./pages/CategorySummary'))
 const CreditCards = lazy(() => import('./pages/CreditCards'))
+const Attachments = lazy(() => import('./pages/Attachments'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -164,6 +165,15 @@ function App() {
                 <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                   <Suspense fallback={<PageLoader />}>
                     <CreditCards />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/adjuntos" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Attachments />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

@@ -85,11 +85,14 @@ export default function SortDropdown({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
         </svg>
         <span className="hidden sm:inline">{currentOption?.label}</span>
-        {/* Order indicator button */}
-        <button
+        {/* Order indicator */}
+        <span
           onClick={toggleOrder}
-          className="p-0.5 rounded hover:bg-white/10 transition-colors"
+          className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
           title={value.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && toggleOrder(e)}
         >
           <svg
             className={`w-3.5 h-3.5 transition-transform duration-200 ${value.sortOrder === 'asc' ? 'rotate-180' : ''}`}
@@ -99,7 +102,7 @@ export default function SortDropdown({
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-        </button>
+        </span>
       </button>
 
       {/* Dropdown menu */}

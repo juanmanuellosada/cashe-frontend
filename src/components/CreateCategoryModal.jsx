@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react';
 import { addCategory } from '../services/supabaseApi';
-import IconPicker from './IconPicker';
-import { isEmoji, resolveIconPath } from '../services/iconStorage';
+import CategoryIconPicker from './CategoryIconPicker';
+import { isEmoji } from '../services/iconStorage';
+import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 
 function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(null);
+  const [iconCatalogId, setIconCatalogId] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Store filename for preview
+  const [catalogFilename, setCatalogFilename] = useState(null);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setName('');
       setIcon(null);
+      setIconCatalogId(null);
+      setCatalogFilename(null);
       setError('');
     }
   }, [isOpen]);
@@ -22,6 +28,18 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   const isIncome = type === 'ingreso';
   const typeLabel = isIncome ? 'ingreso' : 'gasto';
   const accentColor = isIncome ? 'var(--accent-green)' : 'var(--accent-red)';
+
+  const handleIconSelect = ({ type: iconType, value, iconCatalogId: catId }) => {
+    if (iconType === 'logo') {
+      setIcon(null);
+      setIconCatalogId(catId);
+      setCatalogFilename(value); // filename
+    } else {
+      setIcon(value);
+      setIconCatalogId(null);
+      setCatalogFilename(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,22 +51,25 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
     setError('');
 
     try {
-      // Build final name - prepend emoji if selected
+      // Build final name - prepend emoji if selected (and no catalog icon)
       let finalName = name.trim();
       const iconIsEmoji = icon && isEmoji(icon);
-      if (iconIsEmoji) {
+      if (iconIsEmoji && !iconCatalogId) {
         finalName = `${icon} ${finalName}`;
       }
 
-      const result = await addCategory({
+      await addCategory({
         nombre: finalName,
         tipo: type,
-        icon: iconIsEmoji ? null : icon, // Only save non-emoji icons to icon field
+        icon: (iconIsEmoji || iconCatalogId) ? null : icon,
+        icon_catalog_id: iconCatalogId || null,
       });
 
       onCategoryCreated(finalName);
       setName('');
       setIcon(null);
+      setIconCatalogId(null);
+      setCatalogFilename(null);
       onClose();
     } catch (err) {
       console.error('Error creating category:', err);
@@ -60,15 +81,38 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
 
   if (!isOpen) return null;
 
+  const hasIcon = icon || iconCatalogId;
+
+  // Render icon preview
+  const renderIconPreview = () => {
+    if (iconCatalogId && catalogFilename) {
+      return <img src={getIconCatalogUrl(catalogFilename)} alt="" className="w-7 h-7 rounded object-contain" />;
+    }
+    if (icon && isEmoji(icon)) {
+      return <span className="text-xl">{icon}</span>;
+    }
+    return (
+      <svg
+        className="w-5 h-5"
+        style={{ color: 'var(--text-muted)' }}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[110] flex items-start justify-center pt-16 p-4 bg-black/50">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="fixed inset-0"
         onClick={onClose}
       />
       <div
         className="relative w-full max-w-sm rounded-2xl p-5 animate-scale-in card-elevated"
-        style={{ 
+        style={{
           backgroundColor: 'var(--bg-secondary)',
           boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)'
         }}
@@ -108,27 +152,11 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
               className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center transition-all duration-200 border-2 border-dashed hover:border-solid"
               style={{
                 backgroundColor: 'var(--bg-tertiary)',
-                borderColor: icon ? accentColor : 'var(--border-medium)',
+                borderColor: hasIcon ? accentColor : 'var(--border-medium)',
               }}
               title="Elegir ícono"
             >
-              {icon ? (
-                isEmoji(icon) ? (
-                  <span className="text-xl">{icon}</span>
-                ) : (
-                  <img src={resolveIconPath(icon)} alt="" className="w-7 h-7 rounded object-cover" />
-                )
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  style={{ color: 'var(--text-muted)' }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              )}
+              {renderIconPreview()}
             </button>
 
             {/* Name input */}
@@ -170,16 +198,13 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
         </form>
       </div>
 
-      {/* Icon Picker */}
-      <IconPicker
+      {/* Category Icon Picker */}
+      <CategoryIconPicker
         isOpen={showIconPicker}
         onClose={() => setShowIconPicker(false)}
-        onSelect={(selectedIcon) => {
-          setIcon(selectedIcon);
-          setShowIconPicker(false);
-        }}
-        currentValue={icon}
-        title="Elegir ícono para la categoría"
+        onSelect={handleIconSelect}
+        currentIcon={icon}
+        currentIconCatalogId={iconCatalogId}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
+import AttachmentInput from '../AttachmentInput';
 
 function TransferForm({ accounts, onSubmit, loading, prefillData }) {
   const today = new Date().toISOString().split('T')[0];
@@ -20,6 +21,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
     : true;
   const [sameAmount, setSameAmount] = useState(initialSameAmount);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [attachment, setAttachment] = useState(null);
 
   // Sincronizar montos cuando sameAmount está activo
   useEffect(() => {
@@ -58,11 +60,13 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
         ...formData,
         montoSaliente: parseFloat(formData.montoSaliente),
         montoEntrante: parseFloat(formData.montoEntrante),
+        attachment,
       },
     });
 
     if (result !== false) {
       setShowSuccess(true);
+      setAttachment(null); // Limpiar adjunto despues de guardar
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };
@@ -310,6 +314,13 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
           />
         </div>
       </div>
+
+      {/* Adjunto */}
+      <AttachmentInput
+        value={attachment}
+        onChange={setAttachment}
+        disabled={loading}
+      />
 
       {/* Submit Button */}
       <button

@@ -6,6 +6,7 @@ import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
 import SortDropdown from './SortDropdown';
 import { useError } from '../contexts/ErrorContext';
+import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 
 function MovementsList({
   title,
@@ -875,6 +876,37 @@ function MovementsList({
                     </p>
                   </div>
                 </button>
+
+                {/* Attachment indicator */}
+                {movement.attachmentUrl && !selectionMode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadAttachment(movement.attachmentUrl, movement.attachmentName);
+                    }}
+                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105"
+                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                    title={movement.attachmentName ? `Descargar: ${movement.attachmentName}` : 'Descargar adjunto'}
+                  >
+                    {isImageFile(movement.attachmentName) ? (
+                      <img
+                        src={movement.attachmentUrl}
+                        alt="Adjunto"
+                        className="w-6 h-6 rounded object-cover"
+                      />
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        style={{ color: 'var(--accent-primary)' }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                    )}
+                  </button>
+                )}
 
                 {/* Delete button - hidden by default and in selection mode */}
                 {!selectionMode && (

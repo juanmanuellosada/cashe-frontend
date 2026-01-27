@@ -227,6 +227,25 @@ body {
   }
 }
 
+/* Force visible thin scrollbar for category chip containers */
+.chips-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+.chips-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.chips-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chips-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 9999px;
+}
+.chips-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    FORM ELEMENTS - Refined Inputs
    ═══════════════════════════════════════════════════════════════════════════ */

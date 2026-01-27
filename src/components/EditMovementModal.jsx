@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import LoadingSpinner from './LoadingSpinner';
+import AttachmentInput from './AttachmentInput';
 import { formatCurrency } from '../utils/format';
 import { useError } from '../contexts/ErrorContext';
 
@@ -37,6 +38,10 @@ function EditMovementModal({
   // Estado para modal de confirmación de eliminación
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Estados para adjuntos
+  const [newAttachment, setNewAttachment] = useState(null);
+  const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
+
   const isTransfer = movement?.tipo === 'transferencia';
 
   useEffect(() => {
@@ -63,6 +68,9 @@ function EditMovementModal({
           nota: movement.nota || '',
         });
       }
+      // Reset attachment states
+      setNewAttachment(null);
+      setRemoveExistingAttachment(false);
     }
   }, [movement, isTransfer]);
 
@@ -87,12 +95,16 @@ function EditMovementModal({
         montoSaliente: parseFloat(transferData.montoSaliente),
         montoEntrante: parseFloat(transferData.montoEntrante),
         nota: transferData.nota,
+        newAttachment,
+        removeAttachment: removeExistingAttachment && !newAttachment,
       });
     } else {
       onSave?.({
         ...movement,
         ...formData,
         monto: parseFloat(formData.monto),
+        newAttachment,
+        removeAttachment: removeExistingAttachment && !newAttachment,
       });
     }
   };
@@ -315,6 +327,25 @@ function EditMovementModal({
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                 />
               </div>
+
+              {/* Adjunto */}
+              <AttachmentInput
+                value={newAttachment}
+                existingAttachment={
+                  !removeExistingAttachment && movement?.attachmentUrl
+                    ? { url: movement.attachmentUrl, name: movement.attachmentName }
+                    : null
+                }
+                onChange={(file) => {
+                  setNewAttachment(file);
+                  if (file) setRemoveExistingAttachment(true);
+                }}
+                onRemoveExisting={() => {
+                  setRemoveExistingAttachment(true);
+                  setNewAttachment(null);
+                }}
+                disabled={loading}
+              />
             </>
           ) : (
             // Income/Expense form
@@ -391,11 +422,16 @@ function EditMovementModal({
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                 >
                   <option value="">Seleccionar categoria</option>
-                  {currentCategories?.map((categoria) => (
-                    <option key={categoria} value={categoria}>
-                      {categoria}
-                    </option>
-                  ))}
+                  {currentCategories?.map((categoria) => {
+                    // Soportar tanto objetos { value, label } como strings
+                    const value = typeof categoria === 'string' ? categoria : categoria.value;
+                    const label = typeof categoria === 'string' ? categoria : (categoria.icon ? `${categoria.icon} ${categoria.label}` : categoria.label);
+                    return (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -414,6 +450,25 @@ function EditMovementModal({
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                 />
               </div>
+
+              {/* Adjunto */}
+              <AttachmentInput
+                value={newAttachment}
+                existingAttachment={
+                  !removeExistingAttachment && movement?.attachmentUrl
+                    ? { url: movement.attachmentUrl, name: movement.attachmentName }
+                    : null
+                }
+                onChange={(file) => {
+                  setNewAttachment(file);
+                  if (file) setRemoveExistingAttachment(true);
+                }}
+                onRemoveExisting={() => {
+                  setRemoveExistingAttachment(true);
+                  setNewAttachment(null);
+                }}
+                disabled={loading}
+              />
             </>
           )}
 

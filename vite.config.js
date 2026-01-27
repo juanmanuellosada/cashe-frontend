@@ -2,23 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const isProd = process.env.NODE_ENV === 'production'
-const basePath = isProd ? '/cashe-frontend/' : '/'
-
-// Custom plugin to redirect /cashe-frontend to /cashe-frontend/
-const redirectPlugin = () => ({
-  name: 'redirect-plugin',
-  configureServer(server) {
-    server.middlewares.use((req, res, next) => {
-      if (req.url === '/cashe-frontend') {
-        res.writeHead(301, { Location: '/cashe-frontend/' });
-        res.end();
-        return;
-      }
-      next();
-    });
-  }
-});
+const basePath = '/'
 
 // https://vite.dev/config/
 export default defineConfig({

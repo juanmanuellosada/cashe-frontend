@@ -2,6 +2,7 @@ import { useState } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
+import AttachmentInput from '../AttachmentInput';
 
 function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
@@ -16,6 +17,7 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [attachment, setAttachment] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,11 +36,13 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
       data: {
         ...formData,
         monto: parseFloat(formData.monto),
+        attachment,
       },
     });
 
     if (result !== false) {
       setShowSuccess(true);
+      setAttachment(null); // Limpiar adjunto despues de guardar
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };
@@ -203,6 +207,13 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
           />
         </div>
       </div>
+
+      {/* Adjunto */}
+      <AttachmentInput
+        value={attachment}
+        onChange={setAttachment}
+        disabled={loading}
+      />
 
       {/* Submit Button */}
       <button

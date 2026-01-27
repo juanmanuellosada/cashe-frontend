@@ -1,4 +1,6 @@
 import { supabase } from '../config/supabase';
+import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from './attachmentStorage';
+import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 
 // ============================================
 // CACHE MANAGEMENT (mantener compatibilidad)
@@ -258,7 +260,65 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
   return { success: true, account: data };
 };
 
+/**
+ * Elimina todos los adjuntos asociados a una cuenta
+ * Llamar ANTES de eliminar la cuenta
+ */
+const deleteAccountAttachments = async (accountId) => {
+  const userId = await getUserId();
+
+  // 1. Eliminar adjuntos de movimientos de esta cuenta
+  const { data: movements } = await supabase
+    .from('movements')
+    .select('attachment_url')
+    .eq('user_id', userId)
+    .eq('account_id', accountId)
+    .not('attachment_url', 'is', null);
+
+  for (const m of (movements || [])) {
+    if (m.attachment_url) {
+      await deleteAttachment(m.attachment_url);
+    }
+  }
+
+  // 2. Eliminar adjuntos de transferencias (from y to)
+  const { data: transfersFrom } = await supabase
+    .from('transfers')
+    .select('attachment_url')
+    .eq('user_id', userId)
+    .eq('from_account_id', accountId)
+    .not('attachment_url', 'is', null);
+
+  const { data: transfersTo } = await supabase
+    .from('transfers')
+    .select('attachment_url')
+    .eq('user_id', userId)
+    .eq('to_account_id', accountId)
+    .not('attachment_url', 'is', null);
+
+  for (const t of [...(transfersFrom || []), ...(transfersTo || [])]) {
+    if (t.attachment_url) {
+      await deleteAttachment(t.attachment_url);
+    }
+  }
+
+  // 3. Eliminar adjuntos de resúmenes de tarjeta
+  const { data: statements } = await supabase
+    .from('card_statement_attachments')
+    .select('statement_url, receipt_url')
+    .eq('user_id', userId)
+    .eq('account_id', accountId);
+
+  for (const s of (statements || [])) {
+    if (s.statement_url) await deleteAttachment(s.statement_url);
+    if (s.receipt_url) await deleteAttachment(s.receipt_url);
+  }
+};
+
 export const deleteAccount = async (idOrRowIndex) => {
+  // Eliminar adjuntos primero
+  await deleteAccountAttachments(idOrRowIndex);
+
   const { error } = await supabase
     .from('accounts')
     .delete()
@@ -272,7 +332,12 @@ export const deleteAccount = async (idOrRowIndex) => {
 export const bulkDeleteAccounts = async (accounts) => {
   const ids = accounts.map(a => a.id).filter(Boolean);
   if (ids.length === 0) return { success: true };
-  
+
+  // Eliminar adjuntos de cada cuenta
+  for (const id of ids) {
+    await deleteAccountAttachments(id);
+  }
+
   const { error } = await supabase
     .from('accounts')
     .delete()
@@ -301,28 +366,37 @@ export const getCategories = () => withDeduplication('categories', async () => {
 
   const { data: categories, error } = await supabase
     .from('categories')
-    .select('*')
+    .select('*, icon_catalog:icon_catalog_id(id, name, filename)')
     .eq('user_id', userId)
     .order('name');
 
   if (error) throw error;
 
   const mapCategory = (c) => {
+    // If there's a catalog icon, use it
+    const hasCatalogIcon = c.icon_catalog && c.icon_catalog.filename;
     // If there's a custom icon (URL), use it
     // Otherwise, try to extract an emoji from the name
     const customIcon = c.icon || null;
-    const emojiFromName = !customIcon ? extractLeadingEmoji(c.name) : null;
+    const emojiFromName = (!customIcon && !hasCatalogIcon) ? extractLeadingEmoji(c.name) : null;
 
     // If we're using an emoji from the name as icon, remove it from the label
     let displayLabel = c.name;
-    if (emojiFromName && !customIcon) {
+    if (emojiFromName && !customIcon && !hasCatalogIcon) {
       displayLabel = c.name.slice(emojiFromName.length).trim();
     }
+
+    // For Combobox compatibility: set icon to catalog URL if available
+    const resolvedIcon = hasCatalogIcon
+      ? getIconCatalogUrl(c.icon_catalog.filename)
+      : (customIcon || emojiFromName);
 
     return {
       value: c.name,  // Keep original name as value for saving
       label: displayLabel,  // Clean label for display
-      icon: customIcon || emojiFromName
+      icon: resolvedIcon,
+      icon_catalog: hasCatalogIcon ? c.icon_catalog : null,
+      icon_catalog_id: c.icon_catalog_id || null,
     };
   };
 
@@ -344,10 +418,10 @@ export const getCategoriesWithId = async () => {
   if (cached) return cached;
 
   const userId = await getUserId();
-  
+
   const { data: categories, error } = await supabase
     .from('categories')
-    .select('*')
+    .select('*, icon_catalog:icon_catalog_id(id, name, filename)')
     .eq('user_id', userId)
     .order('name');
 
@@ -359,14 +433,16 @@ export const getCategoriesWithId = async () => {
       rowIndex: c.id, // compatibility
       nombre: c.name,
       tipo: c.type === 'income' ? 'Ingreso' : 'Gasto',
-      icon: c.icon || null
+      icon: c.icon || null,
+      icon_catalog_id: c.icon_catalog_id || null,
+      icon_catalog: (c.icon_catalog && c.icon_catalog.filename) ? c.icon_catalog : null,
     }))
   };
   setCachedData(cacheKey, result);
   return result;
 };
 
-export const addCategory = async ({ nombre, tipo, icon }) => {
+export const addCategory = async ({ nombre, tipo, icon, icon_catalog_id }) => {
   const userId = await getUserId();
 
   // Normalizar el tipo a income/expense
@@ -380,7 +456,8 @@ export const addCategory = async ({ nombre, tipo, icon }) => {
       user_id: userId,
       name: nombre,
       type: normalizedType,
-      icon: icon || null
+      icon: icon || null,
+      icon_catalog_id: icon_catalog_id || null,
     })
     .select()
     .single();
@@ -390,14 +467,15 @@ export const addCategory = async ({ nombre, tipo, icon }) => {
   return { success: true, category: data };
 };
 
-export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon }) => {
+export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_catalog_id }) => {
   const categoryId = id || rowIndex;
   const { data, error } = await supabase
     .from('categories')
     .update({
       name: nombre,
       type: tipo === 'Ingreso' ? 'income' : 'expense',
-      icon: icon !== undefined ? icon : null
+      icon: icon !== undefined ? icon : null,
+      icon_catalog_id: icon_catalog_id || null,
     })
     .eq('id', categoryId)
     .select()
@@ -436,7 +514,7 @@ export const bulkDeleteCategories = async (categoryIds) => {
 const mapMovementFromDB = (m, accounts, categories) => {
   const account = accounts?.find(a => a.id === m.account_id);
   const category = categories?.find(c => c.id === m.category_id);
-  
+
   return {
     id: m.id,
     rowIndex: m.id, // compatibility
@@ -450,9 +528,12 @@ const mapMovementFromDB = (m, accounts, categories) => {
     categoryId: m.category_id,
     // Installment info
     idCompra: m.installment_purchase_id,
-    cuota: m.installment_number && m.total_installments 
-      ? `${m.installment_number}/${m.total_installments}` 
+    cuota: m.installment_number && m.total_installments
+      ? `${m.installment_number}/${m.total_installments}`
       : null,
+    // Attachment info
+    attachmentUrl: m.attachment_url,
+    attachmentName: m.attachment_name,
   };
 };
 
@@ -506,9 +587,9 @@ export const getIncomes = async () => {
   return result;
 };
 
-export const addExpense = async ({ fecha, monto, cuenta, categoria, nota }) => {
+export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment }) => {
   const userId = await getUserId();
-  
+
   // Get account and category IDs
   const { data: account } = await supabase
     .from('accounts')
@@ -524,6 +605,16 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota }) => {
     .eq('name', categoria)
     .single();
 
+  // Subir adjunto si existe
+  let attachmentUrl = null;
+  let attachmentName = null;
+
+  if (attachment) {
+    const result = await uploadAttachment(attachment, userId, 'movements');
+    attachmentUrl = result.url;
+    attachmentName = result.name;
+  }
+
   const { data, error } = await supabase
     .from('movements')
     .insert({
@@ -533,7 +624,9 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota }) => {
       amount: monto,
       account_id: account?.id,
       category_id: categoryData?.id,
-      note: nota || null
+      note: nota || null,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
     })
     .select()
     .single();
@@ -543,9 +636,9 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota }) => {
   return { success: true, movement: data };
 };
 
-export const addIncome = async ({ fecha, monto, cuenta, categoria, nota }) => {
+export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachment }) => {
   const userId = await getUserId();
-  
+
   const { data: account } = await supabase
     .from('accounts')
     .select('id')
@@ -560,6 +653,16 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota }) => {
     .eq('name', categoria)
     .single();
 
+  // Subir adjunto si existe
+  let attachmentUrl = null;
+  let attachmentName = null;
+
+  if (attachment) {
+    const result = await uploadAttachment(attachment, userId, 'movements');
+    attachmentUrl = result.url;
+    attachmentName = result.name;
+  }
+
   const { data, error } = await supabase
     .from('movements')
     .insert({
@@ -569,7 +672,9 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota }) => {
       amount: monto,
       account_id: account?.id,
       category_id: categoryData?.id,
-      note: nota || null
+      note: nota || null,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
     })
     .select()
     .single();
@@ -581,9 +686,9 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota }) => {
 
 export const updateMovement = async (movement) => {
   console.log('updateMovement called with:', movement);
-  
+
   const userId = await getUserId();
-  
+
   // Buscar cuenta
   const { data: accounts } = await supabase
     .from('accounts')
@@ -609,16 +714,42 @@ export const updateMovement = async (movement) => {
 
   const id = movement.id || movement.rowIndex;
   console.log('Movement ID to update:', id);
-  
+
+  // Manejar adjuntos
+  let attachmentUrl = movement.attachmentUrl;
+  let attachmentName = movement.attachmentName;
+
+  // Si hay nuevo archivo, subir
+  if (movement.newAttachment) {
+    // Eliminar adjunto anterior si existe
+    if (movement.attachmentUrl) {
+      await deleteAttachment(movement.attachmentUrl);
+    }
+    const result = await uploadAttachment(movement.newAttachment, userId, 'movements');
+    attachmentUrl = result.url;
+    attachmentName = result.name;
+  }
+
+  // Si se marcó para eliminar
+  if (movement.removeAttachment) {
+    if (movement.attachmentUrl) {
+      await deleteAttachment(movement.attachmentUrl);
+    }
+    attachmentUrl = null;
+    attachmentName = null;
+  }
+
   const updatePayload = {
     date: movement.fecha,
     amount: movement.monto,
     account_id: account?.id,
     category_id: categoryId,
-    note: movement.nota || null
+    note: movement.nota || null,
+    attachment_url: attachmentUrl,
+    attachment_name: attachmentName,
   };
   console.log('Update payload:', updatePayload);
-  
+
   const { data, error } = await supabase
     .from('movements')
     .update(updatePayload)
@@ -635,7 +766,12 @@ export const updateMovement = async (movement) => {
 
 export const deleteMovement = async (movement) => {
   const id = movement.id || movement.rowIndex;
-  
+
+  // Eliminar adjunto si existe
+  if (movement.attachmentUrl) {
+    await deleteAttachment(movement.attachmentUrl);
+  }
+
   const { error } = await supabase
     .from('movements')
     .delete()
@@ -648,7 +784,14 @@ export const deleteMovement = async (movement) => {
 
 export const deleteMultipleMovements = async (movements) => {
   const ids = movements.map(m => m.id || m.rowIndex);
-  
+
+  // Eliminar adjuntos de los movimientos que los tengan
+  const deletePromises = movements
+    .filter(m => m.attachmentUrl)
+    .map(m => deleteAttachment(m.attachmentUrl));
+
+  await Promise.all(deletePromises);
+
   const { error } = await supabase
     .from('movements')
     .delete()
@@ -727,7 +870,9 @@ export const getTransfers = async () => {
         montoSaliente: parseFloat(t.from_amount),
         montoEntrante: parseFloat(t.to_amount),
         nota: t.note || '',
-        tipo: 'transferencia'
+        tipo: 'transferencia',
+        attachmentUrl: t.attachment_url,
+        attachmentName: t.attachment_name,
       };
     })
   };
@@ -735,9 +880,9 @@ export const getTransfers = async () => {
   return result;
 };
 
-export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, montoSaliente, montoEntrante, nota }) => {
+export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, montoSaliente, montoEntrante, nota, attachment }) => {
   const userId = await getUserId();
-  
+
   const { data: fromAccount } = await supabase
     .from('accounts')
     .select('id')
@@ -752,6 +897,16 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
     .eq('name', cuentaEntrante)
     .single();
 
+  // Subir adjunto si existe
+  let attachmentUrl = null;
+  let attachmentName = null;
+
+  if (attachment) {
+    const result = await uploadAttachment(attachment, userId, 'transfers');
+    attachmentUrl = result.url;
+    attachmentName = result.name;
+  }
+
   const { data, error } = await supabase
     .from('transfers')
     .insert({
@@ -761,7 +916,9 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
       to_account_id: toAccount?.id,
       from_amount: montoSaliente,
       to_amount: montoEntrante,
-      note: nota || null
+      note: nota || null,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
     })
     .select()
     .single();
@@ -769,6 +926,88 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
   if (error) throw error;
   invalidateCache('transfer');
   return { success: true, transfer: data };
+};
+
+export const updateTransfer = async (transfer) => {
+  const userId = await getUserId();
+
+  const { data: fromAccount } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('name', transfer.cuentaSaliente)
+    .single();
+
+  const { data: toAccount } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('name', transfer.cuentaEntrante)
+    .single();
+
+  const id = transfer.id || transfer.rowIndex;
+
+  // Manejar adjuntos
+  let attachmentUrl = transfer.attachmentUrl;
+  let attachmentName = transfer.attachmentName;
+
+  // Si hay nuevo archivo, subir
+  if (transfer.newAttachment) {
+    // Eliminar adjunto anterior si existe
+    if (transfer.attachmentUrl) {
+      await deleteAttachment(transfer.attachmentUrl);
+    }
+    const result = await uploadAttachment(transfer.newAttachment, userId, 'transfers');
+    attachmentUrl = result.url;
+    attachmentName = result.name;
+  }
+
+  // Si se marcó para eliminar
+  if (transfer.removeAttachment) {
+    if (transfer.attachmentUrl) {
+      await deleteAttachment(transfer.attachmentUrl);
+    }
+    attachmentUrl = null;
+    attachmentName = null;
+  }
+
+  const { data, error } = await supabase
+    .from('transfers')
+    .update({
+      date: transfer.fecha,
+      from_account_id: fromAccount?.id,
+      to_account_id: toAccount?.id,
+      from_amount: transfer.montoSaliente,
+      to_amount: transfer.montoEntrante,
+      note: transfer.nota || null,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('transfer');
+  return { success: true, transfer: data };
+};
+
+export const deleteTransfer = async (transfer) => {
+  const id = transfer.id || transfer.rowIndex;
+
+  // Eliminar adjunto si existe
+  if (transfer.attachmentUrl) {
+    await deleteAttachment(transfer.attachmentUrl);
+  }
+
+  const { error } = await supabase
+    .from('transfers')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  invalidateCache('transfer');
+  return { success: true };
 };
 
 // ============================================
@@ -1389,3 +1628,125 @@ export const invalidateMovementCache = invalidateCache;
 
 // Alias for addExpenseWithInstallments (used in credit cards)
 export const addExpenseWithInstallments = addInstallmentPurchase;
+
+// ============================================
+// CARD STATEMENT ATTACHMENTS
+// ============================================
+export const getCardStatementAttachments = async (accountId) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('card_statement_attachments')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('account_id', accountId);
+
+  if (error) throw error;
+
+  // Devolver mapa por período para acceso rápido
+  const byPeriod = {};
+  (data || []).forEach(row => {
+    byPeriod[row.period] = {
+      id: row.id,
+      statementUrl: row.statement_url,
+      statementName: row.statement_name,
+      receiptUrl: row.receipt_url,
+      receiptName: row.receipt_name,
+    };
+  });
+
+  return byPeriod;
+};
+
+export const saveCardStatementAttachments = async ({ accountId, period, statementFile, receiptFile, existing }) => {
+  const userId = await getUserId();
+
+  let statementUrl = existing?.statementUrl || null;
+  let statementName = existing?.statementName || null;
+  let receiptUrl = existing?.receiptUrl || null;
+  let receiptName = existing?.receiptName || null;
+
+  // Subir nuevo PDF de resumen
+  if (statementFile) {
+    // Eliminar anterior si existe
+    if (statementUrl) await deleteAttachment(statementUrl);
+    const result = await uploadStatementAttachment(statementFile, userId, 'statement');
+    statementUrl = result.url;
+    statementName = result.name;
+  }
+
+  // Subir nuevo comprobante de pago
+  if (receiptFile) {
+    if (receiptUrl) await deleteAttachment(receiptUrl);
+    const result = await uploadStatementAttachment(receiptFile, userId, 'receipt');
+    receiptUrl = result.url;
+    receiptName = result.name;
+  }
+
+  const { data, error } = await supabase
+    .from('card_statement_attachments')
+    .upsert({
+      user_id: userId,
+      account_id: accountId,
+      period,
+      statement_url: statementUrl,
+      statement_name: statementName,
+      receipt_url: receiptUrl,
+      receipt_name: receiptName,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,account_id,period' })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    statementUrl: data.statement_url,
+    statementName: data.statement_name,
+    receiptUrl: data.receipt_url,
+    receiptName: data.receipt_name,
+  };
+};
+
+export const deleteCardStatementAttachment = async ({ accountId, period, field }) => {
+  const userId = await getUserId();
+
+  // Obtener registro actual
+  const { data: current } = await supabase
+    .from('card_statement_attachments')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('account_id', accountId)
+    .eq('period', period)
+    .single();
+
+  if (!current) return;
+
+  // Eliminar archivo del storage
+  if (field === 'statement' && current.statement_url) {
+    await deleteAttachment(current.statement_url);
+  } else if (field === 'receipt' && current.receipt_url) {
+    await deleteAttachment(current.receipt_url);
+  }
+
+  const updateData = field === 'statement'
+    ? { statement_url: null, statement_name: null }
+    : { receipt_url: null, receipt_name: null };
+
+  // Si ambos quedan null, eliminar el registro entero
+  const otherField = field === 'statement' ? 'receipt_url' : 'statement_url';
+  if (!current[otherField]) {
+    await supabase
+      .from('card_statement_attachments')
+      .delete()
+      .eq('id', current.id);
+  } else {
+    await supabase
+      .from('card_statement_attachments')
+      .update(updateData)
+      .eq('id', current.id);
+  }
+
+  return { success: true };
+};

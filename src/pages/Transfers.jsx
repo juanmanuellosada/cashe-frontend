@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllTransfers, getAccounts, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
+import { getAllTransfers, getAccounts, updateTransfer, deleteTransfer } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
@@ -34,10 +34,10 @@ function Transfers() {
     }
   };
 
-  const handleSave = async (movement) => {
+  const handleSave = async (transfer) => {
     try {
       setSaving(true);
-      await updateMovement(movement);
+      await updateTransfer(transfer);
       setEditingMovement(null);
       await fetchData();
     } catch (err) {
@@ -48,14 +48,14 @@ function Transfers() {
     }
   };
 
-  const handleDelete = async (movement) => {
+  const handleDelete = async (transfer) => {
     // Cerrar modal y remover de lista inmediatamente (optimistic)
     setEditingMovement(null);
-    setTransfers(prev => prev.filter(t => t.rowIndex !== movement.rowIndex));
+    setTransfers(prev => prev.filter(t => t.rowIndex !== transfer.rowIndex));
 
     // Borrar en background
     try {
-      await deleteMovement(movement);
+      await deleteTransfer(transfer);
     } catch (err) {
       console.error('Error deleting:', err);
       showError('No se pudo eliminar la transferencia', err.message);
@@ -64,25 +64,15 @@ function Transfers() {
     }
   };
 
-  const handleBulkDelete = async (movements) => {
+  const handleBulkDelete = async (transfersToDelete) => {
     // Remover de lista inmediatamente (optimistic)
-    const rowIndexes = new Set(movements.map(m => m.rowIndex));
+    const rowIndexes = new Set(transfersToDelete.map(t => t.rowIndex));
     setTransfers(prev => prev.filter(t => !rowIndexes.has(t.rowIndex)));
 
     // Borrar en background
-    await bulkDeleteMovements(movements);
-    fetchData();
-  };
-
-  const handleBulkUpdate = async (movements, field, value) => {
-    // Actualizar lista inmediatamente (optimistic)
-    const rowIndexes = new Set(movements.map(m => m.rowIndex));
-    setTransfers(prev => prev.map(t => 
-      rowIndexes.has(t.rowIndex) ? { ...t, [field]: value } : t
-    ));
-
-    // Actualizar en background
-    await bulkUpdateMovements(movements, field, value);
+    for (const transfer of transfersToDelete) {
+      await deleteTransfer(transfer);
+    }
     fetchData();
   };
 
@@ -97,7 +87,6 @@ function Transfers() {
         onMovementClick={setEditingMovement}
         onMovementDelete={handleDelete}
         onBulkDelete={handleBulkDelete}
-        onBulkUpdate={handleBulkUpdate}
         onAddClick={() => setShowAddModal(true)}
         type="transferencia"
       />

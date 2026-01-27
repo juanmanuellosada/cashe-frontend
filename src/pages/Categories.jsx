@@ -3,8 +3,9 @@ import { getCategoriesAll, addCategory, updateCategory, deleteCategory, bulkDele
 import ConfirmModal from '../components/ConfirmModal';
 import Toast from '../components/Toast';
 import { useError } from '../contexts/ErrorContext';
-import IconPicker from '../components/IconPicker';
+import CategoryIconPicker from '../components/CategoryIconPicker';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
+import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 import SortDropdown from '../components/SortDropdown';
 
 function Categories() {
@@ -193,11 +194,13 @@ function Categories() {
 
   // Extract emoji from category name or icon field
   const getCategoryIcon = (category) => {
-    // First check if there's an icon field
-    if (category.icon) return category.icon;
+    // First check if there's an icon_catalog
+    if (category.icon_catalog?.filename) return { type: 'catalog', data: category.icon_catalog };
+    // Then check icon field
+    if (category.icon) return { type: 'icon', data: category.icon };
     // Then try to extract emoji from name
     const emojiMatch = category.nombre.match(/^[\p{Emoji}\u200d]+/u);
-    return emojiMatch ? emojiMatch[0] : null;
+    return emojiMatch ? { type: 'emoji', data: emojiMatch[0] } : null;
   };
 
   // Get name without emoji
@@ -394,10 +397,11 @@ function Categories() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
           {filteredCategories.map((category) => {
             const isIngreso = category.tipo === 'Ingreso';
-            const icon = getCategoryIcon(category);
+            const iconInfo = getCategoryIcon(category);
             const nameWithoutEmoji = getNameWithoutEmoji(category.nombre);
             const isSelected = selectedCategories.includes(category.rowIndex);
-            const iconIsEmoji = icon && isEmoji(icon);
+            const isCatalogIcon = iconInfo?.type === 'catalog';
+            const isEmojiIcon = iconInfo?.type === 'emoji' || (iconInfo?.type === 'icon' && isEmoji(iconInfo.data));
 
             return (
               <div
@@ -441,19 +445,25 @@ function Categories() {
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden"
                     style={{
-                      backgroundColor: icon && !iconIsEmoji
+                      backgroundColor: (isCatalogIcon || (iconInfo && !isEmojiIcon))
                         ? 'transparent'
                         : isIngreso
                           ? 'rgba(34, 197, 94, 0.2)'
                           : 'rgba(239, 68, 68, 0.2)',
                     }}
                   >
-                    {icon ? (
-                      iconIsEmoji ? (
-                        icon
+                    {isCatalogIcon ? (
+                      <img
+                        src={getIconCatalogUrl(iconInfo.data.filename)}
+                        alt={iconInfo.data.name || category.nombre}
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                    ) : iconInfo ? (
+                      isEmojiIcon ? (
+                        iconInfo.data
                       ) : (
                         <img
-                          src={resolveIconPath(icon)}
+                          src={resolveIconPath(iconInfo.data)}
                           alt={category.nombre}
                           className="w-full h-full object-cover rounded-xl"
                         />
@@ -588,6 +598,7 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
 
   // Parse existing category to extract icon if it's stored in the name
   const parseExistingIcon = () => {
+    if (category?.icon_catalog_id) return null; // Icon comes from catalog
     if (category?.icon) return category.icon;
     // Try to extract emoji from name
     const emojiMatch = category?.nombre?.match(/^[\p{Emoji}\u200d]+/u);
@@ -595,7 +606,7 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
   };
 
   const parseExistingName = () => {
-    if (category?.icon) return category?.nombre || '';
+    if (category?.icon || category?.icon_catalog_id) return category?.nombre || '';
     // Remove emoji from name if present
     return (category?.nombre || '').replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim();
   };
@@ -606,7 +617,9 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
     nombre: parseExistingName(),
     tipo: category?.tipo || 'Gasto',
     icon: parseExistingIcon(),
+    icon_catalog_id: category?.icon_catalog_id || null,
   });
+  const [catalogFilename, setCatalogFilename] = useState(category?.icon_catalog?.filename || null);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   const handleChange = (e) => {
@@ -614,26 +627,62 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleIconSelect = (iconValue) => {
-    setFormData(prev => ({ ...prev, icon: iconValue }));
+  const handleIconSelect = ({ type: iconType, value, iconCatalogId }) => {
+    if (iconType === 'logo') {
+      setFormData(prev => ({ ...prev, icon: null, icon_catalog_id: iconCatalogId }));
+      setCatalogFilename(value); // filename
+    } else {
+      setFormData(prev => ({ ...prev, icon: value, icon_catalog_id: null }));
+      setCatalogFilename(null);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Combine icon and name for backward compatibility
     let finalName = formData.nombre;
-    if (formData.icon && isEmoji(formData.icon)) {
+    if (formData.icon && isEmoji(formData.icon) && !formData.icon_catalog_id) {
       // If icon is emoji, prepend it to name
       finalName = `${formData.icon} ${formData.nombre}`;
     }
     onSave({
       ...formData,
       nombre: finalName,
+      icon: (formData.icon && isEmoji(formData.icon)) ? null : formData.icon,
+      icon_catalog_id: formData.icon_catalog_id || null,
     });
   };
 
+  const hasIcon = formData.icon || formData.icon_catalog_id;
+
+  // Render the icon preview
+  const renderIconPreview = () => {
+    if (formData.icon_catalog_id && catalogFilename) {
+      return (
+        <img
+          src={getIconCatalogUrl(catalogFilename)}
+          alt="Ícono"
+          className="w-full h-full object-contain rounded-xl"
+        />
+      );
+    }
+    if (formData.icon) {
+      if (isEmoji(formData.icon)) {
+        return <span className="text-2xl">{formData.icon}</span>;
+      }
+      return (
+        <img
+          src={resolveIconPath(formData.icon)}
+          alt="Ícono"
+          className="w-full h-full object-cover rounded-xl"
+        />
+      );
+    }
+    return <span className="text-2xl">{formData.tipo === 'Ingreso' ? '💰' : '💸'}</span>;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
@@ -675,37 +724,25 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
               className="w-full px-4 py-3 rounded-xl transition-all duration-200 border-2 border-dashed hover:border-solid flex items-center gap-3"
               style={{
                 backgroundColor: 'var(--bg-tertiary)',
-                borderColor: formData.icon ? 'var(--accent-primary)' : 'var(--border-medium)',
+                borderColor: hasIcon ? 'var(--accent-primary)' : 'var(--border-medium)',
               }}
             >
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
                 style={{
-                  backgroundColor: formData.icon
-                    ? (isEmoji(formData.icon) ? (formData.tipo === 'Ingreso' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)') : 'transparent')
+                  backgroundColor: hasIcon
+                    ? (formData.icon_catalog_id ? 'transparent' : (formData.icon && isEmoji(formData.icon) ? (formData.tipo === 'Ingreso' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)') : 'transparent'))
                     : 'var(--bg-secondary)',
                 }}
               >
-                {formData.icon ? (
-                  isEmoji(formData.icon) ? (
-                    <span className="text-2xl">{formData.icon}</span>
-                  ) : (
-                    <img
-                      src={resolveIconPath(formData.icon)}
-                      alt="Ícono"
-                      className="w-full h-full object-cover rounded-xl"
-                    />
-                  )
-                ) : (
-                  <span className="text-2xl">{formData.tipo === 'Ingreso' ? '💰' : '💸'}</span>
-                )}
+                {renderIconPreview()}
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {formData.icon ? 'Cambiar ícono' : 'Seleccionar ícono'}
+                  {hasIcon ? 'Cambiar ícono' : 'Seleccionar ícono'}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Emoji o imagen personalizada
+                  Emoji o logo del catálogo
                 </p>
               </div>
               <svg
@@ -818,14 +855,13 @@ function CategoryModal({ category, onSave, onDelete, onClose, loading }) {
           </div>
         </form>
 
-        {/* Icon Picker Modal - only emoji and upload for categories */}
-        <IconPicker
+        {/* Category Icon Picker Modal */}
+        <CategoryIconPicker
           isOpen={showIconPicker}
           onClose={() => setShowIconPicker(false)}
           onSelect={handleIconSelect}
-          currentValue={formData.icon}
-          showPredefined={false}
-          title="Ícono de categoría"
+          currentIcon={formData.icon}
+          currentIconCatalogId={formData.icon_catalog_id}
         />
       </div>
     </div>

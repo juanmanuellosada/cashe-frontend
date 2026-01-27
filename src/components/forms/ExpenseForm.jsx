@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
+import AttachmentInput from '../AttachmentInput';
 import { formatCurrency } from '../../utils/format';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
@@ -45,6 +46,7 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
   const [showSuccess, setShowSuccess] = useState(false);
   const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [attachment, setAttachment] = useState(null);
 
   // Encontrar la cuenta seleccionada y verificar si es tarjeta de crédito
   const selectedAccount = useMemo(() => {
@@ -93,22 +95,24 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
     const result = await onSubmit({
       type: usarCuotas ? 'expense_installments' : 'expense',
       data: usarCuotas ? {
-        fechaCompra: formData.fecha,
+        fechaInicio: formData.fecha,
         montoTotal: parseFloat(formData.monto),
         cuenta: formData.cuenta,
         categoria: formData.categoria,
-        nota: formData.nota,
-        cantidadCuotas: cantidadCuotas,
-        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de crédito
+        descripcion: formData.nota || `Compra en ${cantidadCuotas} cuotas`,
+        cuotas: cantidadCuotas,
+        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de credito
       } : {
         ...formData,
         monto: parseFloat(formData.monto),
-        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de crédito
+        moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de credito
+        attachment,
       },
     });
 
     if (result !== false) {
       setShowSuccess(true);
+      setAttachment(null); // Limpiar adjunto despues de guardar
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };
@@ -439,6 +443,15 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
           />
         </div>
       </div>
+
+      {/* Adjunto - Solo para gastos sin cuotas */}
+      {!(esTarjetaCredito && cantidadCuotas > 1) && (
+        <AttachmentInput
+          value={attachment}
+          onChange={setAttachment}
+          disabled={loading}
+        />
+      )}
 
       {/* Submit Button */}
       <button

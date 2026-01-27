@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAccounts, getAllExpenses, addExpense, addTransfer } from '../services/supabaseApi';
+import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
 import { useError } from '../contexts/ErrorContext';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
+import { downloadAttachment } from '../services/attachmentStorage';
+import StatementAttachmentsModal from '../components/StatementAttachmentsModal';
 
 function CreditCards() {
   const { showError } = useError();
@@ -26,6 +28,12 @@ function CreditCards() {
   const [paymentCurrency, setPaymentCurrency] = useState('ARS'); // Moneda a pagar
   const [saving, setSaving] = useState(false);
   const [viewingStatement, setViewingStatement] = useState(null); // Para ver detalle de un resumen
+
+  // Estado para adjuntos de resúmenes
+  const [statementAttachments, setStatementAttachments] = useState({});
+  const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
+  const [selectedStatementForAttachments, setSelectedStatementForAttachments] = useState(null);
+  const [savingAttachment, setSavingAttachment] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -59,6 +67,17 @@ function CreditCards() {
       setLoading(false);
     }
   };
+
+  // Cargar adjuntos cuando cambia la tarjeta seleccionada
+  useEffect(() => {
+    if (selectedCard?.id) {
+      getCardStatementAttachments(selectedCard.id)
+        .then(setStatementAttachments)
+        .catch(err => console.error('Error loading statement attachments:', err));
+    } else {
+      setStatementAttachments({});
+    }
+  }, [selectedCard?.id]);
 
   // Cuentas disponibles para pagar (no tarjetas de crédito), filtradas por moneda
   const paymentAccountsARS = useMemo(() => {
@@ -281,6 +300,75 @@ function CreditCards() {
     // Por defecto seleccionar la moneda que tenga saldo
     setPaymentCurrency(statement.totalPesos > 0 ? 'ARS' : 'USD');
     setShowPayModal(true);
+  };
+
+  const openAttachmentsModal = (statement) => {
+    setSelectedStatementForAttachments(statement);
+    setAttachmentsModalOpen(true);
+  };
+
+  const handleSaveAttachments = async ({ statementFile, receiptFile }) => {
+    if (!selectedStatementForAttachments || !selectedCard) return;
+    try {
+      setSavingAttachment(true);
+      const period = selectedStatementForAttachments.id;
+      const existing = statementAttachments[period] || null;
+
+      const result = await saveCardStatementAttachments({
+        accountId: selectedCard.id,
+        period,
+        statementFile,
+        receiptFile,
+        existing,
+      });
+
+      setStatementAttachments(prev => ({ ...prev, [period]: result }));
+    } catch (err) {
+      console.error('Error saving statement attachments:', err);
+      showError('No se pudieron guardar los adjuntos', err.message);
+    } finally {
+      setSavingAttachment(false);
+    }
+  };
+
+  const handleRemoveAttachment = async (field) => {
+    if (!selectedStatementForAttachments || !selectedCard) return;
+    try {
+      setSavingAttachment(true);
+      const period = selectedStatementForAttachments.id;
+
+      await deleteCardStatementAttachment({
+        accountId: selectedCard.id,
+        period,
+        field,
+      });
+
+      setStatementAttachments(prev => {
+        const updated = { ...prev };
+        if (updated[period]) {
+          const copy = { ...updated[period] };
+          if (field === 'statement') {
+            copy.statementUrl = null;
+            copy.statementName = null;
+          } else {
+            copy.receiptUrl = null;
+            copy.receiptName = null;
+          }
+          // Si ambos quedaron null, eliminar la entrada
+          if (!copy.statementUrl && !copy.receiptUrl) {
+            delete updated[period];
+          } else {
+            updated[period] = copy;
+          }
+        }
+        return updated;
+      });
+    } catch (err) {
+      console.error('Error removing attachment:', err);
+      showError('No se pudo eliminar el adjunto', err.message);
+    } finally {
+      setSavingAttachment(false);
+    }
   };
 
   if (loading) {
@@ -511,12 +599,30 @@ function CreditCards() {
                           </span>
                         )}
                       </p>
-                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        {statement.itemCount} movimiento{statement.itemCount !== 1 ? 's' : ''} · Cierra {format(statement.closeDate, 'd MMM', { locale: es })}
-                      </p>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          {statement.itemCount} movimiento{statement.itemCount !== 1 ? 's' : ''} · Cierra {format(statement.closeDate, 'd MMM', { locale: es })}
+                        </p>
+                        {statementAttachments[statement.id]?.statementUrl && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                            style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
+                          >
+                            PDF
+                          </span>
+                        )}
+                        {statementAttachments[statement.id]?.receiptUrl && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                            style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)' }}
+                          >
+                            Pagado
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <div className="text-right">
                       {hasBothCurrencies ? (
@@ -569,6 +675,16 @@ function CreditCards() {
                       Imp. Sellos
                     </button>
                   )}
+                  <button
+                    onClick={() => openAttachmentsModal(statement)}
+                    className="py-2.5 px-3 rounded-xl text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+                    title="Adjuntos"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => openPayModal(statement)}
                     className="flex-1 py-2.5 rounded-xl text-xs font-medium text-white transition-all duration-200 flex items-center justify-center gap-1.5"
@@ -787,6 +903,45 @@ function CreditCards() {
             </div>
           </div>
 
+          {/* Adjuntos del resumen */}
+          {statementAttachments[viewingStatement.id] && (
+            <div
+              className="px-4 py-3 flex gap-2 flex-wrap"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              {statementAttachments[viewingStatement.id].statementUrl && (
+                <button
+                  onClick={() => downloadAttachment(
+                    statementAttachments[viewingStatement.id].statementUrl,
+                    statementAttachments[viewingStatement.id].statementName
+                  )}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors hover:opacity-80"
+                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Resumen PDF
+                </button>
+              )}
+              {statementAttachments[viewingStatement.id].receiptUrl && (
+                <button
+                  onClick={() => downloadAttachment(
+                    statementAttachments[viewingStatement.id].receiptUrl,
+                    statementAttachments[viewingStatement.id].receiptName
+                  )}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors hover:opacity-80"
+                  style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Comprobante
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Selector de moneda para filtrar gastos */}
           {viewingStatement.totalPesos > 0 && viewingStatement.totalDolares > 0 && (
             <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -906,6 +1061,17 @@ function CreditCards() {
             )}
             <button
               onClick={() => {
+                openAttachmentsModal(viewingStatement);
+              }}
+              className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
                 openPayModal(viewingStatement);
                 setViewingStatement(null);
               }}
@@ -920,6 +1086,19 @@ function CreditCards() {
           </div>
         </div>
       )}
+      {/* Modal - Adjuntos del Resumen */}
+      <StatementAttachmentsModal
+        isOpen={attachmentsModalOpen}
+        onClose={() => {
+          setAttachmentsModalOpen(false);
+          setSelectedStatementForAttachments(null);
+        }}
+        statement={selectedStatementForAttachments}
+        attachments={selectedStatementForAttachments ? statementAttachments[selectedStatementForAttachments.id] : null}
+        onSave={handleSaveAttachments}
+        onRemove={handleRemoveAttachment}
+        saving={savingAttachment}
+      />
     </div>
   );
 }

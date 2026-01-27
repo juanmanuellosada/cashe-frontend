@@ -39,13 +39,20 @@
 └──────────────────────────────┼───────────────────────────────────┘
                                │
                                ▼
-              ┌────────────────────────────────┐
-              │           SUPABASE             │
-              │  ┌──────────┐  ┌────────────┐  │
-              │  │   Auth   │  │ PostgreSQL │  │
-              │  │  (OAuth) │  │    (DB)    │  │
-              │  └──────────┘  └────────────┘  │
-              └────────────────────────────────┘
+              ┌────────────────────────────────────┐
+              │           SUPABASE                 │
+              │  ┌──────────┐  ┌────────────┐      │
+              │  │   Auth   │  │ PostgreSQL │      │
+              │  │  (OAuth) │  │    (DB)    │      │
+              │  └──────────┘  └────────────┘      │
+              └────────────────────────────────────┘
+                               │
+                               ▼
+              ┌────────────────────────────────────┐
+              │         DOLAR API                  │
+              │   https://dolarapi.com/v1/dolares  │
+              │   (Tipo de cambio en tiempo real)  │
+              └────────────────────────────────────┘
 ```
 
 ---
@@ -61,14 +68,17 @@ cashe-frontend/
 ├── vite.config.js
 ├── tailwind.config.js
 ├── postcss.config.js
+├── database/
+│   └── schema.sql                 # Schema de Supabase
+├── email-templates/               # Templates de email de Supabase
 ├── public/
 │   ├── favicon.ico
-│   ├── logo.svg
-│   └── manifest.json
-├── dist/                          # Build de producción
+│   ├── manifest.json
+│   └── icons/
+│       └── catalog/               # Iconos SVG de bancos/billeteras argentinas
 └── src/
     ├── main.jsx                   # Entry point
-    ├── App.jsx                    # Router principal + rutas protegidas
+    ├── App.jsx                    # Router principal + lazy loading
     ├── index.css                  # Estilos globales + Tailwind
     │
     ├── config/
@@ -79,7 +89,8 @@ cashe-frontend/
     │   └── ErrorContext.jsx       # Manejo global de errores
     │
     ├── services/
-    │   └── supabaseApi.js         # Funciones de autenticación y datos
+    │   ├── supabaseApi.js         # API principal (CRUD, cache, dólar)
+    │   └── iconStorage.js         # Almacenamiento de iconos custom
     │
     ├── hooks/
     │   ├── useAccounts.js         # Hook para cuentas
@@ -89,9 +100,14 @@ cashe-frontend/
     ├── utils/
     │   └── format.js              # Formateo de números y fechas
     │
+    ├── data/
+    │   ├── emojis.js              # Lista de emojis para categorías
+    │   └── predefinedIcons.js     # Iconos predefinidos (bancos, etc.)
+    │
     ├── components/
     │   ├── Layout.jsx             # Layout con sidebar
     │   ├── ProtectedRoute.jsx     # HOC para rutas protegidas
+    │   ├── AnimatedBackground.jsx # Fondo animado landing
     │   ├── Avatar.jsx             # Avatar de usuario
     │   ├── ThemeToggle.jsx        # Dark/Light mode
     │   ├── LoadingSpinner.jsx     # Spinner de carga
@@ -102,12 +118,15 @@ cashe-frontend/
     │   ├── DatePicker.jsx         # Selector de fecha
     │   ├── DateRangePicker.jsx    # Selector de rango de fechas
     │   ├── FilterBar.jsx          # Barra de filtros
+    │   ├── SortDropdown.jsx       # Dropdown de ordenamiento
     │   ├── MovementsList.jsx      # Lista de movimientos
     │   ├── EditMovementModal.jsx  # Modal para editar
     │   ├── NewMovementModal.jsx   # Modal para nuevo movimiento
     │   ├── CreateCategoryModal.jsx # Modal para crear categoría
+    │   ├── IconPicker.jsx         # Selector de iconos/emojis
     │   ├── SearchButton.jsx       # Botón de búsqueda (Alt+K)
     │   ├── SearchModal.jsx        # Modal de búsqueda
+    │   ├── SessionExpiryWarning.jsx # Aviso de sesión por expirar
     │   │
     │   ├── forms/
     │   │   ├── MovementForm.jsx   # Formulario principal (tabs)
@@ -149,7 +168,7 @@ cashe-frontend/
 
 ## Rutas de la Aplicación
 
-### Rutas Públicas
+### Rutas Públicas (carga inmediata)
 | Ruta | Página | Descripción |
 |------|--------|-------------|
 | `/` | Landing | Página de bienvenida |
@@ -157,7 +176,7 @@ cashe-frontend/
 | `/register` | Register | Registro de usuario |
 | `/reset-password` | ResetPassword | Recuperar contraseña |
 
-### Rutas Protegidas (requieren autenticación)
+### Rutas Protegidas (lazy loading con Suspense)
 | Ruta | Página | Descripción |
 |------|--------|-------------|
 | `/home` | Home | Dashboard principal |
@@ -171,6 +190,109 @@ cashe-frontend/
 | `/tarjetas` | CreditCards | Gestión de tarjetas |
 | `/cuentas` | Accounts | Gestión de cuentas |
 | `/categorias` | Categories | Gestión de categorías |
+
+---
+
+## Base de Datos (Supabase PostgreSQL)
+
+### Tablas
+
+#### `profiles`
+Información de usuarios (extiende auth.users)
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | - |
+| email | text | YES | - |
+| full_name | text | YES | - |
+| avatar_url | text | YES | - |
+| created_at | timestamp | YES | now() |
+| updated_at | timestamp | YES | now() |
+
+#### `user_settings`
+Configuración por usuario
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| default_currency | text | YES | 'ARS' |
+| exchange_rate | numeric | YES | 1000 |
+| created_at | timestamp | YES | now() |
+| updated_at | timestamp | YES | now() |
+
+#### `accounts`
+Cuentas del usuario (bancos, billeteras, tarjetas)
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| name | text | NO | - |
+| currency | text | NO | 'ARS' |
+| initial_balance | numeric | YES | 0 |
+| account_number | text | YES | - |
+| account_type | text | YES | 'Caja de ahorro' |
+| is_credit_card | boolean | YES | false |
+| closing_day | integer | YES | - |
+| icon | text | YES | - |
+| created_at | timestamp | YES | now() |
+| updated_at | timestamp | YES | now() |
+
+#### `categories`
+Categorías de ingresos y gastos
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| name | text | NO | - |
+| type | text | NO | - |
+| icon | text | YES | - |
+| created_at | timestamp | YES | now() |
+
+#### `movements`
+Movimientos (ingresos y gastos)
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| type | text | NO | - |
+| date | date | NO | CURRENT_DATE |
+| amount | numeric | NO | - |
+| account_id | uuid | YES | - |
+| category_id | uuid | YES | - |
+| note | text | YES | - |
+| installment_purchase_id | uuid | YES | - |
+| installment_number | integer | YES | - |
+| total_installments | integer | YES | - |
+| created_at | timestamp | YES | now() |
+| updated_at | timestamp | YES | now() |
+
+#### `transfers`
+Transferencias entre cuentas
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| date | date | NO | CURRENT_DATE |
+| from_account_id | uuid | YES | - |
+| to_account_id | uuid | YES | - |
+| from_amount | numeric | NO | - |
+| to_amount | numeric | NO | - |
+| note | text | YES | - |
+| created_at | timestamp | YES | now() |
+| updated_at | timestamp | YES | now() |
+
+#### `installment_purchases`
+Compras en cuotas (tarjeta de crédito)
+| Campo | Tipo | Nullable | Default |
+|-------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| user_id | uuid | NO | - |
+| description | text | NO | - |
+| total_amount | numeric | NO | - |
+| installments | integer | NO | - |
+| account_id | uuid | YES | - |
+| category_id | uuid | YES | - |
+| start_date | date | NO | - |
+| created_at | timestamp | YES | now() |
 
 ---
 
@@ -225,12 +347,13 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 
 ### ✅ Core
 - [x] Autenticación con Google (Supabase)
-- [x] Landing page pública
+- [x] Landing page pública con fondo animado
 - [x] Dashboard con resumen financiero
 - [x] Registro de ingresos, gastos y transferencias
 - [x] Sistema de cuotas automáticas para tarjetas
 - [x] Multi-moneda (ARS/USD) con tipo de cambio en tiempo real
 - [x] Dark/Light mode
+- [x] Aviso de sesión por expirar
 
 ### ✅ Análisis
 - [x] Estadísticas con gráficos (Recharts)
@@ -240,17 +363,40 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 
 ### ✅ Gestión
 - [x] CRUD de movimientos
-- [x] Gestión de cuentas
-- [x] Gestión de categorías
+- [x] Gestión de cuentas con iconos personalizados
+- [x] Gestión de categorías con emojis/iconos
 - [x] Gestión de tarjetas de crédito
 - [x] Búsqueda global (Alt+K)
 - [x] Atajos de teclado
+- [x] Ordenamiento de listas
 
 ### ✅ UX
 - [x] PWA instalable
 - [x] Responsive (mobile-first)
 - [x] Feedback visual (toasts, loaders)
 - [x] Empty states
+- [x] Lazy loading de rutas protegidas
+
+### ✅ Performance
+- [x] Cache de requests con deduplicación
+- [x] Lazy loading con React.lazy() y Suspense
+- [x] Invalidación selectiva de cache
+
+---
+
+## API de Tipo de Cambio
+
+La app usa [dolarapi.com](https://dolarapi.com) para obtener cotizaciones en tiempo real:
+
+```javascript
+// Obtener dólar oficial
+const response = await fetch('https://dolarapi.com/v1/dolares/oficial');
+// Retorna: { compra, venta, fechaActualizacion }
+
+// Obtener todas las cotizaciones
+const response = await fetch('https://dolarapi.com/v1/dolares');
+// Retorna array con: oficial, blue, bolsa, crypto, etc.
+```
 
 ---
 
@@ -319,9 +465,39 @@ npm run deploy
 1. **Formato de fecha**: ISO `yyyy-mm-dd`
 2. **Montos**: Enviar como número, sin símbolos
 3. Las consultas a Supabase requieren que el usuario esté autenticado (RLS habilitado)
+4. **Tipos de cuenta válidos**: 'Caja de ahorro', 'Cuenta corriente', 'Efectivo', 'Inversión', 'Tarjeta de crédito', 'Billetera virtual', 'Otro'
+5. **Tipos de categoría**: 'income' | 'expense'
+6. **Tipos de movimiento**: 'income' | 'expense'
 
 ### Sistema de Cuotas
-1. Se genera `idCompra` único
-2. Se calcula fecha según día de cierre de tarjeta
-3. Se crean N filas con el mismo `idCompra`
-4. Eliminar con `deleteInstallmentsByPurchase`
+1. Se crea registro en `installment_purchases`
+2. Se generan N filas en `movements` con `installment_purchase_id`
+3. Cada cuota tiene `installment_number` y `total_installments`
+4. Eliminar compra elimina todas las cuotas (CASCADE)
+
+### Sistema de Cache
+```javascript
+// Cache de 5 minutos con deduplicación
+const CACHE_DURATION = 5 * 60 * 1000;
+
+// Previene requests duplicados concurrentes
+withDeduplication(key, fetchFn)
+
+// Invalidar cache selectivamente
+invalidateCache('accounts') // Invalida accounts + dashboard + movements
+clearCache() // Limpia todo
+```
+
+### Categorías por Defecto (nuevos usuarios)
+Al registrarse, `initializeUserData()` crea:
+- **Ingresos**: 💼 Sueldo, 💰 Freelance, 📈 Inversiones, 🎁 Regalo, 📦 Otros ingresos
+- **Gastos**: 🍔 Comida, 🏠 Hogar, 🚗 Transporte, 🎬 Entretenimiento, 🛒 Supermercado, 💊 Salud, 👕 Ropa, 📱 Servicios, 📦 Otros gastos
+
+---
+
+## Iconos de Bancos/Billeteras
+
+La app incluye iconos SVG de entidades financieras argentinas en `/public/icons/catalog/`:
+- Bancos: Galicia, Santander, BBVA, Macro, Nación, Provincia, ICBC, HSBC, etc.
+- Billeteras: Mercado Pago, Ualá, Naranja X, Brubank, Lemon, Personal Pay, etc.
+- Otros: Visa, Mastercard, American Express, PayPal, etc.
