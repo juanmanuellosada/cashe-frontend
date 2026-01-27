@@ -27,7 +27,13 @@
       "Bash(claude mcp add:*)",
       "Bash(claude mcp list:*)",
       "mcp__supabase__list_projects",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "mcp__cloudflare-cashe-com-ar__list_dns_records",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_evaluate",
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_logs",
+      "mcp__playwright__browser_click"
     ]
   },
   "enableAllProjectMcpServers": true,
