@@ -4,7 +4,7 @@
 
 **Cashé** es una aplicación web para gestión de finanzas personales con soporte para ingresos, gastos (incluyendo cuotas automáticas de tarjeta de crédito), y transferencias. Utiliza Supabase para autenticación y como base de datos.
 
-**URL de producción**: https://juanmanuellosada.github.io/cashe-frontend/
+**URL de producción**: https://cashe.ar/
 
 ---
 

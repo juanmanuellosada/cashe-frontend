@@ -1,11 +1,11 @@
 # Robots.txt for Cashé
-# https://juanmanuellosada.github.io/cashe-frontend/
+# https://cashe.ar/
 
 User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://juanmanuellosada.github.io/cashe-frontend/sitemap.xml
+Sitemap: https://cashe.ar/sitemap.xml
 
 # Disallow private routes (require authentication anyway)
 Disallow: /home
