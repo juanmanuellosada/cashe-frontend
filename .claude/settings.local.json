@@ -22,7 +22,8 @@
       "Bash(powershell:*)",
       "Bash(npx vite build)",
       "Bash(node -e \"\nconst url = ''https://pqyrbbylglzmcmhlyybc.supabase.co'';\n// Simulating what supabase.storage.from\\(''icons''\\).getPublicUrl\\(''catalog/filename.png''\\) would produce\nconsole.log\\(url + ''/storage/v1/object/public/icons/catalog/aguasbonaerenses_com_ar.png''\\);\n\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(gh run:*)"
     ]
   }
 }
