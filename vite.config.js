@@ -7,7 +7,6 @@ const basePath = '/'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    redirectPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
