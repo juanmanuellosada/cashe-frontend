@@ -90,7 +90,8 @@ cashe-frontend/
     │
     ├── services/
     │   ├── supabaseApi.js         # API principal (CRUD, cache, dólar)
-    │   └── iconStorage.js         # Almacenamiento de iconos custom
+    │   ├── iconStorage.js         # Almacenamiento de iconos custom
+    │   └── whatsappApi.js         # API de integración WhatsApp
     │
     ├── hooks/
     │   ├── useAccounts.js         # Hook para cuentas
@@ -128,6 +129,9 @@ cashe-frontend/
     │   ├── SearchModal.jsx        # Modal de búsqueda
     │   ├── SessionExpiryWarning.jsx # Aviso de sesión por expirar
     │   │
+    │   ├── integrations/
+    │   │   └── WhatsAppLinkSection.jsx # Vinculación de WhatsApp
+    │   │
     │   ├── forms/
     │   │   ├── MovementForm.jsx   # Formulario principal (tabs)
     │   │   ├── IncomeForm.jsx     # Campos de ingreso
@@ -161,7 +165,8 @@ cashe-frontend/
         ├── CategorySummary.jsx    # Resumen por categoría
         ├── CreditCards.jsx        # Gestión de tarjetas de crédito
         ├── Accounts.jsx           # Gestión de cuentas
-        └── Categories.jsx         # Gestión de categorías
+        ├── Categories.jsx         # Gestión de categorías
+        └── Integrations.jsx       # Integraciones externas (WhatsApp)
 ```
 
 ---
@@ -190,6 +195,7 @@ cashe-frontend/
 | `/tarjetas` | CreditCards | Gestión de tarjetas |
 | `/cuentas` | Accounts | Gestión de cuentas |
 | `/categorias` | Categories | Gestión de categorías |
+| `/integraciones` | Integrations | Integraciones externas (WhatsApp) |
 
 ---
 
@@ -335,10 +341,11 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
    ├── Ingresos          /ingresos
    └── Transferencias    /transferencias
 
-⚙️ CONFIGURACIÓN
+⚙️ AJUSTES
    ├── Tarjetas          /tarjetas
    ├── Cuentas           /cuentas
-   └── Categorías        /categorias
+   ├── Categorías        /categorias
+   └── Integraciones     /integraciones
 ```
 
 ---
@@ -381,6 +388,12 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 - [x] Cache de requests con deduplicación
 - [x] Lazy loading con React.lazy() y Suspense
 - [x] Invalidación selectiva de cache
+
+### ✅ Integraciones
+- [x] Bot de WhatsApp con Claude AI para lenguaje natural
+- [x] Vinculación de WhatsApp con código de verificación
+- [x] Registro de movimientos por mensaje de texto
+- [x] Consultas de gastos y saldos por WhatsApp
 
 ---
 
@@ -501,3 +514,108 @@ La app incluye iconos SVG de entidades financieras argentinas en `/public/icons/
 - Bancos: Galicia, Santander, BBVA, Macro, Nación, Provincia, ICBC, HSBC, etc.
 - Billeteras: Mercado Pago, Ualá, Naranja X, Brubank, Lemon, Personal Pay, etc.
 - Otros: Visa, Mastercard, American Express, PayPal, etc.
+
+---
+
+## Bot de WhatsApp
+
+### Descripción
+Permite a los usuarios crear gastos, ingresos, transferencias y hacer consultas usando lenguaje natural a través de WhatsApp.
+
+### Componentes
+
+#### Base de Datos (Nuevas tablas)
+
+**`whatsapp_users`** - Vincula números de WhatsApp con cuentas de Cashé
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| user_id | uuid | FK a profiles |
+| phone_number | text | Número en formato +5491123456789 |
+| verified | boolean | Si está verificado |
+| verification_code | text | Código de 6 dígitos |
+| verification_expires_at | timestamptz | Expiración del código |
+
+**`whatsapp_pending_actions`** - Cola de confirmaciones
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| whatsapp_user_id | uuid | FK a whatsapp_users |
+| action_type | text | 'movement' \| 'transfer' \| 'query' |
+| action_data | jsonb | Datos parseados |
+| status | text | 'pending' \| 'confirmed' \| 'cancelled' |
+| expires_at | timestamptz | Auto-expira en 10 minutos |
+
+#### Edge Function
+
+**Ubicación**: `supabase/functions/whatsapp-webhook/index.ts`
+
+**Funcionalidad**:
+1. Verifica webhook de Meta (GET con hub.verify_token)
+2. Recibe mensajes de WhatsApp (POST)
+3. Usa Claude API para interpretar lenguaje natural
+4. Crea movimientos/transferencias tras confirmación
+5. Envía respuestas al usuario
+
+#### Frontend
+
+**Servicio**: `src/services/whatsappApi.js`
+- `getWhatsAppStatus()` - Obtener estado de vinculación
+- `generateVerificationCode()` - Generar código de 6 dígitos
+- `checkWhatsAppVerification()` - Polling para verificación
+- `unlinkWhatsApp()` - Desvincular WhatsApp
+
+**Componentes**:
+- `src/components/integrations/WhatsAppLinkSection.jsx` - Sección de vinculación
+- `src/pages/Integrations.jsx` - Página de integraciones
+
+**Ruta**: `/integraciones`
+
+### Flujo de Vinculación
+
+1. Usuario abre `/integraciones` en la app web
+2. Hace click en "Vincular WhatsApp"
+3. Se genera código de 6 dígitos (expira en 10 min)
+4. Usuario envía código al bot de WhatsApp
+5. Bot verifica código y vincula la cuenta
+6. Usuario puede empezar a enviar mensajes
+
+### Ejemplos de Uso
+
+```
+Usuario: "Gasté 5000 en el super con la visa"
+Bot: 📝 *Confirmar gasto:*
+     💸 Monto: $5.000
+     📁 Categoría: Supermercado
+     💳 Cuenta: VISA
+     📅 Fecha: Hoy
+     ¿Confirmo? (sí/no/editar)
+
+Usuario: "sí"
+Bot: ✅ Gasto registrado
+```
+
+### Variables de Entorno (Edge Function)
+
+```bash
+WHATSAPP_ACCESS_TOKEN      # Token de Meta Business API
+WHATSAPP_PHONE_NUMBER_ID   # ID del número de WhatsApp Business
+WHATSAPP_VERIFY_TOKEN      # Token personalizado para verificación
+ANTHROPIC_API_KEY          # API key de Claude
+```
+
+### Deploy
+
+```bash
+# Aplicar migración de base de datos
+# (ejecutar en Supabase Dashboard o con supabase db push)
+
+# Deploy Edge Function
+supabase functions deploy whatsapp-webhook
+
+# Configurar secrets
+supabase secrets set WHATSAPP_ACCESS_TOKEN=xxx
+supabase secrets set WHATSAPP_PHONE_NUMBER_ID=xxx
+supabase secrets set WHATSAPP_VERIFY_TOKEN=xxx
+supabase secrets set ANTHROPIC_API_KEY=xxx
+```

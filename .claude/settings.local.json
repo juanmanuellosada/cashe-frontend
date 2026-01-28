@@ -33,11 +33,15 @@
       "mcp__playwright__browser_evaluate",
       "mcp__supabase__get_project",
       "mcp__supabase__get_logs",
-      "mcp__playwright__browser_click"
+      "mcp__playwright__browser_click",
+      "Bash(npx supabase functions deploy:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "supabase"
+    "supabase",
+    "github",
+    "playwright",
+    "puppeteer"
   ]
 }

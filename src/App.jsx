@@ -27,6 +27,7 @@ const Comparador = lazy(() => import('./pages/Comparador'))
 const CategorySummary = lazy(() => import('./pages/CategorySummary'))
 const CreditCards = lazy(() => import('./pages/CreditCards'))
 const Attachments = lazy(() => import('./pages/Attachments'))
+const Integrations = lazy(() => import('./pages/Integrations'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -174,6 +175,15 @@ function App() {
                 <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                   <Suspense fallback={<PageLoader />}>
                     <Attachments />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/integraciones" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Integrations />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>
