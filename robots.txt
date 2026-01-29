@@ -1,0 +1,21 @@
+# Robots.txt for Cashé
+# https://cashe.ar/
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://cashe.ar/sitemap.xml
+
+# Disallow private routes (require authentication anyway)
+Disallow: /home
+Disallow: /nuevo
+Disallow: /cuentas
+Disallow: /categorias
+Disallow: /gastos
+Disallow: /ingresos
+Disallow: /transferencias
+Disallow: /estadisticas
+Disallow: /comparador
+Disallow: /resumen-categorias
+Disallow: /tarjetas
