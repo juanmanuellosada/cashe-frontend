@@ -64,8 +64,8 @@ export default function Privacy() {
           <h2 className="text-xl font-semibold mb-4">6. Contacto</h2>
           <p className="text-zinc-300">
             Si tenés preguntas sobre esta política, podés contactarnos en{' '}
-            <a href="mailto:privacidad@cashe.ar" className="text-teal-400 hover:underline">
-              privacidad@cashe.ar
+            <a href="mailto:juanmalosada01@gmail.com" className="text-teal-400 hover:underline">
+              juanmalosada01@gmail.com
             </a>
           </p>
         </section>

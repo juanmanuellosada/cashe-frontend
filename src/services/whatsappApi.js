@@ -1,5 +1,8 @@
 import { supabase } from '../config/supabase';
 
+// WhatsApp bot phone number (without +)
+export const WHATSAPP_BOT_NUMBER = '15551632329'; // Meta test number
+
 // ============================================
 // HELPER: Get current user ID
 // ============================================
@@ -13,6 +16,31 @@ const getUserId = async () => {
     throw new Error('No authenticated user');
   }
   return user.id;
+};
+
+// ============================================
+// CHECK IF USER HAS WHATSAPP ACCESS
+// Returns whether the user can use WhatsApp integration
+// ============================================
+export const checkWhatsAppAccess = async () => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('whatsapp_enabled, email, full_name')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error checking WhatsApp access:', error);
+    return { enabled: false, email: null, name: null };
+  }
+
+  return {
+    enabled: data?.whatsapp_enabled === true,
+    email: data?.email,
+    name: data?.full_name
+  };
 };
 
 // ============================================
@@ -202,4 +230,39 @@ export const formatPhoneForDisplay = (phone) => {
   }
 
   return phone;
+};
+
+// ============================================
+// REQUEST WHATSAPP ACCESS
+// Sends a notification email to admin
+// ============================================
+export const requestWhatsAppAccess = async () => {
+  const userId = await getUserId();
+
+  // Get user info
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, full_name')
+    .eq('id', userId)
+    .single();
+
+  if (!profile) {
+    throw new Error('No se pudo obtener información del usuario');
+  }
+
+  // Call the Edge Function to send email
+  const { data, error } = await supabase.functions.invoke('send-access-request', {
+    body: {
+      userId,
+      email: profile.email,
+      name: profile.full_name
+    }
+  });
+
+  if (error) {
+    console.error('Error requesting access:', error);
+    throw error;
+  }
+
+  return { success: true };
 };

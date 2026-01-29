@@ -166,6 +166,18 @@ async function handleUnlinkedUser(phoneNumber: string, messageText: string) {
       .single()
 
     if (pendingLink) {
+      // Check if user has whatsapp_enabled
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('whatsapp_enabled')
+        .eq('id', pendingLink.user_id)
+        .single()
+
+      if (!profile?.whatsapp_enabled) {
+        await sendWhatsAppMessage(phoneNumber, `🔒 *Acceso restringido*\n\nTu cuenta no tiene acceso al bot de WhatsApp.\n\nSolicitá acceso desde cashe.ar/integraciones`)
+        return
+      }
+
       await supabase
         .from('whatsapp_users')
         .update({
@@ -209,8 +221,16 @@ async function handleFlowStep(
 ) {
   const lowerText = messageText.toLowerCase().trim()
 
-  // Global commands
-  if (['menu', 'inicio', 'empezar', 'hola', 'hi', 'hello'].includes(lowerText)) {
+  // Global commands - cancel/restart
+  const cancelWords = [
+    'cancelar', 'cancel', 'salir', 'volver', 'atras', 'atrás',
+    'volver atras', 'volver atrás', 'empezar de nuevo', 'reiniciar',
+    'no', 'x', '0'
+  ]
+
+  const menuWords = ['menu', 'menú', 'inicio', 'empezar', 'hola', 'hi', 'hello', 'start']
+
+  if (menuWords.includes(lowerText)) {
     if (pendingAction) {
       await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
     }
@@ -218,11 +238,11 @@ async function handleFlowStep(
     return
   }
 
-  if (['cancelar', 'salir', 'cancel'].includes(lowerText)) {
+  if (cancelWords.includes(lowerText)) {
     if (pendingAction) {
       await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
+      await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
     }
-    await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
     await showMainMenu(phoneNumber)
     return
   }
@@ -230,7 +250,7 @@ async function handleFlowStep(
   // Handle based on current step
   switch (flowState.step) {
     case 'idle':
-      await handleIdleStep(whatsappUser, buttonId, phoneNumber)
+      await handleIdleStep(whatsappUser, buttonId, listId, phoneNumber)
       break
     case 'select_account':
       await handleSelectAccount(whatsappUser, pendingAction, flowState, listId, phoneNumber)
@@ -275,6 +295,19 @@ async function handleFlowStep(
 // SHOW MAIN MENU
 // ============================================
 async function showMainMenu(phoneNumber: string) {
+  await sendWhatsAppButtons(
+    phoneNumber,
+    '¿Qué querés hacer?',
+    [
+      { id: 'type_expense', title: '💸 Gasto' },
+      { id: 'type_income', title: '💰 Ingreso' },
+      { id: 'show_more_options', title: '📋 Más opciones' }
+    ]
+  )
+}
+
+// Show more options (transfer + queries)
+async function showMoreOptions(phoneNumber: string) {
   await sendWhatsAppList(
     phoneNumber,
     '¿Qué querés hacer?',
@@ -283,18 +316,16 @@ async function showMainMenu(phoneNumber: string) {
       {
         title: '📝 Registrar',
         rows: [
-          { id: 'type_expense', title: '💸 Gasto', description: 'Registrar un gasto' },
-          { id: 'type_income', title: '💰 Ingreso', description: 'Registrar un ingreso' },
-          { id: 'type_transfer', title: '🔄 Transferencia', description: 'Entre cuentas' }
+          { id: 'type_transfer', title: '🔄 Transferencia', description: 'Mover plata entre cuentas' }
         ]
       },
       {
         title: '📊 Consultar',
         rows: [
           { id: 'query_balances', title: '💰 Ver saldos', description: 'Saldo de cada cuenta' },
-          { id: 'query_summary', title: '📈 Resumen mensual', description: 'Gastos del mes' },
-          { id: 'query_category', title: '📁 Por categoría', description: 'Detalle por categoría' },
-          { id: 'query_recent', title: '🕐 Últimos movimientos', description: 'Los últimos 10' }
+          { id: 'query_summary', title: '📈 Resumen mensual', description: 'Gastos e ingresos del mes' },
+          { id: 'query_category', title: '📁 Por categoría', description: 'Detalle de una categoría' },
+          { id: 'query_recent', title: '🕐 Últimos movimientos', description: 'Los 10 más recientes' }
         ]
       }
     ]
@@ -305,10 +336,19 @@ async function showMainMenu(phoneNumber: string) {
 // STEP HANDLERS
 // ============================================
 
-async function handleIdleStep(whatsappUser: any, buttonId: string, phoneNumber: string) {
+async function handleIdleStep(whatsappUser: any, buttonId: string, listId: string, phoneNumber: string) {
+  // Main menu uses buttons, more options uses list
+  const selection = buttonId || listId
+
+  // Handle "More options" button
+  if (selection === 'show_more_options') {
+    await showMoreOptions(phoneNumber)
+    return
+  }
+
   // Handle main menu selections
-  if (buttonId === 'type_expense' || buttonId === 'type_income' || buttonId === 'type_transfer') {
-    const type = buttonId === 'type_expense' ? 'expense' : buttonId === 'type_income' ? 'income' : 'transfer'
+  if (selection === 'type_expense' || selection === 'type_income' || selection === 'type_transfer') {
+    const type = selection === 'type_expense' ? 'expense' : selection === 'type_income' ? 'income' : 'transfer'
 
     await supabase.from('whatsapp_pending_actions').insert({
       whatsapp_user_id: whatsappUser.id,
@@ -326,8 +366,8 @@ async function handleIdleStep(whatsappUser: any, buttonId: string, phoneNumber: 
   }
 
   // Handle query selections
-  if (buttonId.startsWith('query_')) {
-    await handleQueryStart(whatsappUser, buttonId, phoneNumber)
+  if (selection && selection.startsWith('query_')) {
+    await handleQueryStart(whatsappUser, selection, phoneNumber)
     return
   }
 
@@ -435,7 +475,7 @@ async function handleSelectToAccount(
   }
 
   await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
-  await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto transferís?*\n\nEscribí el monto en ${flowState.from_currency || 'pesos'}`)
+  await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto transferís?*\n\nEscribí el monto en ${flowState.from_currency || 'pesos'}\n\n_Escribí "cancelar" para volver al menú_`)
 }
 
 async function handleSelectCategory(
@@ -483,7 +523,7 @@ async function handleSelectCategory(
   }
 
   await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
-  await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto?*\n\nEscribí el monto en ${flowState.currency || 'pesos'}`)
+  await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto?*\n\nEscribí el monto en ${flowState.currency || 'pesos'}\n\n_Escribí "cancelar" para volver al menú_`)
 }
 
 async function handleEnterAmount(
@@ -496,7 +536,7 @@ async function handleEnterAmount(
   const amount = parseAmount(messageText)
 
   if (!amount || amount <= 0) {
-    await sendWhatsAppMessage(phoneNumber, '⚠️ Escribí un monto válido.\n\nEjemplo: 5000')
+    await sendWhatsAppMessage(phoneNumber, '⚠️ Escribí un monto válido.\n\nEjemplo: 5000\n\n_Escribí "cancelar" para volver al menú_')
     return
   }
 
@@ -504,7 +544,7 @@ async function handleEnterAmount(
     if (flowState.from_currency !== flowState.to_currency) {
       const newState: FlowState = { ...flowState, step: 'enter_to_amount', from_amount: amount }
       await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
-      await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto recibís?*\n\nEscribí el monto en ${flowState.to_currency}`)
+      await sendWhatsAppMessage(phoneNumber, `💵 *¿Cuánto recibís?*\n\nEscribí el monto en ${flowState.to_currency}\n\n_Escribí "cancelar" para volver al menú_`)
       return
     }
 
@@ -528,7 +568,7 @@ async function handleEnterToAmount(
   const amount = parseAmount(messageText)
 
   if (!amount || amount <= 0) {
-    await sendWhatsAppMessage(phoneNumber, '⚠️ Escribí un monto válido.')
+    await sendWhatsAppMessage(phoneNumber, '⚠️ Escribí un monto válido.\n\n_Escribí "cancelar" para volver al menú_')
     return
   }
 
@@ -564,7 +604,7 @@ async function handleEnterNote(
   }
 
   if (buttonId === 'note_add') {
-    await sendWhatsAppMessage(phoneNumber, '📝 Escribí la nota:')
+    await sendWhatsAppMessage(phoneNumber, '📝 Escribí la nota:\n\n_Escribí "cancelar" para volver al menú_')
     return
   }
 
@@ -900,7 +940,7 @@ async function showQueryCategoryList(userId: string, phoneNumber: string) {
 
   await sendWhatsAppList(
     phoneNumber,
-    '¿Qué categoría querés ver?',
+    '¿Qué categoría querés ver?\n\n_Escribí "cancelar" para volver_',
     'Seleccionar',
     [{ title: 'Categorías', rows }]
   )
@@ -909,7 +949,7 @@ async function showQueryCategoryList(userId: string, phoneNumber: string) {
 async function showPeriodList(phoneNumber: string) {
   await sendWhatsAppList(
     phoneNumber,
-    '¿Qué período querés ver?',
+    '¿Qué período querés ver?\n\n_Escribí "cancelar" para volver_',
     'Seleccionar',
     [{
       title: 'Períodos',
@@ -976,7 +1016,7 @@ async function executeAction(
 async function showAccountList(userId: string, phoneNumber: string, title: string, prefix: string, excludeId?: string) {
   const { data: accounts } = await supabase
     .from('accounts')
-    .select('id, name, currency')
+    .select('id, name, currency, account_type')
     .eq('user_id', userId)
     .order('name')
 
@@ -989,11 +1029,52 @@ async function showAccountList(userId: string, phoneNumber: string, title: strin
 
   const rows = filtered.slice(0, 10).map(acc => ({
     id: `${prefix}acc_${acc.id}`,
-    title: truncateName(acc.name, 24),
-    description: acc.currency
+    title: createShortAccountName(acc.name, acc.currency, 24),
+    description: acc.name.slice(0, 72) // Full name in description
   }))
 
-  await sendWhatsAppList(phoneNumber, title, 'Seleccionar', [{ title: 'Cuentas', rows }])
+  await sendWhatsAppList(phoneNumber, title + '\n\n_Escribí "cancelar" para volver_', 'Seleccionar', [{ title: 'Cuentas', rows }])
+}
+
+// Create a short but identifiable account name
+function createShortAccountName(fullName: string, currency: string, maxLength: number): string {
+  const currencyLabel = currency === 'USD' ? ' (USD)' : ''
+  const availableLength = maxLength - currencyLabel.length
+
+  // If name already fits, use it as-is
+  if (fullName.length <= availableLength) {
+    return fullName + currencyLabel
+  }
+
+  // Try to create a smart short name
+  let shortName = fullName
+
+  // Pattern: "Tipo de cuenta, Banco" → "Banco + tipo corto"
+  const commaMatch = fullName.match(/^(.+),\s*(.+)$/)
+  if (commaMatch) {
+    const [, accountType, bankName] = commaMatch
+
+    // Extract key words from account type
+    let typeHint = ''
+    if (accountType.toLowerCase().includes('dólar') || accountType.toLowerCase().includes('usd')) {
+      typeHint = ' USD'
+    } else if (accountType.toLowerCase().includes('peso')) {
+      typeHint = ' $'
+    } else if (accountType.toLowerCase().includes('fima') || accountType.toLowerCase().includes('premium')) {
+      typeHint = ' FCI' // Fondo Común de Inversión
+    } else if (accountType.toLowerCase().includes('corriente')) {
+      typeHint = ' CC'
+    }
+
+    shortName = bankName + typeHint
+  }
+
+  // Truncate if still too long
+  if (shortName.length > availableLength) {
+    shortName = truncateName(shortName, availableLength)
+  }
+
+  return shortName + currencyLabel
 }
 
 async function showCategoryList(userId: string, type: string, phoneNumber: string, page: number) {
@@ -1030,9 +1111,10 @@ async function showCategoryList(userId: string, type: string, phoneNumber: strin
 
   const sections = [{ title: `Categorías (${page}/${Math.ceil(categories.length / pageSize)})`, rows }]
 
+  const categoryPrompt = type === 'expense' ? '¿En qué categoría?' : '¿De qué categoría?'
   await sendWhatsAppList(
     phoneNumber,
-    type === 'expense' ? '¿En qué categoría?' : '¿De qué categoría?',
+    categoryPrompt + '\n\n_Escribí "cancelar" para volver_',
     'Seleccionar',
     sections
   )
