@@ -29,6 +29,8 @@ const CategorySummary = lazy(() => import('./pages/CategorySummary'))
 const CreditCards = lazy(() => import('./pages/CreditCards'))
 const Attachments = lazy(() => import('./pages/Attachments'))
 const Integrations = lazy(() => import('./pages/Integrations'))
+const Budgets = lazy(() => import('./pages/Budgets'))
+const Goals = lazy(() => import('./pages/Goals'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -186,6 +188,24 @@ function App() {
                 <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                   <Suspense fallback={<PageLoader />}>
                     <Integrations />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/presupuestos" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Budgets />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/metas" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Goals />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

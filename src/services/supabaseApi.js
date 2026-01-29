@@ -1750,3 +1750,588 @@ export const deleteCardStatementAttachment = async ({ accountId, period, field }
 
   return { success: true };
 };
+
+// ============================================
+// BUDGETS (Presupuestos)
+// ============================================
+
+// Helper: Calculate period dates based on type
+const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
+  const now = new Date();
+  let start, end;
+
+  switch (periodType) {
+    case 'weekly': {
+      // Start of week (Monday)
+      const dayOfWeek = now.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      start = new Date(now);
+      start.setDate(now.getDate() - diff);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      break;
+    }
+    case 'monthly': {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      break;
+    }
+    case 'yearly': {
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31);
+      break;
+    }
+    case 'custom': {
+      start = customStartDate ? new Date(customStartDate) : new Date();
+      end = customEndDate ? new Date(customEndDate) : new Date();
+      break;
+    }
+    default: {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+  }
+
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
+  };
+};
+
+// Helper: Calculate days remaining in period
+const calculateDaysRemaining = (endDate) => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  const diffTime = end - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+};
+
+// Helper: Calculate spent amount for a budget in a period
+const calculateBudgetSpent = async (budget, startDate, endDate) => {
+  const userId = await getUserId();
+
+  let query = supabase
+    .from('movements')
+    .select('amount')
+    .eq('user_id', userId)
+    .eq('type', 'expense')
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  // Apply filters only if not global
+  if (!budget.is_global) {
+    if (budget.category_ids && budget.category_ids.length > 0) {
+      query = query.in('category_id', budget.category_ids);
+    }
+    if (budget.account_ids && budget.account_ids.length > 0) {
+      query = query.in('account_id', budget.account_ids);
+    }
+  }
+
+  const { data: movements } = await query;
+  return (movements || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+};
+
+export const getBudgets = () => withDeduplication('budgets', async () => {
+  const userId = await getUserId();
+
+  const { data: budgets, error } = await supabase
+    .from('budgets')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const result = { budgets: budgets || [] };
+  setCachedData('budgets', result);
+  return result;
+});
+
+export const getBudgetsWithProgress = async () => {
+  const userId = await getUserId();
+
+  const { data: budgets, error } = await supabase
+    .from('budgets')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Calculate progress for each budget
+  const budgetsWithProgress = await Promise.all(
+    (budgets || []).map(async (budget) => {
+      // Skip calculation for inactive or paused budgets
+      if (!budget.is_active || budget.is_paused) {
+        return {
+          ...budget,
+          spent: 0,
+          remaining: budget.amount,
+          percentageUsed: 0,
+          currentPeriod: null,
+          daysRemaining: 0,
+        };
+      }
+
+      const periodDates = calculatePeriodDates(budget.period_type, budget.start_date, budget.end_date);
+      const spent = await calculateBudgetSpent(budget, periodDates.start, periodDates.end);
+      const remaining = budget.amount - spent;
+      const percentageUsed = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+      const daysRemaining = calculateDaysRemaining(periodDates.end);
+
+      return {
+        ...budget,
+        spent,
+        remaining,
+        percentageUsed,
+        currentPeriod: periodDates,
+        daysRemaining,
+      };
+    })
+  );
+
+  return { budgets: budgetsWithProgress };
+};
+
+export const getBudgetWithProgress = async (budgetId) => {
+  const userId = await getUserId();
+
+  const { data: budget, error } = await supabase
+    .from('budgets')
+    .select('*')
+    .eq('id', budgetId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) throw error;
+
+  const periodDates = calculatePeriodDates(budget.period_type, budget.start_date, budget.end_date);
+  const spent = await calculateBudgetSpent(budget, periodDates.start, periodDates.end);
+  const remaining = budget.amount - spent;
+  const percentageUsed = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+  const daysRemaining = calculateDaysRemaining(periodDates.end);
+
+  return {
+    ...budget,
+    spent,
+    remaining,
+    percentageUsed,
+    currentPeriod: periodDates,
+    daysRemaining,
+  };
+};
+
+export const addBudget = async (budgetData) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('budgets')
+    .insert({
+      user_id: userId,
+      name: budgetData.name,
+      amount: budgetData.amount,
+      currency: budgetData.currency || 'ARS',
+      period_type: budgetData.periodType,
+      start_date: budgetData.startDate,
+      end_date: budgetData.endDate || null,
+      is_recurring: budgetData.isRecurring ?? true,
+      category_ids: budgetData.categoryIds || [],
+      account_ids: budgetData.accountIds || [],
+      is_global: budgetData.isGlobal || false,
+      icon: budgetData.icon || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('budgets');
+  return { success: true, budget: data };
+};
+
+export const updateBudget = async (budgetData) => {
+  const { data, error } = await supabase
+    .from('budgets')
+    .update({
+      name: budgetData.name,
+      amount: budgetData.amount,
+      currency: budgetData.currency,
+      period_type: budgetData.periodType,
+      start_date: budgetData.startDate,
+      end_date: budgetData.endDate,
+      is_recurring: budgetData.isRecurring,
+      category_ids: budgetData.categoryIds,
+      account_ids: budgetData.accountIds,
+      is_global: budgetData.isGlobal,
+      is_active: budgetData.isActive,
+      is_paused: budgetData.isPaused,
+      icon: budgetData.icon,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', budgetData.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('budgets');
+  return { success: true, budget: data };
+};
+
+export const deleteBudget = async (budgetId) => {
+  const { error } = await supabase
+    .from('budgets')
+    .delete()
+    .eq('id', budgetId);
+
+  if (error) throw error;
+  invalidateCache('budgets');
+  return { success: true };
+};
+
+export const duplicateBudget = async (budgetId) => {
+  const userId = await getUserId();
+
+  // Get original budget
+  const { data: original, error: fetchError } = await supabase
+    .from('budgets')
+    .select('*')
+    .eq('id', budgetId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!original) throw new Error('Presupuesto no encontrado');
+
+  // Create copy without id and timestamps
+  const { id, created_at, updated_at, ...budgetData } = original;
+
+  const { data, error } = await supabase
+    .from('budgets')
+    .insert({
+      ...budgetData,
+      name: `${original.name} (copia)`,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('budgets');
+  return { success: true, budget: data };
+};
+
+export const toggleBudgetPause = async (budgetId) => {
+  const userId = await getUserId();
+
+  // Get current state
+  const { data: budget, error: fetchError } = await supabase
+    .from('budgets')
+    .select('is_paused')
+    .eq('id', budgetId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Toggle
+  const { data, error } = await supabase
+    .from('budgets')
+    .update({
+      is_paused: !budget.is_paused,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', budgetId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('budgets');
+  return { success: true, budget: data };
+};
+
+// ============================================
+// GOALS (Metas)
+// ============================================
+
+// Helper: Calculate goal progress based on type
+const calculateGoalProgress = async (goal, startDate, endDate) => {
+  const userId = await getUserId();
+
+  switch (goal.goal_type) {
+    case 'income': {
+      // Sum all incomes in the period
+      let query = supabase
+        .from('movements')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('type', 'income')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (!goal.is_global) {
+        if (goal.category_ids?.length > 0) {
+          query = query.in('category_id', goal.category_ids);
+        }
+        if (goal.account_ids?.length > 0) {
+          query = query.in('account_id', goal.account_ids);
+        }
+      }
+
+      const { data: incomes } = await query;
+      return (incomes || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+    }
+
+    case 'savings': {
+      // Savings = Income - Expenses in the period
+      let incomeQuery = supabase
+        .from('movements')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('type', 'income')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      let expenseQuery = supabase
+        .from('movements')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('type', 'expense')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (!goal.is_global) {
+        if (goal.category_ids?.length > 0) {
+          incomeQuery = incomeQuery.in('category_id', goal.category_ids);
+          expenseQuery = expenseQuery.in('category_id', goal.category_ids);
+        }
+        if (goal.account_ids?.length > 0) {
+          incomeQuery = incomeQuery.in('account_id', goal.account_ids);
+          expenseQuery = expenseQuery.in('account_id', goal.account_ids);
+        }
+      }
+
+      const [{ data: incomes }, { data: expenses }] = await Promise.all([
+        incomeQuery,
+        expenseQuery,
+      ]);
+
+      const totalIncome = (incomes || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+      const totalExpense = (expenses || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+      return totalIncome - totalExpense;
+    }
+
+    case 'spending_reduction': {
+      // Current spending in the period
+      let query = supabase
+        .from('movements')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('type', 'expense')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (!goal.is_global) {
+        if (goal.category_ids?.length > 0) {
+          query = query.in('category_id', goal.category_ids);
+        }
+        if (goal.account_ids?.length > 0) {
+          query = query.in('account_id', goal.account_ids);
+        }
+      }
+
+      const { data: expenses } = await query;
+      const currentSpending = (expenses || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+
+      // For reduction goals, we want to spend LESS than target
+      // Return the "saved" amount vs baseline
+      const baseline = goal.baseline_amount || goal.target_amount;
+      return baseline - currentSpending;
+    }
+
+    default:
+      return 0;
+  }
+};
+
+export const getGoals = () => withDeduplication('goals', async () => {
+  const userId = await getUserId();
+
+  const { data: goals, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const result = { goals: goals || [] };
+  setCachedData('goals', result);
+  return result;
+});
+
+export const getGoalsWithProgress = async () => {
+  const userId = await getUserId();
+
+  const { data: goals, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Calculate progress for each goal
+  const goalsWithProgress = await Promise.all(
+    (goals || []).map(async (goal) => {
+      // Skip calculation for inactive goals
+      if (!goal.is_active) {
+        return {
+          ...goal,
+          currentAmount: 0,
+          percentageAchieved: 0,
+          currentPeriod: null,
+          daysRemaining: 0,
+        };
+      }
+
+      const periodDates = calculatePeriodDates(goal.period_type, goal.start_date, goal.end_date);
+      const currentAmount = await calculateGoalProgress(goal, periodDates.start, periodDates.end);
+      const percentageAchieved = goal.target_amount > 0 ? (currentAmount / goal.target_amount) * 100 : 0;
+      const daysRemaining = calculateDaysRemaining(periodDates.end);
+      const isOnTrack = percentageAchieved >= ((new Date() - new Date(periodDates.start)) / (new Date(periodDates.end) - new Date(periodDates.start))) * 100;
+
+      return {
+        ...goal,
+        currentAmount,
+        percentageAchieved,
+        currentPeriod: periodDates,
+        daysRemaining,
+        isOnTrack,
+      };
+    })
+  );
+
+  return { goals: goalsWithProgress };
+};
+
+export const getGoalWithProgress = async (goalId) => {
+  const userId = await getUserId();
+
+  const { data: goal, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('id', goalId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) throw error;
+
+  const periodDates = calculatePeriodDates(goal.period_type, goal.start_date, goal.end_date);
+  const currentAmount = await calculateGoalProgress(goal, periodDates.start, periodDates.end);
+  const percentageAchieved = goal.target_amount > 0 ? (currentAmount / goal.target_amount) * 100 : 0;
+  const daysRemaining = calculateDaysRemaining(periodDates.end);
+
+  return {
+    ...goal,
+    currentAmount,
+    percentageAchieved,
+    currentPeriod: periodDates,
+    daysRemaining,
+  };
+};
+
+export const addGoal = async (goalData) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .insert({
+      user_id: userId,
+      name: goalData.name,
+      goal_type: goalData.goalType,
+      target_amount: goalData.targetAmount,
+      currency: goalData.currency || 'ARS',
+      period_type: goalData.periodType,
+      start_date: goalData.startDate,
+      end_date: goalData.endDate || null,
+      is_recurring: goalData.isRecurring ?? true,
+      category_ids: goalData.categoryIds || [],
+      account_ids: goalData.accountIds || [],
+      is_global: goalData.isGlobal || false,
+      reduction_type: goalData.reductionType || null,
+      reduction_value: goalData.reductionValue || null,
+      baseline_amount: goalData.baselineAmount || null,
+      icon: goalData.icon || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('goals');
+  return { success: true, goal: data };
+};
+
+export const updateGoal = async (goalData) => {
+  const { data, error } = await supabase
+    .from('goals')
+    .update({
+      name: goalData.name,
+      goal_type: goalData.goalType,
+      target_amount: goalData.targetAmount,
+      currency: goalData.currency,
+      period_type: goalData.periodType,
+      start_date: goalData.startDate,
+      end_date: goalData.endDate,
+      is_recurring: goalData.isRecurring,
+      category_ids: goalData.categoryIds,
+      account_ids: goalData.accountIds,
+      is_global: goalData.isGlobal,
+      reduction_type: goalData.reductionType,
+      reduction_value: goalData.reductionValue,
+      baseline_amount: goalData.baselineAmount,
+      is_active: goalData.isActive,
+      is_completed: goalData.isCompleted,
+      completed_at: goalData.isCompleted ? new Date().toISOString() : null,
+      icon: goalData.icon,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', goalData.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('goals');
+  return { success: true, goal: data };
+};
+
+export const deleteGoal = async (goalId) => {
+  const { error } = await supabase
+    .from('goals')
+    .delete()
+    .eq('id', goalId);
+
+  if (error) throw error;
+  invalidateCache('goals');
+  return { success: true };
+};
+
+export const completeGoal = async (goalId, completed = true) => {
+  const { data, error } = await supabase
+    .from('goals')
+    .update({
+      is_completed: completed,
+      completed_at: completed ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', goalId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('goals');
+  return { success: true, goal: data };
+};

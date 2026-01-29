@@ -1,4 +1,5 @@
 import WhatsAppLinkSection from '../components/integrations/WhatsAppLinkSection';
+import TelegramLinkSection from '../components/integrations/TelegramLinkSection';
 
 function Integrations() {
   return (
@@ -15,7 +16,10 @@ function Integrations() {
 
       {/* Integrations list */}
       <div className="space-y-4">
-        {/* WhatsApp */}
+        {/* Telegram - No restrictions, free to use */}
+        <TelegramLinkSection />
+
+        {/* WhatsApp - Requires access approval */}
         <WhatsAppLinkSection />
 
         {/* Future integrations placeholder */}
@@ -52,7 +56,7 @@ function Integrations() {
                 Más integraciones próximamente
               </h3>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Telegram, importación de extractos bancarios y más
+                Importación de extractos bancarios y más
               </p>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { getCategories } from '../services/supabaseApi';
+import { getCategories, getCategoriesWithId } from '../services/supabaseApi';
 
 export function useCategories() {
   const [categories, setCategories] = useState({ ingresos: [], gastos: [] });
+  const [categoriesWithId, setCategoriesWithId] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -11,8 +12,12 @@ export function useCategories() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getCategories();
+        const [data, dataWithId] = await Promise.all([
+          getCategories(),
+          getCategoriesWithId()
+        ]);
         setCategories(data.categorias || { ingresos: [], gastos: [] });
+        setCategoriesWithId(dataWithId.categorias || []);
       } catch (err) {
         setError(err.message);
         console.error('Error fetching categories:', err);
@@ -28,8 +33,12 @@ export function useCategories() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getCategories();
+      const [data, dataWithId] = await Promise.all([
+        getCategories(),
+        getCategoriesWithId()
+      ]);
       setCategories(data.categorias || { ingresos: [], gastos: [] });
+      setCategoriesWithId(dataWithId.categorias || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,5 +46,5 @@ export function useCategories() {
     }
   };
 
-  return { categories, loading, error, refetch };
+  return { categories, categoriesWithId, loading, error, refetch };
 }

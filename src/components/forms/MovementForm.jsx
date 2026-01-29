@@ -24,7 +24,7 @@ const MOVEMENT_TYPES = [
   },
 ];
 
-function MovementForm({ accounts, categories, onSubmit, loading, prefillData, hideTypeSelector, onCategoryCreated }) {
+function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, hideTypeSelector, onCategoryCreated }) {
   // Set initial type based on prefill data
   const getInitialType = () => {
     if (prefillData?.tipo === 'ingreso') return 'ingreso';
@@ -38,6 +38,9 @@ function MovementForm({ accounts, categories, onSubmit, loading, prefillData, hi
   const renderForm = () => {
     const formProps = {
       accounts,
+      categoriesWithId,
+      budgets,
+      goals,
       onSubmit,
       loading,
       onCategoryCreated,

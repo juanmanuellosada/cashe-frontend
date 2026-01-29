@@ -91,7 +91,8 @@ cashe-frontend/
     ├── services/
     │   ├── supabaseApi.js         # API principal (CRUD, cache, dólar)
     │   ├── iconStorage.js         # Almacenamiento de iconos custom
-    │   └── whatsappApi.js         # API de integración WhatsApp
+    │   ├── whatsappApi.js         # API de integración WhatsApp
+    │   └── telegramApi.js         # API de integración Telegram
     │
     ├── hooks/
     │   ├── useAccounts.js         # Hook para cuentas
@@ -130,7 +131,8 @@ cashe-frontend/
     │   ├── SessionExpiryWarning.jsx # Aviso de sesión por expirar
     │   │
     │   ├── integrations/
-    │   │   └── WhatsAppLinkSection.jsx # Vinculación de WhatsApp
+    │   │   ├── WhatsAppLinkSection.jsx # Vinculación de WhatsApp
+    │   │   └── TelegramLinkSection.jsx  # Vinculación de Telegram
     │   │
     │   ├── forms/
     │   │   ├── MovementForm.jsx   # Formulario principal (tabs)
@@ -619,3 +621,94 @@ supabase secrets set WHATSAPP_PHONE_NUMBER_ID=xxx
 supabase secrets set WHATSAPP_VERIFY_TOKEN=xxx
 supabase secrets set ANTHROPIC_API_KEY=xxx
 ```
+
+---
+
+## Bot de Telegram
+
+### Descripción
+Bot complementario al de WhatsApp. Permite crear gastos, ingresos, transferencias y hacer consultas usando botones interactivos. **No requiere solicitud de acceso** (es gratis).
+
+### Ventajas sobre WhatsApp
+- **Gratis**: Sin costos de API
+- **Sin aprobación**: No requiere verificación de Meta
+- **Setup simple**: Solo crear bot con BotFather
+- **Botones inline**: Más flexibles que WhatsApp
+
+### Base de Datos (Nuevas tablas)
+
+**`telegram_users`** - Vincula cuentas de Telegram con Cashé
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| user_id | uuid | FK a profiles |
+| telegram_id | bigint | ID numérico de Telegram |
+| telegram_username | text | @username (opcional) |
+| telegram_first_name | text | Nombre del usuario |
+| verified | boolean | Si está verificado |
+| verification_code | text | Código de 6 dígitos |
+
+**`telegram_pending_actions`** - Cola de confirmaciones (igual que WhatsApp)
+
+### Edge Function
+
+**Ubicación**: `supabase/functions/telegram-webhook/index.ts`
+
+**Funcionalidad**:
+1. Recibe updates del Telegram Bot API
+2. Maneja callback queries (botones inline)
+3. Misma máquina de estados que WhatsApp
+4. Crea movimientos/transferencias tras confirmación
+
+### Frontend
+
+**Servicio**: `src/services/telegramApi.js`
+- `getTelegramStatus()` - Estado de vinculación
+- `generateTelegramVerificationCode()` - Generar código
+- `checkTelegramVerification()` - Polling para verificación
+- `unlinkTelegram()` - Desvincular
+
+**Componente**: `src/components/integrations/TelegramLinkSection.jsx`
+
+### Flujo de Vinculación
+
+1. Usuario abre `/integraciones` en la app web
+2. Hace click en "Vincular Telegram"
+3. Se genera código de 6 dígitos (expira en 10 min)
+4. Click en "Abrir Telegram" → deep link `t.me/BOT?start=CODE`
+5. Bot verifica código y vincula la cuenta
+6. Usuario puede empezar a usar el bot
+
+### Variables de Entorno (Edge Function)
+
+```bash
+TELEGRAM_BOT_TOKEN         # Token del bot (de BotFather)
+```
+
+### Deploy
+
+```bash
+# 1. Crear bot con @BotFather en Telegram
+# 2. Obtener token del bot
+
+# 3. Aplicar migración
+# (ejecutar database/telegram_schema.sql en Supabase Dashboard)
+
+# 4. Deploy Edge Function
+supabase functions deploy telegram-webhook
+
+# 5. Configurar secret
+supabase secrets set TELEGRAM_BOT_TOKEN=xxx
+
+# 6. Configurar webhook de Telegram
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -d "url=https://<PROJECT_REF>.supabase.co/functions/v1/telegram-webhook"
+```
+
+### Comandos del Bot
+
+| Comando | Acción |
+|---------|--------|
+| `/start` | Iniciar o vincular cuenta |
+| `/menu` | Mostrar menú principal |
+| `/cancel` | Cancelar operación actual |

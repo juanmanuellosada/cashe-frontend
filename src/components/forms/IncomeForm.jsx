@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
+import BudgetGoalImpact from '../common/BudgetGoalImpact';
 
-function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCategoryCreated }) {
+function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -18,6 +19,21 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
+
+  // Obtener el ID de la categoría seleccionada
+  const selectedCategoryId = useMemo(() => {
+    if (!formData.categoria || !categoriesWithId) return null;
+    const cat = categoriesWithId.find(c =>
+      c.nombre === formData.categoria || c.name === formData.categoria
+    );
+    return cat?.id || null;
+  }, [formData.categoria, categoriesWithId]);
+
+  // Obtener la cuenta seleccionada
+  const selectedAccount = useMemo(() => {
+    if (!formData.cuenta || !accounts) return null;
+    return accounts.find(a => a.nombre === formData.cuenta) || null;
+  }, [formData.cuenta, accounts]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -214,6 +230,19 @@ function IncomeForm({ accounts, categories, onSubmit, loading, prefillData, onCa
         onChange={setAttachment}
         disabled={loading}
       />
+
+      {/* Impacto en presupuestos y metas */}
+      {formData.monto && parseFloat(formData.monto) > 0 && (budgets?.length > 0 || goals?.length > 0) && (
+        <BudgetGoalImpact
+          type="income"
+          amount={parseFloat(formData.monto)}
+          categoryId={selectedCategoryId}
+          accountId={selectedAccount?.id}
+          currency={selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS'}
+          budgets={budgets || []}
+          goals={goals || []}
+        />
+      )}
 
       {/* Submit Button */}
       <button

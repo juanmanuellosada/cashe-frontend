@@ -484,6 +484,20 @@ function MovementsList({
           {title}
         </h2>
         <div className="flex items-center gap-2">
+          {/* Add button */}
+          {!selectionMode && (
+            <button
+              onClick={() => onAddClick ? onAddClick() : navigate('/nuevo')}
+              className="p-2 rounded-xl transition-colors"
+              style={{ backgroundColor: getTypeColor(), color: 'white' }}
+              title={`Agregar ${type === 'transferencia' ? 'transferencia' : type}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          )}
+
           {/* Selection mode toggle */}
           {!selectionMode && filteredMovements.length > 0 && (
             <button
@@ -497,7 +511,7 @@ function MovementsList({
               </svg>
             </button>
           )}
-          
+
           {/* Currency Selector - Premium design */}
           <div
             className="inline-flex rounded-xl p-1"

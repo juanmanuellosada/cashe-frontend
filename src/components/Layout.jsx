@@ -54,6 +54,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'U', ctrl: false, alt: true, label: 'Cuentas', action: () => navigate('/cuentas') },
     { key: 'A', ctrl: false, alt: true, label: 'Categorías', action: () => navigate('/categorias') },
     { key: 'D', ctrl: false, alt: true, label: 'Adjuntos', action: () => navigate('/adjuntos') },
+    { key: 'P', ctrl: false, alt: true, label: 'Presupuestos', action: () => navigate('/presupuestos') },
+    { key: 'M', ctrl: false, alt: true, label: 'Metas', action: () => navigate('/metas') },
     { key: 'B', ctrl: false, alt: true, label: 'Colapsar menú', action: () => setSidebarCollapsed(prev => !prev) },
     { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); setNewMovementOpen(false); } },
   ];
@@ -154,6 +156,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/estadisticas', label: 'Estadisticas', icon: 'statistics', color: 'var(--accent-purple)' },
     { path: '/comparador', label: 'Comparador', icon: 'comparador', color: 'var(--accent-blue)' },
     { path: '/resumen-categorias', label: 'Por categoría', icon: 'categorysum', color: 'var(--accent-primary)' },
+    { path: '/presupuestos', label: 'Presupuestos', icon: 'budget', color: 'var(--accent-yellow)' },
+    { path: '/metas', label: 'Metas', icon: 'goal', color: 'var(--accent-green)' },
     { path: '/gastos', label: 'Gastos', icon: 'expense', color: 'var(--accent-red)' },
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
@@ -231,6 +235,18 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         return (
           <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+        );
+      case 'budget':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'goal':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
           </svg>
         );
       default:
@@ -312,7 +328,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(0, 3).map(item => (
+            {menuItems.slice(0, 5).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -334,7 +350,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(3, 6).map(item => (
+            {menuItems.slice(5, 8).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -356,7 +372,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(6).map(item => (
+            {menuItems.slice(8).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}

@@ -5,6 +5,7 @@ import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
+import BudgetGoalImpact from '../common/BudgetGoalImpact';
 import { formatCurrency } from '../../utils/format';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
@@ -31,7 +32,7 @@ function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
   return fecha;
 }
 
-function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onCategoryCreated }) {
+function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -55,6 +56,15 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
 
   const esTarjetaCredito = selectedAccount?.esTarjetaCredito || false;
   const diaCierre = selectedAccount?.diaCierre || null;
+
+  // Encontrar el ID de la categoría seleccionada
+  const selectedCategoryId = useMemo(() => {
+    if (!formData.categoria || !categoriesWithId) return null;
+    const cat = categoriesWithId.find(c =>
+      c.nombre === formData.categoria || c.name === formData.categoria
+    );
+    return cat?.id || null;
+  }, [formData.categoria, categoriesWithId]);
 
   // Calcular monto por cuota
   const montoPorCuota = useMemo(() => {
@@ -450,6 +460,19 @@ function ExpenseForm({ accounts, categories, onSubmit, loading, prefillData, onC
           value={attachment}
           onChange={setAttachment}
           disabled={loading}
+        />
+      )}
+
+      {/* Impacto en presupuestos y metas */}
+      {formData.monto && parseFloat(formData.monto) > 0 && (budgets?.length > 0 || goals?.length > 0) && (
+        <BudgetGoalImpact
+          type="expense"
+          amount={parseFloat(formData.monto)}
+          categoryId={selectedCategoryId}
+          accountId={selectedAccount?.id}
+          currency={esTarjetaCredito ? monedaGasto : (selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS')}
+          budgets={budgets || []}
+          goals={goals || []}
         />
       )}
 

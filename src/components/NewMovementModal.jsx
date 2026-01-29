@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
+import { useBudgets } from '../hooks/useBudgets';
+import { useGoals } from '../hooks/useGoals';
 import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
 import MovementForm from './forms/MovementForm';
 import LoadingSpinner from './LoadingSpinner';
@@ -11,7 +13,9 @@ import Toast from './Toast';
  */
 function NewMovementModal({ isOpen, onClose, defaultType }) {
   const { accounts, loading: loadingAccounts, refetch: refetchAccounts } = useAccounts();
-  const { categories, loading: loadingCategories, refetch: refetchCategories } = useCategories();
+  const { categories, categoriesWithId, loading: loadingCategories, refetch: refetchCategories } = useCategories();
+  const { budgets } = useBudgets();
+  const { goals } = useGoals();
 
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
@@ -197,6 +201,9 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
               key={formKey}
               accounts={accounts}
               categories={categories}
+              categoriesWithId={categoriesWithId}
+              budgets={budgets}
+              goals={goals}
               onSubmit={handleSubmit}
               loading={submitting}
               prefillData={defaultType ? { tipo: defaultType === 'income' ? 'ingreso' : defaultType === 'expense' ? 'gasto' : 'transferencia' } : null}
