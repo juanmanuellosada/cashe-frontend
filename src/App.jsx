@@ -13,6 +13,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
+import Privacy from './pages/Privacy'
 
 // Protected pages - lazy loaded to reduce initial bundle size
 const Home = lazy(() => import('./pages/Home'))
@@ -69,6 +70,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/privacidad" element={<Privacy />} />
 
             {/* Protected routes - lazy loaded */}
             <Route path="/home" element={
