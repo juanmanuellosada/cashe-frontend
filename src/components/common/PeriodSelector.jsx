@@ -14,17 +14,17 @@ function PeriodSelector({
   className = '',
 }) {
   const periods = [
-    { value: 'weekly', label: 'Semanal', shortLabel: '7D' },
-    { value: 'monthly', label: 'Mensual', shortLabel: '30D' },
-    { value: 'yearly', label: 'Anual', shortLabel: '1A' },
+    { value: 'weekly', label: 'Sem', labelFull: 'Semanal' },
+    { value: 'monthly', label: 'Mes', labelFull: 'Mensual' },
+    { value: 'yearly', label: 'Año', labelFull: 'Anual' },
   ];
 
   if (showCustom) {
-    periods.push({ value: 'custom', label: 'Personalizado', shortLabel: '...' });
+    periods.push({ value: 'custom', label: 'Otro', labelFull: 'Personalizado' });
   }
 
   return (
-    <div className={`flex gap-2 ${className}`}>
+    <div className={`flex gap-1 sm:gap-2 ${className}`}>
       {periods.map((period) => {
         const isSelected = value === period.value;
         return (
@@ -33,7 +33,7 @@ function PeriodSelector({
             type="button"
             onClick={() => onChange(period.value)}
             className={`
-              px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+              flex-1 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-medium transition-all
               ${isSelected ? 'ring-2 ring-offset-1' : 'hover:opacity-80'}
             `}
             style={{
@@ -47,8 +47,8 @@ function PeriodSelector({
               '--tw-ring-offset-color': 'var(--bg-primary)',
             }}
           >
-            <span className="hidden sm:inline">{period.label}</span>
-            <span className="sm:hidden">{period.shortLabel}</span>
+            <span className="sm:hidden">{period.label}</span>
+            <span className="hidden sm:inline">{period.labelFull}</span>
           </button>
         );
       })}

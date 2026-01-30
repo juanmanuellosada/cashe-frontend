@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PeriodSelector from '../common/PeriodSelector';
-import MultiSelectChips from '../common/MultiSelectChips';
+import MultiSelectDropdown from '../common/MultiSelectDropdown';
 import DatePicker from '../DatePicker';
 import ConfirmModal from '../ConfirmModal';
 import IconPicker from '../IconPicker';
@@ -39,6 +39,17 @@ function BudgetModal({
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
+  // Reset drag state when modal opens
+  useEffect(() => {
+    setDragY(0);
+    setIsDragging(false);
+  }, [budget]);
+
   // Load budget data when editing
   useEffect(() => {
     if (budget) {
@@ -57,6 +68,29 @@ function BudgetModal({
       });
     }
   }, [budget]);
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100 && !loading) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -133,37 +167,57 @@ function BudgetModal({
     icon: a.icon,
   }));
 
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
+
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+          className="absolute inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
+          style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
           onClick={onClose}
         />
 
         {/* Modal */}
         <div
-          className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up sm:animate-scale-in"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
+          className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-5 animate-slide-down"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            transform: `translateY(${dragY}px)`,
+            transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+            opacity: shouldClose ? 0.5 : 1,
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
-          {/* Drag indicator (mobile) */}
-          <div
-            className="sm:hidden w-12 h-1 rounded-full mx-auto mb-4"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          />
+          {/* Drag indicator - mobile only */}
+          <div className="sm:hidden flex justify-center -mt-2 mb-1" data-drag-handle>
+            <div
+              className="w-10 h-1 rounded-full transition-colors"
+              style={{
+                backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+              }}
+            />
+          </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          {/* Header - Compact like AccountModal */}
+          <div
+            className="flex items-center justify-between py-2 sm:py-3 mb-3 border-b"
+            style={{ borderColor: 'var(--border-subtle)' }}
+            data-drag-handle
+          >
             <h2
-              className="text-lg font-semibold"
+              className="text-base sm:text-lg font-semibold"
               style={{ color: 'var(--text-primary)' }}
             >
               {isEditing ? 'Editar presupuesto' : 'Nuevo presupuesto'}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl transition-colors hover:bg-black/10"
+              className="p-1.5 rounded-lg transition-colors hover:bg-black/10"
               style={{ color: 'var(--text-muted)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,11 +226,11 @@ function BudgetModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {/* Name & Icon */}
             <div>
               <label
-                className="block text-sm font-medium mb-2"
+                className="block text-xs sm:text-sm font-medium mb-1.5"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 Nombre
@@ -186,12 +240,12 @@ function BudgetModal({
                 <button
                   type="button"
                   onClick={() => setShowIconPicker(true)}
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors hover:opacity-80"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl transition-colors hover:opacity-80"
                   style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
                   {formData.icon ? (
                     isEmoji(formData.icon) ? formData.icon : (
-                      <img src={formData.icon} alt="" className="w-8 h-8 rounded-lg object-contain" />
+                      <img src={formData.icon} alt="" className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg object-contain" />
                     )
                   ) : '💰'}
                 </button>
@@ -200,7 +254,7 @@ function BudgetModal({
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="Ej: Gastos mensuales"
-                  className="flex-1 px-4 py-3 rounded-xl text-sm outline-none transition-all focus:ring-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm outline-none transition-all focus:ring-2"
                   style={{
                     backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-primary)',
@@ -218,7 +272,7 @@ function BudgetModal({
             {/* Amount & Currency */}
             <div>
               <label
-                className="block text-sm font-medium mb-2"
+                className="block text-xs sm:text-sm font-medium mb-1.5"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 Monto límite
@@ -231,7 +285,7 @@ function BudgetModal({
                   placeholder="0"
                   min="0"
                   step="0.01"
-                  className="flex-1 px-4 py-3 rounded-xl text-sm outline-none transition-all focus:ring-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm outline-none transition-all focus:ring-2"
                   style={{
                     backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-primary)',
@@ -240,32 +294,32 @@ function BudgetModal({
                 />
                 {/* Currency selector with flags */}
                 <div
-                  className="flex rounded-xl p-1"
+                  className="flex rounded-lg sm:rounded-xl p-0.5 sm:p-1"
                   style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
                   <button
                     type="button"
                     onClick={() => handleChange('currency', 'ARS')}
-                    className="px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    className="px-2 sm:px-3 py-2 rounded-md sm:rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
                     style={{
                       backgroundColor: formData.currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
                       color: formData.currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
                     }}
                   >
                     <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
-                    ARS
+                    <span className="hidden sm:inline">ARS</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleChange('currency', 'USD')}
-                    className="px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    className="px-2 sm:px-3 py-2 rounded-md sm:rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
                     style={{
                       backgroundColor: formData.currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
                       color: formData.currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
                     }}
                   >
                     <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
-                    USD
+                    <span className="hidden sm:inline">USD</span>
                   </button>
                 </div>
               </div>
@@ -279,7 +333,7 @@ function BudgetModal({
             {/* Period */}
             <div>
               <label
-                className="block text-sm font-medium mb-2"
+                className="block text-xs sm:text-sm font-medium mb-1.5"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 Período
@@ -290,143 +344,126 @@ function BudgetModal({
               />
             </div>
 
-            {/* Start date (for all period types) */}
-            <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                Fecha de inicio
-              </label>
-              <DatePicker
-                value={formData.startDate}
-                onChange={(e) => handleChange('startDate', e.target.value)}
-              />
-            </div>
-
-            {/* End date (only for custom period) */}
-            {formData.periodType === 'custom' && (
+            {/* Dates row - two columns only for custom period */}
+            <div className={`grid gap-2 ${formData.periodType === 'custom' ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <div>
                 <label
-                  className="block text-xs font-medium mb-1"
+                  className="block text-[10px] sm:text-xs font-medium mb-1"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  Fecha fin
+                  {formData.periodType === 'custom' ? 'Inicio' : 'Fecha de inicio'}
                 </label>
                 <DatePicker
-                  value={formData.endDate}
-                  onChange={(e) => handleChange('endDate', e.target.value)}
+                  value={formData.startDate}
+                  onChange={(e) => handleChange('startDate', e.target.value)}
+                  compact={formData.periodType === 'custom'}
                 />
-                {errors.endDate && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--accent-red)' }}>
-                    {errors.endDate}
-                  </p>
+              </div>
+
+              {formData.periodType === 'custom' && (
+                <div>
+                  <label
+                    className="block text-[10px] sm:text-xs font-medium mb-1"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Fin
+                  </label>
+                  <DatePicker
+                    value={formData.endDate}
+                    onChange={(e) => handleChange('endDate', e.target.value)}
+                    compact
+                  />
+                  {errors.endDate && (
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--accent-red)' }}>
+                      {errors.endDate}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Global checkbox - compact */}
+            <button
+              type="button"
+              onClick={() => handleChange('isGlobal', !formData.isGlobal)}
+              className="flex items-center gap-2 w-full p-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <div
+                className={`w-4 h-4 rounded flex items-center justify-center transition-all duration-200 flex-shrink-0 ${!formData.isGlobal ? 'border-2' : ''}`}
+                style={{
+                  backgroundColor: formData.isGlobal ? 'var(--accent-primary)' : 'transparent',
+                  borderColor: 'var(--text-secondary)'
+                }}
+              >
+                {formData.isGlobal && (
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
                 )}
               </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Global</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Todos los gastos</p>
+              </div>
+            </button>
+
+            {/* Category & Account filters (if not global) */}
+            {!formData.isGlobal && (
+              <div className="grid grid-cols-2 gap-2">
+                <MultiSelectDropdown
+                  items={expenseCategories}
+                  selectedIds={formData.categoryIds}
+                  onChange={(ids) => handleChange('categoryIds', ids)}
+                  label="Categorías"
+                  placeholder="Todas"
+                  emptyMessage="Sin categorías"
+                />
+                <MultiSelectDropdown
+                  items={accountOptions}
+                  selectedIds={formData.accountIds}
+                  onChange={(ids) => handleChange('accountIds', ids)}
+                  label="Cuentas"
+                  placeholder="Todas"
+                  emptyMessage="Sin cuentas"
+                />
+              </div>
             )}
 
-            {/* Global toggle */}
-            <div
-              className="flex items-center justify-between p-3 rounded-xl"
+            {/* Recurring checkbox - compact */}
+            <button
+              type="button"
+              onClick={() => handleChange('isRecurring', !formData.isRecurring)}
+              className="flex items-center gap-2 w-full p-2 rounded-lg transition-colors"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
-              <div>
-                <p
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  Presupuesto global
-                </p>
-                <p
-                  className="text-xs"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Incluir todos los gastos
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleChange('isGlobal', !formData.isGlobal)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+              <div
+                className={`w-4 h-4 rounded flex items-center justify-center transition-all duration-200 flex-shrink-0 ${!formData.isRecurring ? 'border-2' : ''}`}
                 style={{
-                  backgroundColor: formData.isGlobal ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                  backgroundColor: formData.isRecurring ? 'var(--accent-primary)' : 'transparent',
+                  borderColor: 'var(--text-secondary)'
                 }}
               >
-                <span
-                  className={`
-                    inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform
-                    ${formData.isGlobal ? 'translate-x-6' : 'translate-x-1'}
-                  `}
-                />
-              </button>
-            </div>
-
-            {/* Category filter (if not global) */}
-            {!formData.isGlobal && (
-              <MultiSelectChips
-                items={expenseCategories}
-                selectedIds={formData.categoryIds}
-                onChange={(ids) => handleChange('categoryIds', ids)}
-                label="Categorías (opcional)"
-                emptyMessage="No hay categorías de gasto"
-              />
-            )}
-
-            {/* Account filter (if not global) */}
-            {!formData.isGlobal && (
-              <MultiSelectChips
-                items={accountOptions}
-                selectedIds={formData.accountIds}
-                onChange={(ids) => handleChange('accountIds', ids)}
-                label="Cuentas (opcional)"
-                emptyMessage="No hay cuentas"
-              />
-            )}
-
-            {/* Recurring toggle */}
-            <div
-              className="flex items-center justify-between p-3 rounded-xl"
-              style={{ backgroundColor: 'var(--bg-tertiary)' }}
-            >
-              <div>
-                <p
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  Recurrente
-                </p>
-                <p
-                  className="text-xs"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Se reinicia cada período
-                </p>
+                {formData.isRecurring && (
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleChange('isRecurring', !formData.isRecurring)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                style={{
-                  backgroundColor: formData.isRecurring ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                }}
-              >
-                <span
-                  className={`
-                    inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform
-                    ${formData.isRecurring ? 'translate-x-6' : 'translate-x-1'}
-                  `}
-                />
-              </button>
-            </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Recurrente</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Se reinicia cada período</p>
+              </div>
+            </button>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-3">
+            <div className="flex gap-2 pt-2">
               {isEditing && onDelete && (
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={loading}
-                  className="px-4 py-3 rounded-xl text-sm font-medium transition-colors"
+                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
                   style={{
                     backgroundColor: 'var(--accent-red-dim)',
                     color: 'var(--accent-red)',
@@ -441,7 +478,7 @@ function BudgetModal({
                   type="button"
                   onClick={() => onDuplicate(budget)}
                   disabled={loading}
-                  className="px-4 py-3 rounded-xl text-sm font-medium transition-colors"
+                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
                   style={{
                     backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-secondary)',
@@ -454,13 +491,13 @@ function BudgetModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors disabled:opacity-50"
                 style={{
                   backgroundColor: 'var(--accent-primary)',
                   color: 'white',
                 }}
               >
-                {loading ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear presupuesto'}
+                {loading ? 'Guardando...' : isEditing ? 'Guardar' : 'Crear'}
               </button>
             </div>
           </form>
@@ -468,17 +505,16 @@ function BudgetModal({
       </div>
 
       {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <ConfirmModal
-          title="Eliminar presupuesto"
-          message={`¿Estás seguro de que quieres eliminar "${budget?.name}"? Esta acción no se puede deshacer.`}
-          confirmText="Eliminar"
-          cancelText="Cancelar"
-          onConfirm={confirmDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
-          variant="danger"
-        />
-      )}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Eliminar presupuesto"
+        message={`¿Estás seguro de que quieres eliminar "${budget?.name}"? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
 
       {/* Icon picker */}
       <IconPicker
