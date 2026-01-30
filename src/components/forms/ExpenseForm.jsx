@@ -176,14 +176,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5">
         {/* Fecha */}
         <div>
           <label
-            className="flex items-center gap-2 text-sm font-medium mb-2"
+            className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
             style={{ color: 'var(--text-secondary)' }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             Fecha
@@ -198,14 +198,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       {/* Monto - Highlighted */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {currencyIcon}
           {esTarjetaCredito && cantidadCuotas > 1 ? 'Monto Total' : 'Monto'}
         </label>
         <div
-          className="relative rounded-2xl p-4 transition-all duration-200"
+          className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-200"
           style={{
             backgroundColor: 'var(--bg-tertiary)',
             border: '2px solid transparent',
@@ -213,7 +213,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         >
           <div className="flex items-center gap-2">
             <span
-              className="text-3xl font-bold"
+              className="text-2xl sm:text-3xl font-bold"
               style={{ color: 'var(--accent-red)' }}
             >
               {monedaGasto === 'USD' ? 'US$' : '$'}
@@ -226,51 +226,52 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
               placeholder="0"
               min="0"
               step="0.01"
-              className="flex-1 text-3xl font-bold bg-transparent outline-none"
+              className="flex-1 text-2xl sm:text-3xl font-bold bg-transparent outline-none"
               style={{ color: 'var(--text-primary)' }}
             />
           </div>
-          
-          {/* Selector de moneda para tarjetas de crédito */}
-          {esTarjetaCredito && (
-            <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <button
-                type="button"
-                onClick={() => setMonedaGasto('ARS')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                  monedaGasto === 'ARS' ? 'ring-2' : 'opacity-60'
-                }`}
-                style={{
-                  backgroundColor: monedaGasto === 'ARS' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-secondary)',
-                  color: monedaGasto === 'ARS' ? 'var(--accent-red)' : 'var(--text-secondary)',
-                  '--tw-ring-color': 'var(--accent-red)',
-                }}
-              >
-                $ Pesos
-              </button>
-              <button
-                type="button"
-                onClick={() => setMonedaGasto('USD')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                  monedaGasto === 'USD' ? 'ring-2' : 'opacity-60'
-                }`}
-                style={{
-                  backgroundColor: monedaGasto === 'USD' ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-secondary)',
-                  color: monedaGasto === 'USD' ? 'var(--accent-green)' : 'var(--text-secondary)',
-                  '--tw-ring-color': 'var(--accent-green)',
-                }}
-              >
-                US$ Dólares
-              </button>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Selector de moneda - Full width - Solo para tarjetas de crédito */}
+      {esTarjetaCredito && (
+        <div>
+          <label
+            className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Moneda
+          </label>
+          <div className="flex w-full p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+            {[
+              { id: 'ARS', label: 'ARS', icon: `${import.meta.env.BASE_URL}icons/catalog/ARS.svg` },
+              { id: 'USD', label: 'USD', icon: `${import.meta.env.BASE_URL}icons/catalog/USD.svg` },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setMonedaGasto(opt.id)}
+                className="flex-1 py-2 rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+                style={{
+                  backgroundColor: monedaGasto === opt.id ? 'var(--bg-elevated)' : 'transparent',
+                  color: monedaGasto === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                <img src={opt.icon} alt={opt.label} className="w-4 h-4 rounded-sm" />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Cuenta */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {accountIcon}
@@ -296,7 +297,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       {/* Selector de Cuotas - Solo visible si es tarjeta de crédito */}
       {esTarjetaCredito && (
         <div
-          className="rounded-2xl p-4 space-y-4 animate-fade-in"
+          className="rounded-xl sm:rounded-2xl p-3 sm:p-4 space-y-3 sm:space-y-4 animate-fade-in"
           style={{
             backgroundColor: 'var(--bg-tertiary)',
             border: '1px solid var(--accent-purple)',
@@ -304,7 +305,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         >
           <div className="flex items-center gap-2">
             {installmentsIcon}
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               ¿En cuantas cuotas?
             </span>
           </div>
@@ -406,20 +407,20 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       {/* Categoría */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {categoryIcon}
-          Categoria
+          Categoría
         </label>
         <Combobox
           name="categoria"
           value={formData.categoria}
           onChange={handleChange}
           options={categories}
-          placeholder="Seleccionar categoria"
+          placeholder="Seleccionar categoría"
           icon={categoryIcon}
-          emptyMessage="No hay categorias"
+          emptyMessage="No hay categorías"
           onCreateNew={() => setShowCreateCategory(true)}
           createNewLabel="Crear categoría"
           defaultOptionIcon="🏷️"
@@ -429,29 +430,21 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       {/* Nota */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {noteIcon}
           Nota (opcional)
         </label>
-        <div className="relative">
-          <div
-            className="absolute left-4 top-3"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {noteIcon}
-          </div>
-          <textarea
-            name="nota"
-            value={formData.nota}
-            onChange={handleChange}
-            placeholder="Agregar una nota..."
-            rows={2}
-            className="w-full pl-12 pr-4 py-3 rounded-xl resize-none transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)]"
-            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-          />
-        </div>
+        <textarea
+          name="nota"
+          value={formData.nota}
+          onChange={handleChange}
+          placeholder="Agregar una nota..."
+          rows={1}
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl resize-none transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
+          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+        />
       </div>
 
       {/* Adjunto - Solo para gastos sin cuotas */}
@@ -480,7 +473,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       <button
         type="submit"
         disabled={!isValid || loading || showSuccess}
-        className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+        className="w-full py-3 sm:py-4 rounded-xl font-semibold text-white text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
         style={{
           backgroundColor: showSuccess
             ? 'var(--accent-green)'

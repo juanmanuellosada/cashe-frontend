@@ -93,7 +93,7 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
       {/* Movement Type Selector - Modern Pill Tabs */}
       {!hideTypeSelector && (
         <div
-          className="inline-flex p-1 rounded-lg mb-5"
+          className="inline-flex p-0.5 sm:p-1 rounded-lg mb-3 sm:mb-5"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           {MOVEMENT_TYPES.map((type) => {
@@ -102,7 +102,7 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
               <button
                 key={type.id}
                 onClick={() => setMovementType(type.id)}
-                className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-150"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-150"
                 style={{
                   backgroundColor: isActive ? type.bgDim : 'transparent',
                   color: isActive ? type.color : 'var(--text-muted)',

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import LoadingSpinner from './LoadingSpinner';
@@ -42,7 +42,20 @@ function EditMovementModal({
   const [newAttachment, setNewAttachment] = useState(null);
   const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
 
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
   const isTransfer = movement?.tipo === 'transferencia';
+
+  // Reset drag state when modal opens
+  useEffect(() => {
+    if (movement) {
+      setDragY(0);
+      setIsDragging(false);
+    }
+  }, [movement]);
 
   useEffect(() => {
     if (movement) {
@@ -73,6 +86,29 @@ function EditMovementModal({
       setRemoveExistingAttachment(false);
     }
   }, [movement, isTransfer]);
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100 && !loading) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -172,37 +208,64 @@ function EditMovementModal({
 
   if (!movement) return null;
 
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
+        className="relative w-full max-w-md sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          maxHeight: 'min(calc(100dvh - 40px), calc(100vh - 40px))',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <div
+          className="flex items-center justify-between px-4 py-2 sm:py-3 flex-shrink-0 border-b cursor-grab active:cursor-grabbing sm:cursor-default"
+          style={{ borderColor: 'var(--border-subtle)' }}
+          data-drag-handle
+        >
+          <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
             {getTitle()}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-opacity-80 transition-colors"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+            style={{ color: 'var(--text-secondary)' }}
           >
-            <svg className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form - scrollable content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
           {isTransfer ? (
             // Transfer form
             <>
@@ -471,64 +534,70 @@ function EditMovementModal({
               />
             </>
           )}
+        </form>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
+        {/* Actions - sticky footer */}
+        <div className="flex gap-2 p-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border-subtle)' }}>
+          <button
+            type="button"
+            onClick={handleDeleteClick}
+            disabled={loading}
+            className="p-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
+            title="Eliminar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+          {onDuplicate && (
             <button
               type="button"
-              onClick={handleDeleteClick}
+              onClick={handleDuplicate}
               disabled={loading}
               className="p-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
-              title="Eliminar"
+              style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
+              title="Duplicar con fecha de hoy"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </button>
-            {onDuplicate && (
-              <button
-                type="button"
-                onClick={handleDuplicate}
-                disabled={loading}
-                className="p-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
-                style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
-                title="Duplicar con fecha de hoy"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
+          )}
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            disabled={!isValid || loading}
+            className="flex-1 py-3 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: getColor() }}
+          >
+            {loading ? (
+              <>
+                <LoadingSpinner size="sm" />
+                Guardando...
+              </>
+            ) : (
+              'Guardar'
             )}
-            <button
-              type="submit"
-              disabled={!isValid || loading}
-              className="flex-1 py-3 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: getColor() }}
-            >
-              {loading ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  Guardando...
-                </>
-              ) : (
-                'Guardar'
-              )}
-            </button>
-          </div>
-        </form>
+          </button>
+        </div>
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center">
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setShowDeleteConfirm(false)}
             />
             <div
-              className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+              className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
             >
+              {/* Drag indicator - mobile only */}
+              <div className="sm:hidden flex justify-center -mt-4 mb-2">
+                <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--border-medium)' }} />
+              </div>
+
               <div className="text-center">
                 <div
                   className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"

@@ -524,7 +524,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         {/* Main Content */}
         <main
           key={location.pathname}
-          className={`flex-1 animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-4 py-4 pb-24'}`}
+          className={`flex-1 animate-fade-in overflow-x-hidden ${isDesktop ? 'px-8 py-6' : 'px-4 py-4 pb-24'}`}
         >
           {children}
         </main>

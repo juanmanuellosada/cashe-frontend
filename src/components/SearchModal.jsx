@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getRecentMovements } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import { format } from 'date-fns';
@@ -11,6 +11,19 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const inputRef = useRef(null);
+
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
+  // Reset drag state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setDragY(0);
+      setIsDragging(false);
+    }
+  }, [isOpen]);
 
   // Load movements when modal opens
   useEffect(() => {
@@ -80,6 +93,29 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
     }
   };
 
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
+
   const getTypeColor = (tipo) => {
     switch (tipo) {
       case 'ingreso': return 'var(--accent-green)';
@@ -124,23 +160,46 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
 
   if (!isOpen) return null;
 
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center pt-16 px-4">
+    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg rounded-2xl overflow-hidden animate-slide-down"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
+        className="relative w-full max-w-lg sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden animate-slide-down"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         {/* Search Input */}
         <div
           className="p-4"
           style={{ borderBottom: '1px solid var(--border-subtle)' }}
+          data-drag-handle
         >
           <div className="relative">
             <svg
@@ -273,22 +332,6 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
           {' '}para cerrar
         </div>
       </div>
-
-      <style>{`
-        @keyframes slide-down {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-down {
-          animation: slide-down 0.2s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

@@ -63,6 +63,11 @@ export default function IconPicker({
   const fileInputRef = useRef(null);
   const modalRef = useRef(null);
 
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
   // Cargar íconos subidos al abrir
   useEffect(() => {
     if (isOpen && user) {
@@ -76,24 +81,10 @@ export default function IconPicker({
       setSearchTerm('');
       setSelectedCategory('all');
       setError(null);
+      setDragY(0);
+      setIsDragging(false);
     }
   }, [isOpen]);
-
-  // Click fuera para cerrar
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      // No cerrar si el modal de confirmación está abierto
-      if (deleteConfirm.isOpen) return;
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen, onClose, deleteConfirm.isOpen]);
 
   // Escape para cerrar
   useEffect(() => {
@@ -108,6 +99,29 @@ export default function IconPicker({
       return () => document.removeEventListener('keydown', handleEscape);
     }
   }, [isOpen, onClose, deleteConfirm.isOpen]);
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
 
   const loadUploadedIcons = async () => {
     if (!user) return;
@@ -210,6 +224,9 @@ export default function IconPicker({
 
   if (!isOpen) return null;
 
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
+
   const tabs = [
     ...(showPredefined ? [{ id: 'predefined', label: 'Íconos' }] : []),
     { id: 'emoji', label: 'Emojis' },
@@ -217,16 +234,43 @@ export default function IconPicker({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
+        onClick={() => !deleteConfirm.isOpen && onClose()}
+      />
+
       <div
         ref={modalRef}
-        className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
-        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
+        className="relative w-full max-w-md sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-slide-down"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         {/* Header */}
         <div
-          className="flex items-center justify-between px-5 py-4"
+          className="flex items-center justify-between px-5 py-4 cursor-grab active:cursor-grabbing sm:cursor-default"
           style={{ borderBottom: '1px solid var(--border-color)' }}
+          data-drag-handle
         >
           <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
             {title}

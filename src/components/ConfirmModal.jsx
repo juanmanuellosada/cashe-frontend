@@ -1,20 +1,7 @@
-import { useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 /**
- * Modal de confirmación reutilizable
- * 
- * @param {Object} props
- * @param {boolean} props.isOpen - Si el modal está abierto
- * @param {Function} props.onClose - Función para cerrar el modal
- * @param {Function} props.onConfirm - Función al confirmar
- * @param {string} props.title - Título del modal
- * @param {string} props.message - Mensaje de confirmación
- * @param {string} props.confirmText - Texto del botón confirmar (default: "Eliminar")
- * @param {string} props.cancelText - Texto del botón cancelar (default: "Cancelar")
- * @param {string} props.variant - Variante de color: "danger" | "warning" | "info" (default: "danger")
- * @param {boolean} props.loading - Si está procesando
- * @param {React.ReactNode} props.icon - Ícono personalizado (opcional)
- * @param {React.ReactNode} props.children - Contenido extra (opcional)
+ * Modal de confirmación reutilizable con drag-to-dismiss
  */
 function ConfirmModal({
   isOpen,
@@ -29,6 +16,18 @@ function ConfirmModal({
   icon,
   children,
 }) {
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
+  // Reset drag state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setDragY(0);
+      setIsDragging(false);
+    }
+  }, [isOpen]);
+
   // Cerrar con Escape
   useEffect(() => {
     const handleEscape = (e) => {
@@ -36,12 +35,38 @@ function ConfirmModal({
         onClose();
       }
     };
-    
+
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, loading, onClose]);
 
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100 && !loading) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
+
   if (!isOpen) return null;
+
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
 
   const getColors = () => {
     switch (variant) {
@@ -76,15 +101,34 @@ function ConfirmModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={loading ? undefined : onClose}
       />
       <div
-        className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
+        className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center -mt-4 mb-2" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         <div className="text-center">
           <div
             className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
@@ -98,9 +142,9 @@ function ConfirmModal({
           <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
             {message}
           </p>
-          
+
           {children}
-          
+
           <div className="flex gap-3">
             <button
               onClick={onClose}

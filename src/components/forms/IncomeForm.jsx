@@ -95,14 +95,14 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5">
         {/* Fecha */}
         <div>
           <label
-            className="flex items-center gap-2 text-sm font-medium mb-2"
+            className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
             style={{ color: 'var(--text-secondary)' }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Fecha
@@ -117,14 +117,14 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
       {/* Monto - Highlighted */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {currencyIcon}
           Monto
         </label>
         <div
-          className="relative rounded-2xl p-4 transition-all duration-200"
+          className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-200"
           style={{
             backgroundColor: 'var(--bg-tertiary)',
             border: '2px solid transparent',
@@ -132,7 +132,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
         >
           <div className="flex items-center gap-2">
             <span
-              className="text-3xl font-bold"
+              className="text-2xl sm:text-3xl font-bold"
               style={{ color: 'var(--accent-green)' }}
             >
               $
@@ -145,7 +145,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
               placeholder="0"
               min="0"
               step="0.01"
-              className="flex-1 text-3xl font-bold bg-transparent outline-none"
+              className="flex-1 text-2xl sm:text-3xl font-bold bg-transparent outline-none"
               style={{ color: 'var(--text-primary)' }}
             />
           </div>
@@ -155,7 +155,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
       {/* Cuenta */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {accountIcon}
@@ -176,7 +176,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
       {/* Categoría */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {categoryIcon}
@@ -199,29 +199,21 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
       {/* Nota */}
       <div>
         <label
-          className="flex items-center gap-2 text-sm font-medium mb-2"
+          className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
           {noteIcon}
           Nota (opcional)
         </label>
-        <div className="relative">
-          <div
-            className="absolute left-4 top-3"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {noteIcon}
-          </div>
-          <textarea
-            name="nota"
-            value={formData.nota}
-            onChange={handleChange}
-            placeholder="Agregar una nota..."
-            rows={2}
-            className="w-full pl-12 pr-4 py-3 rounded-xl resize-none transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)]"
-            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-          />
-        </div>
+        <textarea
+          name="nota"
+          value={formData.nota}
+          onChange={handleChange}
+          placeholder="Agregar una nota..."
+          rows={1}
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl resize-none transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
+          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+        />
       </div>
 
       {/* Adjunto */}
@@ -248,7 +240,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
       <button
         type="submit"
         disabled={!isValid || loading || showSuccess}
-        className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+        className="w-full py-3 sm:py-4 rounded-xl font-semibold text-white text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
         style={{
           backgroundColor: 'var(--accent-green)',
         }}

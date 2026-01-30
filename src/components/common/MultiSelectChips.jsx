@@ -79,7 +79,7 @@ function MultiSelectChips({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
         {items.length === 0 ? (
           <p
             className="text-sm py-2"
@@ -97,9 +97,9 @@ function MultiSelectChips({
                 onClick={() => toggleItem(item.id)}
                 disabled={disabled}
                 className={`
-                  px-3 py-2 rounded-xl text-xs font-medium transition-all
-                  flex items-center gap-1.5
-                  ${isSelected ? 'ring-2 ring-offset-1' : 'hover:opacity-80'}
+                  px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all
+                  flex items-center gap-1
+                  ${isSelected ? 'ring-1 ring-offset-1' : 'hover:opacity-80'}
                   ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
                 style={{
@@ -115,19 +115,19 @@ function MultiSelectChips({
               >
                 {item.icon && (
                   isEmoji(item.icon) ? (
-                    <span className="text-sm">{item.icon}</span>
+                    <span className="text-xs">{item.icon}</span>
                   ) : (
                     <img
                       src={resolveIconPath(item.icon)}
                       alt=""
-                      className="w-4 h-4 rounded-sm object-contain"
+                      className="w-3.5 h-3.5 rounded-sm object-contain"
                     />
                   )
                 )}
-                <span>{item.name}</span>
+                <span className="truncate max-w-[100px]">{item.name}</span>
                 {isSelected && (
                   <svg
-                    className="w-3.5 h-3.5 ml-0.5"
+                    className="w-3 h-3 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

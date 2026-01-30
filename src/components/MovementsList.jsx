@@ -512,9 +512,9 @@ function MovementsList({
             </button>
           )}
 
-          {/* Currency Selector - Premium design */}
+          {/* Currency Selector - Hidden on mobile, shown inline on desktop */}
           <div
-            className="inline-flex rounded-xl p-1"
+            className="hidden sm:inline-flex rounded-xl p-1"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <button
@@ -546,6 +546,37 @@ function MovementsList({
             value={dateRange}
             onChange={setDateRange}
           />
+        </div>
+      </div>
+
+      {/* Currency Selector - Full width on mobile */}
+      <div className="sm:hidden">
+        <div
+          className="flex w-full p-1 rounded-lg"
+          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+        >
+          <button
+            onClick={() => setCurrency('ARS')}
+            className="flex-1 py-2 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5"
+            style={{
+              backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
+            Pesos (ARS)
+          </button>
+          <button
+            onClick={() => setCurrency('USD')}
+            className="flex-1 py-2 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5"
+            style={{
+              backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
+            Dólares (USD)
+          </button>
         </div>
       </div>
 

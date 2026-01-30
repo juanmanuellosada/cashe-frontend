@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
 import { useBudgets } from '../hooks/useBudgets';
@@ -20,6 +20,19 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [formKey, setFormKey] = useState(0);
+
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
+  // Reset drag state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setDragY(0);
+      setIsDragging(false);
+    }
+  }, [isOpen]);
 
   // Cerrar con Escape
   useEffect(() => {
@@ -48,6 +61,29 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
       setToast(null);
     }
   }, [isOpen]);
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100 && !submitting) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
 
   const handleSubmit = async ({ type, data }) => {
     setSubmitting(true);
@@ -115,65 +151,50 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
     }
   };
 
-  const getModalSubtitle = () => {
-    if (!defaultType) return 'Registra ingreso, gasto o transferencia';
-    switch (defaultType) {
-      case 'expense': return 'Registra un gasto';
-      case 'income': return 'Registra un ingreso';
-      case 'transfer': return 'Registra una transferencia';
-      default: return 'Registra ingreso, gasto o transferencia';
-    }
-  };
-
-  const getIconColor = () => {
-    if (!defaultType) return 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)';
-    switch (defaultType) {
-      case 'expense': return 'var(--accent-red)';
-      case 'income': return 'var(--accent-green)';
-      case 'transfer': return 'var(--accent-blue)';
-      default: return 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)';
-    }
-  };
-
-  const getIcon = () => {
-    if (!defaultType) {
-      return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />;
-    }
-    switch (defaultType) {
-      case 'expense':
-        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />;
-      case 'income':
-        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />;
-      case 'transfer':
-        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />;
-      default:
-        return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />;
-    }
-  };
+  const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={submitting ? undefined : onClose}
       />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md my-auto rounded-xl animate-scale-in"
+        className="relative w-full max-w-md sm:my-auto sm:m-4 mt-0 rounded-b-xl sm:rounded-xl animate-slide-down"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)',
-          maxHeight: '85vh',
+          maxHeight: 'min(85dvh, 85vh)',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         {/* Header */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0 cursor-grab active:cursor-grabbing sm:cursor-default"
           style={{ borderColor: 'var(--border-subtle)' }}
+          data-drag-handle
         >
           <h2 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>
             {getModalTitle()}
@@ -191,7 +212,7 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto flex-1">
+        <div className="p-3 sm:p-4 overflow-y-auto flex-1">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="md" />

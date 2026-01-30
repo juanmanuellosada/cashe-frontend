@@ -461,19 +461,21 @@ function Comparador() {
                 Categorias de gastos
               </p>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                {categories.gastos?.map((cat) => {
-                  const selected = selectedExpenseCategories.includes(cat);
+                {categories.gastos?.map((cat, index) => {
+                  const catValue = typeof cat === 'object' ? (cat.value || cat.label || cat.name) : cat;
+                  const catLabel = typeof cat === 'object' ? (cat.label || cat.name || cat.value) : cat;
+                  const selected = selectedExpenseCategories.includes(catValue);
                   return (
                     <button
-                      key={cat}
-                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
+                      key={catValue || `expense-cat-${index}`}
+                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, catValue)}
                       className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
                       }}
                     >
-                      {cat.length > 20 ? cat.substring(0, 20) + '...' : cat}
+                      {catLabel && catLabel.length > 20 ? catLabel.substring(0, 20) + '...' : catLabel}
                     </button>
                   );
                 })}
@@ -489,19 +491,21 @@ function Comparador() {
                 Categorias de ingresos
               </p>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                {categories.ingresos?.map((cat) => {
-                  const selected = selectedIncomeCategories.includes(cat);
+                {categories.ingresos?.map((cat, index) => {
+                  const catValue = typeof cat === 'object' ? (cat.value || cat.label || cat.name) : cat;
+                  const catLabel = typeof cat === 'object' ? (cat.label || cat.name || cat.value) : cat;
+                  const selected = selectedIncomeCategories.includes(catValue);
                   return (
                     <button
-                      key={cat}
-                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
+                      key={catValue || `income-cat-${index}`}
+                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, catValue)}
                       className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
                       }}
                     >
-                      {cat.length > 20 ? cat.substring(0, 20) + '...' : cat}
+                      {catLabel && catLabel.length > 20 ? catLabel.substring(0, 20) + '...' : catLabel}
                     </button>
                   );
                 })}
@@ -877,19 +881,21 @@ function Comparador() {
                 Filtrar por categoria:
               </p>
               <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-                {categories.gastos?.map(cat => {
-                  const selected = selectedExpenseCategories.includes(cat);
+                {categories.gastos?.map((cat, index) => {
+                  const catValue = typeof cat === 'object' ? (cat.value || cat.label || cat.name) : cat;
+                  const catLabel = typeof cat === 'object' ? (cat.label || cat.name || cat.value) : cat;
+                  const selected = selectedExpenseCategories.includes(catValue);
                   return (
                     <button
-                      key={cat}
-                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
+                      key={catValue || `expense-filter-${index}`}
+                      onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, catValue)}
                       className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
                       }}
                     >
-                      {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                      {catLabel && catLabel.length > 15 ? catLabel.substring(0, 15) + '...' : catLabel}
                     </button>
                   );
                 })}
@@ -1016,19 +1022,21 @@ function Comparador() {
                 Filtrar por categoria:
               </p>
               <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-                {categories.ingresos?.map(cat => {
-                  const selected = selectedIncomeCategories.includes(cat);
+                {categories.ingresos?.map((cat, index) => {
+                  const catValue = typeof cat === 'object' ? (cat.value || cat.label || cat.name) : cat;
+                  const catLabel = typeof cat === 'object' ? (cat.label || cat.name || cat.value) : cat;
+                  const selected = selectedIncomeCategories.includes(catValue);
                   return (
                     <button
-                      key={cat}
-                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
+                      key={catValue || `income-filter-${index}`}
+                      onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, catValue)}
                       className="px-2 py-1 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
                       }}
                     >
-                      {cat.length > 15 ? cat.substring(0, 15) + '...' : cat}
+                      {catLabel && catLabel.length > 15 ? catLabel.substring(0, 15) + '...' : catLabel}
                     </button>
                   );
                 })}

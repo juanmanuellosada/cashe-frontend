@@ -162,27 +162,27 @@ export default function Attachments() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Adjuntos
-        </h2>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {attachments.length} archivo{attachments.length !== 1 ? 's' : ''}
-        </p>
+    <div className="space-y-3">
+      {/* Header + Storage compact */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Adjuntos
+          </h2>
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            {attachments.length} archivo{attachments.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <StorageUsageIndicator variant="compact" />
       </div>
 
-      {/* Indicador de storage */}
-      <StorageUsageIndicator variant="full" />
-
-      {/* Filtros */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Filtros - más compactos */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
         {filters.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
               filter === f.key ? 'text-white' : ''
             }`}
             style={{
@@ -195,18 +195,18 @@ export default function Attachments() {
         ))}
       </div>
 
-      {/* Lista de adjuntos */}
-      <div className="space-y-2">
+      {/* Lista de adjuntos - más compacta */}
+      <div className="space-y-1.5">
         {filteredAttachments.length === 0 ? (
           <div
-            className="text-center py-12 rounded-xl"
+            className="text-center py-8 rounded-lg"
             style={{ backgroundColor: 'var(--bg-secondary)' }}
           >
-            <svg className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-12 h-12 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              {filter === 'all' ? 'No hay adjuntos' : 'No hay adjuntos en esta categoria'}
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {filter === 'all' ? 'No hay adjuntos' : 'Sin adjuntos'}
             </p>
           </div>
         ) : (
@@ -214,12 +214,12 @@ export default function Attachments() {
             <div
               key={attachment.id}
               onClick={() => handleClick(attachment)}
-              className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-all hover:scale-[1.005] active:scale-[0.995]"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
             >
-              {/* Thumbnail o icono */}
+              {/* Thumbnail o icono - más pequeño */}
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
                 {isImageFile(attachment.attachmentName) ? (
@@ -229,23 +229,20 @@ export default function Attachments() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <svg className="w-6 h-6" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 )}
               </div>
 
-              {/* Info */}
+              {/* Info - más compacta */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                  {attachment.attachmentName}
-                </p>
-                <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-                  {attachment.description}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                    {attachment.attachmentName}
+                  </p>
                   <span
-                    className="text-xs px-2 py-0.5 rounded-full"
+                    className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{
                       backgroundColor: `color-mix(in srgb, ${getTypeColor(attachment.type)} 20%, transparent)`,
                       color: getTypeColor(attachment.type)
@@ -253,14 +250,14 @@ export default function Attachments() {
                   >
                     {attachment.typeLabel}
                   </span>
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {format(new Date(attachment.date), "d MMM yyyy", { locale: es })}
-                  </span>
                 </div>
+                <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  {attachment.description} · {format(new Date(attachment.date), "d MMM", { locale: es })}
+                </p>
               </div>
 
-              {/* Icono de abrir */}
-              <svg className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Icono de abrir - más pequeño */}
+              <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { addCategory } from '../services/supabaseApi';
 import CategoryIconPicker from './CategoryIconPicker';
 import { isEmoji } from '../services/iconStorage';
@@ -14,6 +14,11 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   // Store filename for preview
   const [catalogFilename, setCatalogFilename] = useState(null);
 
+  // Drag to dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -22,8 +27,33 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
       setIconCatalogId(null);
       setCatalogFilename(null);
       setError('');
+      setDragY(0);
+      setIsDragging(false);
     }
   }, [isOpen]);
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.target.closest('[data-drag-handle]')) {
+      startY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientY - startY.current;
+    if (diff > 0) setDragY(diff);
+  };
+
+  // Handle touch end
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragY > 100 && !saving) onClose();
+    setDragY(0);
+    setIsDragging(false);
+  };
 
   const isIncome = type === 'ingreso';
   const typeLabel = isIncome ? 'ingreso' : 'gasto';
@@ -82,6 +112,8 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   if (!isOpen) return null;
 
   const hasIcon = icon || iconCatalogId;
+  const backdropOpacity = Math.max(0.5 - (dragY / 300), 0);
+  const shouldClose = dragY > 100;
 
   // Render icon preview
   const renderIconPreview = () => {
@@ -105,25 +137,42 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-start justify-center pt-16 p-4 bg-black/50">
+    <div className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center">
       <div
-        className="fixed inset-0"
+        className="fixed inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-sm rounded-2xl p-5 animate-scale-in card-elevated"
+        className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-5 animate-slide-down card-elevated"
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)'
+          boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)',
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          opacity: shouldClose ? 0.5 : 1,
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag indicator - mobile only */}
+        <div className="sm:hidden flex justify-center -mt-3 mb-2" data-drag-handle>
+          <div
+            className="w-10 h-1 rounded-full transition-colors"
+            style={{
+              backgroundColor: shouldClose ? 'var(--accent-red)' : 'var(--border-medium)',
+            }}
+          />
+        </div>
+
         {/* Accent line */}
         <div
           className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
           style={{ backgroundColor: accentColor }}
         />
 
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4" data-drag-handle>
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{ backgroundColor: accentColor }}

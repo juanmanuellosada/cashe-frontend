@@ -4,15 +4,17 @@ import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import 'react-day-picker/style.css';
 
-function DatePicker({ value, onChange, name }) {
+function DatePicker({ value, onChange, name, compact = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Convertir string yyyy-mm-dd a Date
   const selectedDate = value ? parse(value, 'yyyy-MM-dd', new Date()) : new Date();
 
-  // Formatear fecha para mostrar (dd-MM-yyyy)
-  const displayDate = selectedDate ? format(selectedDate, 'dd-MM-yyyy') : '';
+  // Formatear fecha para mostrar
+  const displayDate = selectedDate
+    ? (compact ? format(selectedDate, 'dd/MM/yy') : format(selectedDate, 'dd-MM-yyyy'))
+    : '';
 
   const handleSelect = (date) => {
     if (date) {
@@ -40,11 +42,11 @@ function DatePicker({ value, onChange, name }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 rounded-xl text-left flex items-center gap-3"
+        className={`w-full text-left flex items-center ${compact ? 'px-2.5 py-2 rounded-lg gap-1.5 text-xs' : 'px-4 py-3 rounded-xl gap-3 text-sm'}`}
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >
         <svg
-          className="w-5 h-5"
+          className={compact ? 'w-3.5 h-3.5' : 'w-5 h-5'}
           style={{ color: 'var(--text-secondary)' }}
           fill="none"
           stroke="currentColor"
