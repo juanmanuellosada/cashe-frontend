@@ -8,14 +8,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Session configuration
-export const SESSION_CONFIG = {
-  // Inactivity timeout in milliseconds (30 minutes)
-  INACTIVITY_TIMEOUT: 30 * 60 * 1000,
-  // Warning before logout in milliseconds (5 minutes before)
-  WARNING_BEFORE_LOGOUT: 5 * 60 * 1000,
-  // Session check interval (every 1 minute)
-  SESSION_CHECK_INTERVAL: 60 * 1000,
-};
+// Note: Inactivity timeout removed - session persists until user logs out
+// or Supabase token expires (refreshed automatically)
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

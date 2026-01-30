@@ -242,6 +242,15 @@ body {
   background: var(--border-medium);
   border-radius: 9999px;
 }
+
+/* Utility class to hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 .chips-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
 }

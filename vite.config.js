@@ -66,6 +66,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Force the new service worker to take control immediately
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {

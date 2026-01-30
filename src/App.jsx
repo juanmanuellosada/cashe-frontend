@@ -4,7 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ErrorProvider } from './contexts/ErrorContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorModal from './components/ErrorModal'
-import SessionExpiryWarning from './components/SessionExpiryWarning'
+import UpdatePrompt from './components/UpdatePrompt'
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
 
@@ -65,7 +65,7 @@ function App() {
       <AuthProvider>
         <BrowserRouter basename={basename}>
           <ErrorModal />
-          <SessionExpiryWarning />
+          <UpdatePrompt />
           <Routes>
             {/* Public routes - not lazy loaded for fast initial render */}
             <Route path="/" element={<Landing />} />

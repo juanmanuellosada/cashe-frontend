@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { supabase, SESSION_CONFIG } from '../config/supabase';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { supabase } from '../config/supabase';
 
 const AuthContext = createContext({});
 
@@ -15,29 +15,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sessionExpiring, setSessionExpiring] = useState(false);
 
-  // Refs for tracking activity
-  const lastActivityRef = useRef(Date.now());
-  const inactivityTimerRef = useRef(null);
-  const warningTimerRef = useRef(null);
-  const sessionCheckIntervalRef = useRef(null);
-
-  // Update last activity timestamp
-  const updateActivity = useCallback(() => {
-    lastActivityRef.current = Date.now();
-    setSessionExpiring(false);
-  }, []);
-
-  // Check if session is still valid
+  // Validate session when user returns to tab
   const validateSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error || !session) {
-        // Session invalid, sign out
-        console.log('Session invalid or expired');
-        await signOutInternal();
         return false;
       }
 
@@ -50,7 +34,6 @@ export const AuthProvider = ({ children }) => {
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error('Failed to refresh session:', refreshError);
-            await signOutInternal();
             return false;
           }
         }
@@ -63,122 +46,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Internal sign out (without external calls)
-  const signOutInternal = async () => {
-    setUser(null);
-    setProfile(null);
-    setSessionExpiring(false);
-    clearTimers();
-
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Error in signOutInternal:', err);
-    }
-  };
-
-  // Clear all timers
-  const clearTimers = useCallback(() => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
-    }
-    if (warningTimerRef.current) {
-      clearTimeout(warningTimerRef.current);
-      warningTimerRef.current = null;
-    }
-    if (sessionCheckIntervalRef.current) {
-      clearInterval(sessionCheckIntervalRef.current);
-      sessionCheckIntervalRef.current = null;
-    }
-  }, []);
-
-  // Setup inactivity tracking
-  const setupInactivityTracking = useCallback(() => {
-    clearTimers();
-
-    // Warning timer (shows warning before logout)
-    const warningTime = SESSION_CONFIG.INACTIVITY_TIMEOUT - SESSION_CONFIG.WARNING_BEFORE_LOGOUT;
-    warningTimerRef.current = setTimeout(() => {
-      setSessionExpiring(true);
-    }, warningTime);
-
-    // Logout timer
-    inactivityTimerRef.current = setTimeout(async () => {
-      console.log('Session expired due to inactivity');
-      await signOutInternal();
-    }, SESSION_CONFIG.INACTIVITY_TIMEOUT);
-
-    // Periodic session validation
-    sessionCheckIntervalRef.current = setInterval(async () => {
-      if (user) {
-        await validateSession();
-      }
-    }, SESSION_CONFIG.SESSION_CHECK_INTERVAL);
-  }, [user, validateSession, clearTimers]);
-
-  // Reset inactivity timer on user activity
-  const resetInactivityTimer = useCallback(() => {
-    if (user) {
-      updateActivity();
-      setupInactivityTracking();
-    }
-  }, [user, updateActivity, setupInactivityTracking]);
-
-  // Setup activity listeners
+  // Handle visibility change (user returns to tab)
   useEffect(() => {
-    if (!user) {
-      clearTimers();
-      return;
-    }
-
-    // Events that indicate user activity
-    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-
-    const handleActivity = () => {
-      resetInactivityTimer();
-    };
-
-    // Add event listeners
-    activityEvents.forEach(event => {
-      document.addEventListener(event, handleActivity, { passive: true });
-    });
-
-    // Handle visibility change (user returns to tab)
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible' && user) {
-        // Validate session when user returns to tab
-        const isValid = await validateSession();
-        if (isValid) {
-          resetInactivityTimer();
-        }
+        await validateSession();
       }
     };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Handle window focus
-    const handleFocus = async () => {
-      if (user) {
-        const isValid = await validateSession();
-        if (isValid) {
-          resetInactivityTimer();
-        }
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-
-    // Initial setup
-    setupInactivityTracking();
-
     return () => {
-      activityEvents.forEach(event => {
-        document.removeEventListener(event, handleActivity);
-      });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      clearTimers();
     };
-  }, [user, resetInactivityTimer, validateSession, setupInactivityTracking, clearTimers]);
+  }, [user, validateSession]);
 
   useEffect(() => {
     let mounted = true;
@@ -224,8 +105,6 @@ export const AuthProvider = ({ children }) => {
         // Handle specific auth events
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully');
-        } else if (event === 'SIGNED_OUT') {
-          clearTimers();
         }
 
         setUser(session?.user ?? null);
@@ -246,20 +125,20 @@ export const AuthProvider = ({ children }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [clearTimers]);
+  }, []);
 
   const fetchProfile = async (userId) => {
     try {
       // Get user metadata for avatar
       const { data: userData } = await supabase.auth.getUser();
       const avatarUrl = userData?.user?.user_metadata?.avatar_url || userData?.user?.user_metadata?.picture;
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      
+
       if (error && error.code === 'PGRST116') {
         // Profile doesn't exist yet, create it
         const newProfile = {
@@ -268,13 +147,13 @@ export const AuthProvider = ({ children }) => {
           email: userData?.user?.email,
           avatar_url: avatarUrl
         };
-        
+
         const { data: createdProfile } = await supabase
           .from('profiles')
           .insert(newProfile)
           .select()
           .single();
-        
+
         // Add avatar from user metadata if not in profile
         setProfile({ ...createdProfile, avatar_url: avatarUrl });
       } else if (error) {
@@ -330,13 +209,9 @@ export const AuthProvider = ({ children }) => {
   // Sign out
   const signOut = async () => {
     try {
-      // Clear timers first
-      clearTimers();
-
       // Clear local state
       setUser(null);
       setProfile(null);
-      setSessionExpiring(false);
 
       // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
@@ -350,13 +225,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Extend session (when user clicks "stay logged in")
-  const extendSession = useCallback(() => {
-    updateActivity();
-    setupInactivityTracking();
-    setSessionExpiring(false);
-  }, [updateActivity, setupInactivityTracking]);
-
   // Reset password
   const resetPassword = async (email) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -369,13 +237,11 @@ export const AuthProvider = ({ children }) => {
     user,
     profile,
     loading,
-    sessionExpiring,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     resetPassword,
-    extendSession,
   };
 
   return (

@@ -327,14 +327,14 @@ function Accounts() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-medium flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           Cuentas
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0">
           {/* Currency Selector */}
           <div
-            className="inline-flex p-1 rounded-lg"
+            className="inline-flex p-1 rounded-lg flex-shrink-0"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             {[
@@ -345,7 +345,7 @@ function Accounts() {
               <button
                 key={opt.id}
                 onClick={() => setDisplayCurrency(opt.id)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap"
                 style={{
                   backgroundColor: displayCurrency === opt.id ? 'var(--bg-elevated)' : 'transparent',
                   color: displayCurrency === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -900,13 +900,13 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto animate-scale-in"
+        className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col animate-scale-in"
         style={{ backgroundColor: 'var(--bg-secondary)' }}
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
           <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
             {isEditing ? 'Editar Cuenta' : 'Nueva Cuenta'}
           </h2>
@@ -921,7 +921,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="space-y-4 overflow-y-auto px-6 flex-1">
           {/* Icon selector */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
@@ -1151,7 +1152,10 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          </div>
+
+          {/* Sticky buttons */}
+          <div className="flex gap-3 p-6 pt-4 flex-shrink-0 border-t" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-secondary)' }}>
             {isEditing && onDelete && (
               <button
                 type="button"
