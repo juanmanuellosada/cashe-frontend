@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
+import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
 
 function Expenses() {
@@ -15,11 +16,7 @@ function Expenses() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [expensesData, accountsData, categoriesData] = await Promise.all([
@@ -35,7 +32,11 @@ function Expenses() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSave = async (movement) => {
     try {
@@ -90,7 +91,7 @@ function Expenses() {
   };
 
   return (
-    <>
+    <PullToRefresh onRefresh={fetchData} disabled={loading}>
       <MovementsList
         title="Gastos"
         movements={expenses}
@@ -123,7 +124,7 @@ function Expenses() {
         }}
         defaultType="expense"
       />
-    </>
+    </PullToRefresh>
   );
 }
 

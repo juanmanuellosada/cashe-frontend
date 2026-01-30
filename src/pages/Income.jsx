@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllIncomes, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
+import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
 
 function Income() {
@@ -15,11 +16,7 @@ function Income() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [incomesData, accountsData, categoriesData] = await Promise.all([
@@ -35,7 +32,11 @@ function Income() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSave = async (movement) => {
     try {
@@ -91,7 +92,7 @@ function Income() {
   };
 
   return (
-    <>
+    <PullToRefresh onRefresh={fetchData} disabled={loading}>
       <MovementsList
         title="Ingresos"
         movements={incomes}
@@ -124,7 +125,7 @@ function Income() {
         }}
         defaultType="income"
       />
-    </>
+    </PullToRefresh>
   );
 }
 

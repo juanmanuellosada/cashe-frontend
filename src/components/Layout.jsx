@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import SearchButton from './SearchButton';
@@ -6,9 +6,11 @@ import SearchModal from './SearchModal';
 import EditMovementModal from './EditMovementModal';
 import NewMovementModal from './NewMovementModal';
 import Avatar from './Avatar';
-import { getAccounts, getCategories, updateMovement, deleteMovement } from '../services/supabaseApi';
+import OfflineIndicator from './OfflineIndicator';
+import { getAccounts, getCategories, updateMovement, deleteMovement, invalidateMovementCache } from '../services/supabaseApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useError } from '../contexts/ErrorContext';
+import { useHaptics } from '../hooks/useHaptics';
 
 function Layout({ children, darkMode, toggleDarkMode }) {
   const { user, profile, signOut } = useAuth();
@@ -123,15 +125,31 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDesktop, navigate, keyboardShortcuts]);
 
+  // Callback to notify children that data has changed (used by pages to refresh)
+  const [dataVersion, setDataVersion] = useState(0);
+  const haptics = useHaptics();
+
+  const notifyDataChange = useCallback(() => {
+    // Invalidate cache and increment version to trigger re-fetches
+    invalidateMovementCache('movements');
+    invalidateMovementCache('dashboard');
+    setDataVersion(v => v + 1);
+  }, []);
+
   const handleSaveMovement = async (updatedMovement) => {
     try {
       setSavingMovement(true);
       await updateMovement(updatedMovement);
       setEditingMovement(null);
-      window.location.reload();
+      haptics.success();
+      // Notify data change instead of reloading
+      notifyDataChange();
+      // Navigate to trigger page refresh if needed
+      navigate(location.pathname, { replace: true });
     } catch (err) {
       console.error('Error updating movement:', err);
       showError('No se pudo guardar el movimiento', err.message);
+      haptics.error();
     } finally {
       setSavingMovement(false);
     }
@@ -140,15 +158,19 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const handleDeleteMovement = async (movement) => {
     // Cerrar modal inmediatamente (optimistic)
     setEditingMovement(null);
+    haptics.warning();
 
     // Borrar en background
     try {
       await deleteMovement(movement);
-      // Recargar para actualizar datos
-      window.location.reload();
+      // Notify data change instead of reloading
+      notifyDataChange();
+      // Navigate to trigger page refresh if needed
+      navigate(location.pathname, { replace: true });
     } catch (err) {
       console.error('Error deleting movement:', err);
       showError('No se pudo eliminar el movimiento', err.message);
+      haptics.error();
     }
   };
 
@@ -256,6 +278,9 @@ function Layout({ children, darkMode, toggleDarkMode }) {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+
       {/* Desktop Sidebar */}
       {isDesktop && (
         <aside

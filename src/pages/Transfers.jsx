@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllTransfers, getAccounts, updateTransfer, deleteTransfer } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
+import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
 
 function Transfers() {
@@ -14,11 +15,7 @@ function Transfers() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [transfersData, accountsData] = await Promise.all([
@@ -32,7 +29,11 @@ function Transfers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSave = async (transfer) => {
     try {
@@ -77,7 +78,7 @@ function Transfers() {
   };
 
   return (
-    <>
+    <PullToRefresh onRefresh={fetchData} disabled={loading}>
       <MovementsList
         title="Transferencias"
         movements={transfers}
@@ -109,7 +110,7 @@ function Transfers() {
         }}
         defaultType="transfer"
       />
-    </>
+    </PullToRefresh>
   );
 }
 

@@ -5,8 +5,10 @@ import DateRangePicker from './DateRangePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
 import SortDropdown from './SortDropdown';
+import SwipeableItem from './SwipeableItem';
 import { useError } from '../contexts/ErrorContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
+import { useHaptics } from '../hooks/useHaptics';
 
 function MovementsList({
   title,
@@ -23,6 +25,7 @@ function MovementsList({
 }) {
   const navigate = useNavigate();
   const { showError } = useError();
+  const haptics = useHaptics();
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -30,6 +33,14 @@ function MovementsList({
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [currency, setCurrency] = useState('ARS');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Track window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -789,12 +800,12 @@ function MovementsList({
           {filteredMovements.map((movement, index) => {
             const itemId = movement.rowIndex || movement.id;
             const isSelected = selectedItems.has(itemId);
-            
-            return (
+
+            // Movement item content
+            const movementContent = (
               <div
-                key={itemId}
-                className={`group rounded-2xl p-4 transition-all duration-200 ${!selectionMode ? 'hover:scale-[1.01]' : ''}`}
-                style={{ 
+                className={`group rounded-2xl p-4 transition-all duration-200 ${!selectionMode && !isMobile ? 'hover:scale-[1.01]' : ''}`}
+                style={{
                   backgroundColor: isSelected ? getTypeBgDim() : 'var(--bg-secondary)',
                   border: isSelected ? `1px solid ${getTypeColor()}` : '1px solid transparent',
                 }}
@@ -953,8 +964,8 @@ function MovementsList({
                   </button>
                 )}
 
-                {/* Delete button - hidden by default and in selection mode */}
-                {!selectionMode && (
+                {/* Delete button - hidden by default and in selection mode, desktop only */}
+                {!selectionMode && !isMobile && (
                   <button
                     onClick={(e) => handleDeleteClick(e, movement)}
                     className="p-2 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
@@ -968,6 +979,24 @@ function MovementsList({
                 )}
               </div>
             </div>
+            );
+
+            // Wrap with SwipeableItem on mobile for swipe-to-delete
+            return isMobile && !selectionMode ? (
+              <SwipeableItem
+                key={itemId}
+                onDelete={() => {
+                  haptics.warning();
+                  setDeleteConfirm(movement);
+                }}
+                onEdit={() => onMovementClick?.(movement)}
+              >
+                {movementContent}
+              </SwipeableItem>
+            ) : (
+              <div key={itemId}>
+                {movementContent}
+              </div>
             );
           })}
         </div>

@@ -10,6 +10,7 @@ import RecentMovements from '../components/dashboard/RecentMovements';
 import DateRangePicker from '../components/DateRangePicker';
 import EditMovementModal from '../components/EditMovementModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
 
 function Home() {
@@ -120,6 +121,11 @@ function Home() {
     fetchMovements();
   }, [fetchMovements]);
 
+  // Combined refresh for pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchDashboard(), fetchMovements()]);
+  }, [fetchDashboard, fetchMovements]);
+
   // Handle movement edit save
   const handleSaveMovement = async (updatedMovement) => {
     try {
@@ -193,6 +199,7 @@ function Home() {
   }
 
   return (
+    <PullToRefresh onRefresh={handleRefresh} disabled={loadingDashboard && loadingMovements}>
     <div className="space-y-4 sm:space-y-6">
       {/* Header with filters */}
       <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3">
@@ -303,6 +310,7 @@ function Home() {
         />
       )}
     </div>
+    </PullToRefresh>
   );
 }
 
