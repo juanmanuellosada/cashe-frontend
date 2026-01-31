@@ -41,9 +41,9 @@ function ForceUpdateButton() {
 
       setMessage('Cache limpiado. Recargando...');
 
-      // 4. Hard reload
+      // 4. Navigate to root and reload (needed for GitHub Pages SPA routing)
       setTimeout(() => {
-        window.location.reload(true);
+        window.location.href = '/';
       }, 1000);
 
     } catch (err) {
