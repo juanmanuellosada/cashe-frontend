@@ -141,11 +141,18 @@ export const getPushSubscriptionStatus = async () => {
   }
 
   try {
-    // Add timeout to prevent hanging if SW is not ready
+    // Check if there's any SW registration first
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    if (registrations.length === 0) {
+      // No SW yet, but browser supports it - return supported but not subscribed
+      return { supported: true, subscribed: false, permission };
+    }
+
+    // Try to get the ready SW with a longer timeout
     const registration = await Promise.race([
       navigator.serviceWorker.ready,
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SW timeout')), 5000)
+        setTimeout(() => reject(new Error('SW timeout')), 10000)
       )
     ]);
     const subscription = await registration.pushManager.getSubscription();
@@ -157,7 +164,8 @@ export const getPushSubscriptionStatus = async () => {
     };
   } catch (err) {
     console.warn('Service worker not ready:', err);
-    return { supported: false, subscribed: false };
+    // Still return supported:true since the browser supports it
+    return { supported: true, subscribed: false, permission };
   }
 };
 
