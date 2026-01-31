@@ -109,7 +109,7 @@ function ForceUpdateButton() {
           </button>
 
           <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-            Versión: 2026.01.31-b
+            Versión: 2026.01.31-c
           </p>
         </div>
       </div>

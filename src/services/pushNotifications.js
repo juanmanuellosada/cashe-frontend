@@ -33,8 +33,21 @@ export const subscribeToPush = async (vapidPublicKey) => {
     throw new Error('Notification permission denied');
   }
 
-  // Get service worker registration
-  const registration = await navigator.serviceWorker.ready;
+  // Get service worker registration with retry
+  let registration;
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      registration = await navigator.serviceWorker.ready;
+      // Wait a bit for the SW to fully activate
+      await new Promise(resolve => setTimeout(resolve, 500));
+      break;
+    } catch (err) {
+      retries--;
+      if (retries === 0) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
 
   // Check if already subscribed
   let subscription = await registration.pushManager.getSubscription();
@@ -43,11 +56,22 @@ export const subscribeToPush = async (vapidPublicKey) => {
     // Convert VAPID key to Uint8Array
     const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
-    // Subscribe
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey,
-    });
+    // Subscribe with retry
+    retries = 3;
+    while (retries > 0) {
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+        break;
+      } catch (err) {
+        console.warn('Push subscription attempt failed:', err.message);
+        retries--;
+        if (retries === 0) throw err;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
   }
 
   // Save subscription to database
