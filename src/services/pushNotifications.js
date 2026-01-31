@@ -111,7 +111,12 @@ export const subscribeToPush = async (vapidPublicKey) => {
       console.error('Push subscription error:', err);
       // Check for specific Brave/privacy-related errors
       if (err.message.includes('push service') || err.message.includes('Registration failed')) {
-        throw new Error('Tu navegador bloqueó las notificaciones push. Si usás Brave, probá desactivar Shields para este sitio.');
+        // Detect Brave browser
+        const isBrave = navigator.brave && navigator.brave.isBrave;
+        if (isBrave || navigator.userAgent.includes('Brave')) {
+          throw new Error('Brave bloquea las push notifications por privacidad. Andá a brave://settings/privacy y activá "Use Google services for push messaging", o usá Chrome/Firefox.');
+        }
+        throw new Error('Tu navegador bloqueó las notificaciones push. Verificá la configuración de privacidad del navegador.');
       }
       throw err;
     }
