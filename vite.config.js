@@ -118,6 +118,8 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Import push notification handlers
+        importScripts: ['sw-push.js'],
         // Offline fallback page
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],

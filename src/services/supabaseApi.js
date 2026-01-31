@@ -3376,6 +3376,7 @@ export const getCalendarEvents = async (startDate, endDate) => {
     { data: movements },
     { data: transfers },
     { data: recurring },
+    { data: scheduled },
     { data: accounts },
     { data: categories }
   ] = await Promise.all([
@@ -3399,6 +3400,13 @@ export const getCalendarEvents = async (startDate, endDate) => {
       .eq('user_id', userId)
       .eq('is_active', true)
       .eq('is_paused', false),
+    supabase
+      .from('scheduled_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .gte('scheduled_date', startDate)
+      .lte('scheduled_date', endDate),
     supabase.from('accounts').select('id, name').eq('user_id', userId),
     supabase.from('categories').select('id, name').eq('user_id', userId)
   ]);
@@ -3485,8 +3493,24 @@ export const getCalendarEvents = async (startDate, endDate) => {
     }
   });
 
+  // Map scheduled transactions (pending approval)
+  const scheduledEvents = (scheduled || []).map(s => ({
+    id: `scheduled-${s.id}`,
+    date: s.scheduled_date,
+    type: s.type,
+    amount: parseFloat(s.amount),
+    name: s.type === 'transfer'
+      ? `${accounts?.find(a => a.id === s.account_id)?.name || ''} → ${accounts?.find(a => a.id === s.to_account_id)?.name || ''}`
+      : categories?.find(c => c.id === s.category_id)?.name || s.note || 'Programada',
+    account: accounts?.find(a => a.id === s.account_id)?.name || '',
+    isScheduled: true,
+    isPending: true,
+    scheduledId: s.id,
+    eventType: 'scheduled',
+  }));
+
   // Combine all events and return as flat array
-  const allEvents = [...movementEvents, ...transferEvents, ...recurringEvents];
+  const allEvents = [...movementEvents, ...transferEvents, ...recurringEvents, ...scheduledEvents];
 
   return allEvents;
 };
@@ -3588,4 +3612,318 @@ export const getHolidays = async (year) => {
 
   if (error) throw error;
   return { holidays: data || [] };
+};
+
+// ============================================
+// SCHEDULED TRANSACTIONS
+// Transacciones programadas para una fecha futura
+// ============================================
+
+export const getScheduledTransactions = async (status = null) => {
+  const userId = await getUserId();
+
+  let query = supabase
+    .from('scheduled_transactions')
+    .select(`
+      *,
+      account:accounts!scheduled_transactions_account_id_fkey(id, name, icon, currency),
+      to_account:accounts!scheduled_transactions_to_account_id_fkey(id, name, icon, currency),
+      category:categories(id, name, icon)
+    `)
+    .eq('user_id', userId)
+    .order('scheduled_date', { ascending: true });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return {
+    scheduled: (data || []).map(s => ({
+      ...s,
+      cuenta: s.account?.name,
+      cuentaIcon: s.account?.icon,
+      cuentaMoneda: s.account?.currency,
+      cuentaDestino: s.to_account?.name,
+      cuentaDestinoIcon: s.to_account?.icon,
+      cuentaDestinoMoneda: s.to_account?.currency,
+      categoria: s.category?.name,
+      categoriaIcon: s.category?.icon,
+      monto: s.amount,
+      montoDestino: s.to_amount,
+      fecha: s.scheduled_date,
+      nota: s.note,
+    })),
+  };
+};
+
+export const getScheduledForCalendar = async (startDate, endDate) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('scheduled_transactions')
+    .select(`
+      *,
+      account:accounts!scheduled_transactions_account_id_fkey(name, icon),
+      category:categories(name, icon)
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .gte('scheduled_date', startDate)
+    .lte('scheduled_date', endDate);
+
+  if (error) throw error;
+  return { scheduled: data || [] };
+};
+
+export const createScheduledTransaction = async (data) => {
+  const userId = await getUserId();
+
+  // Obtener IDs de cuenta y categoría
+  let accountId = data.accountId;
+  let toAccountId = data.toAccountId;
+  let categoryId = data.categoryId;
+
+  if (data.accountName && !accountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.accountName)
+      .single();
+    accountId = account?.id;
+  }
+
+  if (data.toAccountName && !toAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.toAccountName)
+      .single();
+    toAccountId = account?.id;
+  }
+
+  if (data.categoryName && !categoryId) {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.categoryName)
+      .single();
+    categoryId = category?.id;
+  }
+
+  const { data: result, error } = await supabase
+    .from('scheduled_transactions')
+    .insert({
+      user_id: userId,
+      type: data.type,
+      scheduled_date: data.scheduledDate,
+      amount: data.amount,
+      account_id: accountId,
+      to_account_id: toAccountId,
+      to_amount: data.toAmount || null,
+      category_id: categoryId,
+      note: data.note || null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('scheduled');
+  return { success: true, scheduled: result };
+};
+
+export const updateScheduledTransaction = async (id, data) => {
+  const userId = await getUserId();
+
+  // Obtener IDs si vienen por nombre
+  let accountId = data.accountId;
+  let toAccountId = data.toAccountId;
+  let categoryId = data.categoryId;
+
+  if (data.accountName && !accountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.accountName)
+      .single();
+    accountId = account?.id;
+  }
+
+  if (data.toAccountName && !toAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.toAccountName)
+      .single();
+    toAccountId = account?.id;
+  }
+
+  if (data.categoryName && !categoryId) {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.categoryName)
+      .single();
+    categoryId = category?.id;
+  }
+
+  const updateData = {};
+  if (data.scheduledDate !== undefined) updateData.scheduled_date = data.scheduledDate;
+  if (data.amount !== undefined) updateData.amount = data.amount;
+  if (accountId !== undefined) updateData.account_id = accountId;
+  if (toAccountId !== undefined) updateData.to_account_id = toAccountId;
+  if (data.toAmount !== undefined) updateData.to_amount = data.toAmount;
+  if (categoryId !== undefined) updateData.category_id = categoryId;
+  if (data.note !== undefined) updateData.note = data.note;
+
+  const { data: result, error } = await supabase
+    .from('scheduled_transactions')
+    .update(updateData)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('scheduled');
+  return { success: true, scheduled: result };
+};
+
+export const deleteScheduledTransaction = async (id) => {
+  const userId = await getUserId();
+
+  const { error } = await supabase
+    .from('scheduled_transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  invalidateCache('scheduled');
+  return { success: true };
+};
+
+export const approveScheduledTransaction = async (id) => {
+  const userId = await getUserId();
+
+  // Obtener la transacción programada
+  const { data: scheduled, error: fetchError } = await supabase
+    .from('scheduled_transactions')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!scheduled) throw new Error('Transacción no encontrada');
+  if (scheduled.status !== 'pending') throw new Error('Solo se pueden aprobar transacciones pendientes');
+
+  // Crear el movimiento/transferencia real según el tipo
+  if (scheduled.type === 'transfer') {
+    // Crear transferencia
+    const { error: transferError } = await supabase
+      .from('transfers')
+      .insert({
+        user_id: userId,
+        date: scheduled.scheduled_date,
+        from_account_id: scheduled.account_id,
+        to_account_id: scheduled.to_account_id,
+        from_amount: scheduled.amount,
+        to_amount: scheduled.to_amount || scheduled.amount,
+        note: scheduled.note,
+      });
+
+    if (transferError) throw transferError;
+    invalidateCache('transfer');
+  } else {
+    // Crear movimiento (income/expense)
+    const { error: movementError } = await supabase
+      .from('movements')
+      .insert({
+        user_id: userId,
+        type: scheduled.type,
+        date: scheduled.scheduled_date,
+        amount: scheduled.amount,
+        account_id: scheduled.account_id,
+        category_id: scheduled.category_id,
+        note: scheduled.note,
+      });
+
+    if (movementError) throw movementError;
+    invalidateCache(scheduled.type === 'income' ? 'income' : 'expense');
+  }
+
+  // Marcar como ejecutada
+  const { error: updateError } = await supabase
+    .from('scheduled_transactions')
+    .update({ status: 'executed' })
+    .eq('id', id);
+
+  if (updateError) throw updateError;
+  invalidateCache('scheduled');
+  return { success: true };
+};
+
+export const rejectScheduledTransaction = async (id) => {
+  const userId = await getUserId();
+
+  const { error } = await supabase
+    .from('scheduled_transactions')
+    .update({ status: 'rejected' })
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  invalidateCache('scheduled');
+  return { success: true };
+};
+
+// ============================================
+// PUSH SUBSCRIPTIONS
+// ============================================
+
+export const getPushSubscriptions = async () => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return { subscriptions: data || [] };
+};
+
+export const deletePushSubscription = async (endpoint) => {
+  const userId = await getUserId();
+
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('endpoint', endpoint);
+
+  if (error) throw error;
+  return { success: true };
+};
+
+export const deleteAllPushSubscriptions = async () => {
+  const userId = await getUserId();
+
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return { success: true };
 };

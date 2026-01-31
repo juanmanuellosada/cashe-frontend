@@ -293,8 +293,21 @@ function MovementsList({
     setSearchText('');
   };
 
+  // Check if date range is the default (current month) for gastos/ingresos
+  const isDefaultDateRange = useMemo(() => {
+    if (type !== 'gasto' && type !== 'ingreso') return false;
+    if (!dateRange.from || !dateRange.to) return false;
+    const now = new Date();
+    const defaultFrom = startOfMonth(now);
+    const defaultTo = endOfMonth(now);
+    const fromDate = dateRange.from instanceof Date ? dateRange.from : new Date(dateRange.from);
+    const toDate = dateRange.to instanceof Date ? dateRange.to : new Date(dateRange.to);
+    return fromDate.toDateString() === defaultFrom.toDateString() &&
+           toDate.toDateString() === defaultTo.toDateString();
+  }, [dateRange, type]);
+
   const activeFiltersCount = [
-    dateRange.from || dateRange.to,
+    (dateRange.from || dateRange.to) && !isDefaultDateRange,
     selectedAccounts.length > 0,
     selectedCategories.length > 0,
     searchText.trim().length > 0,
@@ -1302,7 +1315,7 @@ function MovementsList({
 
       {/* Bulk Edit Category Modal */}
       {bulkAction === 'editCategory' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[130] flex items-start justify-center p-4 pt-20">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
@@ -1325,7 +1338,8 @@ function MovementsList({
                 options={categories.map(c => {
                   const catValue = typeof c === 'object' ? (c.value || c.label) : c;
                   const catLabel = typeof c === 'object' ? (c.label || c.value) : c;
-                  return { value: catValue, label: catLabel };
+                  const catIcon = typeof c === 'object' ? c.icon : null;
+                  return { value: catValue, label: catLabel, icon: catIcon };
                 })}
                 placeholder="Seleccionar categoría..."
               />

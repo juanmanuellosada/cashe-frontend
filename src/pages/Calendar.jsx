@@ -150,7 +150,16 @@ function Calendar() {
   };
 
   // Get event type background
-  const getEventBg = (type) => {
+  const getEventBg = (type, isScheduled = false) => {
+    if (isScheduled) {
+      // Lighter/more transparent for scheduled (pending) transactions
+      switch (type) {
+        case 'income': return 'color-mix(in srgb, var(--accent-green) 10%, transparent)';
+        case 'expense': return 'color-mix(in srgb, var(--accent-red) 10%, transparent)';
+        case 'transfer': return 'color-mix(in srgb, var(--accent-blue) 10%, transparent)';
+        default: return 'var(--bg-tertiary)';
+      }
+    }
     switch (type) {
       case 'income': return 'var(--accent-green-dim)';
       case 'expense': return 'var(--accent-red-dim)';
@@ -389,10 +398,12 @@ function Calendar() {
                     {dayEvents.slice(0, 3).map((event) => (
                       <div
                         key={event.id}
-                        className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] truncate"
+                        className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] truncate ${event.isScheduled ? 'border border-dashed' : ''}`}
                         style={{
-                          backgroundColor: getEventBg(event.type),
+                          backgroundColor: getEventBg(event.type, event.isScheduled),
                           color: getEventColor(event.type),
+                          borderColor: event.isScheduled ? getEventColor(event.type) : 'transparent',
+                          opacity: event.isScheduled ? 0.8 : 1,
                         }}
                       >
                         {event.isRecurring && (
@@ -403,6 +414,11 @@ function Calendar() {
                         {event.isFuture && (
                           <svg className="w-2 h-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                        {event.isScheduled && (
+                          <svg className="w-2 h-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         )}
                         <span className="truncate">{event.name}</span>
@@ -484,10 +500,12 @@ function Calendar() {
                     {dayEvents.map((event) => (
                       <div
                         key={event.id}
-                        className="flex items-center gap-1 px-1.5 py-1 rounded text-[11px]"
+                        className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] ${event.isScheduled ? 'border border-dashed' : ''}`}
                         style={{
-                          backgroundColor: getEventBg(event.type),
+                          backgroundColor: getEventBg(event.type, event.isScheduled),
                           color: getEventColor(event.type),
+                          borderColor: event.isScheduled ? getEventColor(event.type) : 'transparent',
+                          opacity: event.isScheduled ? 0.8 : 1,
                         }}
                       >
                         <div className="flex-1 min-w-0">
@@ -500,6 +518,11 @@ function Calendar() {
                             {event.isFuture && (
                               <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            {event.isScheduled && (
+                              <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             )}
                             <span className="truncate font-medium">{event.name}</span>
@@ -643,7 +666,15 @@ function Calendar() {
                           className="px-1.5 py-0.5 rounded text-[10px] flex-shrink-0"
                           style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
                         >
-                          Programado
+                          Próximo
+                        </span>
+                      )}
+                      {event.isScheduled && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 border border-dashed"
+                          style={{ backgroundColor: 'var(--accent-orange-dim)', color: 'var(--accent-orange)', borderColor: 'var(--accent-orange)' }}
+                        >
+                          Por aprobar
                         </span>
                       )}
                     </div>
@@ -709,6 +740,15 @@ function Calendar() {
             </svg>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               Recurrente
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-3 h-3 rounded border border-dashed"
+              style={{ borderColor: 'var(--accent-orange)', backgroundColor: 'var(--accent-orange-dim)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Por aprobar
             </span>
           </div>
         </div>

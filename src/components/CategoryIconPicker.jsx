@@ -221,7 +221,7 @@ export default function CategoryIconPicker({
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:py-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -231,7 +231,7 @@ export default function CategoryIconPicker({
 
       <div
         ref={modalRef}
-        className="relative w-full max-w-md sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-slide-down max-h-[85vh] sm:max-h-[calc(100vh-48px)] flex flex-col"
+        className="relative w-full max-w-md sm:mx-4 mb-0 sm:mb-0 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-slide-up sm:animate-slide-down max-h-[100dvh] sm:max-h-[90vh] flex flex-col"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-color)',
@@ -392,7 +392,7 @@ export default function CategoryIconPicker({
         )}
 
         {/* Content */}
-        <div className="p-5 min-h-0 flex-1 overflow-y-auto">
+        <div className="p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] min-h-0 flex-1 overflow-y-auto">
           {/* Logo grid */}
           {activeTab === 'logo' && (
             <>
@@ -555,7 +555,7 @@ export default function CategoryIconPicker({
         {/* Footer: clear icon */}
         {hasCurrentIcon && (
           <div
-            className="px-5 py-3"
+            className="px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
             style={{ borderTop: '1px solid var(--border-color)' }}
           >
             <button

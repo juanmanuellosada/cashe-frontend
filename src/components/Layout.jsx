@@ -187,6 +187,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
     { path: '/recurrentes', label: 'Recurrentes', icon: 'recurring', color: 'var(--accent-purple)' },
+    { path: '/programadas', label: 'Programadas', icon: 'scheduled', color: 'var(--accent-orange)' },
     { path: '/tarjetas', label: 'Tarjetas', icon: 'creditcard', color: 'var(--accent-purple)' },
     { path: '/cuentas', label: 'Cuentas', icon: 'accounts', color: 'var(--accent-primary)' },
     { path: '/categorias', label: 'Categorias', icon: 'categories', color: 'var(--accent-primary)' },
@@ -285,6 +286,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         return (
           <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        );
+      case 'scheduled':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       default:

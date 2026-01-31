@@ -1,5 +1,6 @@
 import WhatsAppLinkSection from '../components/integrations/WhatsAppLinkSection';
 import TelegramLinkSection from '../components/integrations/TelegramLinkSection';
+import PushNotificationSection from '../components/integrations/PushNotificationSection';
 
 function Integrations() {
   return (
@@ -16,6 +17,9 @@ function Integrations() {
 
       {/* Integrations list */}
       <div className="space-y-4">
+        {/* Push Notifications */}
+        <PushNotificationSection />
+
         {/* Telegram - No restrictions, free to use */}
         <TelegramLinkSection />
 
