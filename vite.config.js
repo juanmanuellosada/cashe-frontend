@@ -139,18 +139,10 @@ export default defineConfig({
               }
             }
           },
-          // Cache Supabase Auth
+          // Supabase Auth - NetworkOnly (no caching, no timeout)
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-auth-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 5 // 5 minutes
-              },
-              networkTimeoutSeconds: 5
-            }
+            handler: 'NetworkOnly',
           },
           // Cache dollar API
           {
