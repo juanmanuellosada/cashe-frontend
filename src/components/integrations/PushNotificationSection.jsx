@@ -8,8 +8,8 @@ import {
   showLocalNotification,
 } from '../../services/pushNotifications';
 
-// VAPID public key - this should be set as an environment variable
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+// VAPID public key (public keys are safe to hardcode)
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BGAtLxt4YDMsBi4kHWTDoGusF-x1-qGY3YF6TqYzr_JOMbcVUJ2sh9cjOMHty3v6_B5F5QabzpMmFqPDjSGQRCU';
 
 function PushNotificationSection() {
   const [status, setStatus] = useState({

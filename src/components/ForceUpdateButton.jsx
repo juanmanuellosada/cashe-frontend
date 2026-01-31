@@ -109,7 +109,7 @@ function ForceUpdateButton() {
           </button>
 
           <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-            Versión: {import.meta.env.VITE_APP_VERSION || new Date().toISOString().split('T')[0]}
+            Versión: 2026.01.31-b
           </p>
         </div>
       </div>
