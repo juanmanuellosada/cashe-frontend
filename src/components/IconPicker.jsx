@@ -234,7 +234,7 @@ export default function IconPicker({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -244,7 +244,7 @@ export default function IconPicker({
 
       <div
         ref={modalRef}
-        className="relative w-full max-w-md sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-slide-down"
+        className="relative w-full max-w-md sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-slide-down sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-color)',

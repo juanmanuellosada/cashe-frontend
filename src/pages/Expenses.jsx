@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements } from '../services/supabaseApi';
+import { getAllExpenses, getAccounts, getCategories, updateMovement, deleteMovement, bulkDeleteMovements, bulkUpdateMovements, updateSubsequentInstallments } from '../services/supabaseApi';
 import MovementsList from '../components/MovementsList';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
@@ -42,6 +42,12 @@ function Expenses() {
     try {
       setSaving(true);
       await updateMovement(movement);
+
+      // Si es cuota y el usuario eligió aplicar a las siguientes
+      if (movement.applyToSubsequent && movement.idCompra) {
+        await updateSubsequentInstallments(movement);
+      }
+
       setEditingMovement(null);
       await fetchData();
     } catch (err) {
@@ -75,19 +81,19 @@ function Expenses() {
 
     // Borrar en background
     await bulkDeleteMovements(movements);
-    fetchData();
+    await fetchData();
   };
 
   const handleBulkUpdate = async (movements, field, value) => {
     // Actualizar lista inmediatamente (optimistic)
     const rowIndexes = new Set(movements.map(m => m.rowIndex));
-    setExpenses(prev => prev.map(e => 
+    setExpenses(prev => prev.map(e =>
       rowIndexes.has(e.rowIndex) ? { ...e, [field]: value } : e
     ));
 
     // Actualizar en background
     await bulkUpdateMovements(movements, field, value);
-    fetchData();
+    await fetchData();
   };
 
   return (

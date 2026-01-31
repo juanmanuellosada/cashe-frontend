@@ -38,7 +38,8 @@
       "Bash(npm run deploy:*)",
       "Bash(npx supabase:*)",
       "mcp__claude_ai_Supabase__apply_migration",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(grep:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

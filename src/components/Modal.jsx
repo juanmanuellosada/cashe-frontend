@@ -87,7 +87,7 @@ function Modal({
   const shouldClose = dragY > 100;
 
   return (
-    <div className={`fixed inset-0 z-[${zIndex}] flex items-start sm:items-center justify-center`} style={{ zIndex }}>
+    <div className={`fixed inset-0 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6`} style={{ zIndex }}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -98,10 +98,9 @@ function Modal({
       {/* Modal */}
       <div
         ref={modalRef}
-        className={`relative w-full ${maxWidth} sm:m-4 mt-0 sm:mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down`}
+        className={`relative w-full ${maxWidth} sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down max-h-[calc(100dvh-40px)] sm:max-h-[calc(100vh-48px)]`}
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          maxHeight: 'min(calc(100dvh - 40px), calc(100vh - 40px))',
           transform: `translateY(${dragY}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           opacity: shouldClose ? 0.5 : 1,

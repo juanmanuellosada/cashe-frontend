@@ -133,8 +133,7 @@ function Home() {
       await updateMovement(updatedMovement);
       setEditingMovement(null);
       // Refresh data
-      fetchDashboard();
-      fetchMovements();
+      await Promise.all([fetchDashboard(), fetchMovements()]);
     } catch (err) {
       console.error('Error updating movement:', err);
       showError('No se pudo guardar el movimiento', err.message);
@@ -157,12 +156,12 @@ function Home() {
     try {
       await deleteMovement(movement);
       // Refrescar datos para sincronizar
-      fetchDashboard();
+      await fetchDashboard();
     } catch (err) {
       console.error('Error deleting movement:', err);
       showError('No se pudo eliminar el movimiento', err.message);
       // Recargar para recuperar el estado real
-      fetchMovements();
+      await fetchMovements();
     }
   };
 
@@ -235,11 +234,25 @@ function Home() {
               USD
             </button>
           </div>
-          <DateRangePicker
-            value={balanceDateRange}
-            onChange={setBalanceDateRange}
-            defaultPreset="Este mes"
-          />
+          <div className="flex items-center gap-1">
+            <DateRangePicker
+              value={balanceDateRange}
+              onChange={setBalanceDateRange}
+              defaultPreset="Este mes"
+            />
+            {(balanceDateRange.from || balanceDateRange.to) && (
+              <button
+                onClick={() => setBalanceDateRange({ from: null, to: null })}
+                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+                title="Limpiar fechas"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

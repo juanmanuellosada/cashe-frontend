@@ -101,14 +101,14 @@ function ConfirmModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={loading ? undefined : onClose}
       />
       <div
-        className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down"
+        className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           transform: `translateY(${dragY}px)`,

@@ -1,40 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 
 /**
- * Componente dropdown para ordenamiento con persistencia en localStorage
+ * Componente dropdown para ordenamiento
+ * La persistencia en localStorage se maneja en el componente padre (MovementsList)
  */
 export default function SortDropdown({
   options, // [{ id: 'date', label: 'Fecha' }, ...]
   value, // { sortBy: 'date', sortOrder: 'desc' }
   onChange, // (newValue) => void
-  storageKey, // localStorage key para persistencia
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  // Cargar preferencia de localStorage al montar
-  useEffect(() => {
-    if (storageKey) {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.sortBy && parsed.sortOrder) {
-            onChange(parsed);
-          }
-        } catch (e) {
-          console.error('Error parsing sort preference:', e);
-        }
-      }
-    }
-  }, [storageKey]);
-
-  // Guardar en localStorage cuando cambie
-  useEffect(() => {
-    if (storageKey && value.sortBy) {
-      localStorage.setItem(storageKey, JSON.stringify(value));
-    }
-  }, [value, storageKey]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {

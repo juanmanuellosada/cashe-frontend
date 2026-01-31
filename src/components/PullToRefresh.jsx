@@ -92,6 +92,23 @@ function PullToRefresh({
     }
   }, [disabled, isRefreshing, pullDistance, threshold, onRefresh, haptics]);
 
+  // Use native event listeners to allow preventDefault on touchmove
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Use passive: false to allow preventDefault
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
   // Reset pull distance when refreshing completes
   useEffect(() => {
     if (!isRefreshing) {
@@ -110,9 +127,6 @@ function PullToRefresh({
         height: '100%',
         touchAction: isPulling ? 'none' : 'pan-y',
       }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Pull indicator */}
       <div

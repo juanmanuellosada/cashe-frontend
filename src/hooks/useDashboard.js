@@ -18,7 +18,7 @@ export function useDashboard() {
       ]);
 
       setDashboard(dashboardData.dashboard);
-      setMovements(movementsData.movements || []);
+      setMovements(movementsData.movimientos || []);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching dashboard:', err);

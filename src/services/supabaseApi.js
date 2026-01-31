@@ -56,15 +56,16 @@ const invalidateCache = (type) => {
   
   const keysToDelete = [];
   for (const key of cache.keys()) {
-    if (key.includes(type) || key.includes('dashboard') || key.includes('movements') || key.includes('income') || key.includes('expense')) {
+    // Incluir 'accounts' porque los balances dependen de movimientos
+    if (key.includes(type) || key.includes('dashboard') || key.includes('movements') || key.includes('income') || key.includes('expense') || key.includes('accounts')) {
       keysToDelete.push(key);
     }
   }
   keysToDelete.forEach(key => cache.delete(key));
-  
+
   // También limpiar pending requests relacionadas
   for (const key of pendingRequests.keys()) {
-    if (!type || key.includes(type) || key.includes('dashboard') || key.includes('movements') || key.includes('income') || key.includes('expense')) {
+    if (!type || key.includes(type) || key.includes('dashboard') || key.includes('movements') || key.includes('income') || key.includes('expense') || key.includes('accounts')) {
       pendingRequests.delete(key);
     }
   }
@@ -143,7 +144,19 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
   // Get balances for each account
   const accountsWithBalances = await Promise.all(
     accounts.map(async (account) => {
-      const balance = await calculateAccountBalance(account.id, account.initial_balance);
+      const balanceData = await calculateAccountBalance(account.id, account.initial_balance);
+
+      // For credit cards, also calculate next statement balance
+      let creditCardData = {};
+      if (account.is_credit_card) {
+        const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day);
+        creditCardData = {
+          proximoResumenPesos: nextStatement.proximoResumenPesos,
+          proximoResumenDolares: nextStatement.proximoResumenDolares,
+          promedioMensual: nextStatement.promedioMensual,
+        };
+      }
+
       return {
         id: account.id,
         nombre: account.name,
@@ -153,8 +166,13 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
         tipo: accountTypeFromDb(account.account_type),
         esTarjetaCredito: account.is_credit_card,
         diaCierre: account.closing_day,
-        balanceActual: balance,
+        balanceActual: balanceData.balance,
+        totalIngresos: balanceData.totalIngresos,
+        totalGastos: balanceData.totalGastos,
+        totalTransfEntrantes: balanceData.totalTransfEntrantes,
+        totalTransfSalientes: balanceData.totalTransfSalientes,
         icon: account.icon || null,
+        ...creditCardData,
         // Keep original fields too
         ...account
       };
@@ -168,7 +186,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
 
 const calculateAccountBalance = async (accountId, initialBalance) => {
   const userId = await getUserId();
-  
+
   // Sum incomes
   const { data: incomes } = await supabase
     .from('movements')
@@ -176,7 +194,7 @@ const calculateAccountBalance = async (accountId, initialBalance) => {
     .eq('user_id', userId)
     .eq('account_id', accountId)
     .eq('type', 'income');
-  
+
   const totalIncomes = (incomes || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
 
   // Sum expenses
@@ -186,7 +204,7 @@ const calculateAccountBalance = async (accountId, initialBalance) => {
     .eq('user_id', userId)
     .eq('account_id', accountId)
     .eq('type', 'expense');
-  
+
   const totalExpenses = (expenses || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
 
   // Sum transfers in
@@ -195,7 +213,7 @@ const calculateAccountBalance = async (accountId, initialBalance) => {
     .select('to_amount')
     .eq('user_id', userId)
     .eq('to_account_id', accountId);
-  
+
   const totalTransfersIn = (transfersIn || []).reduce((sum, t) => sum + parseFloat(t.to_amount), 0);
 
   // Sum transfers out
@@ -204,10 +222,104 @@ const calculateAccountBalance = async (accountId, initialBalance) => {
     .select('from_amount')
     .eq('user_id', userId)
     .eq('from_account_id', accountId);
-  
+
   const totalTransfersOut = (transfersOut || []).reduce((sum, t) => sum + parseFloat(t.from_amount), 0);
 
-  return parseFloat(initialBalance) + totalIncomes - totalExpenses + totalTransfersIn - totalTransfersOut;
+  const balance = parseFloat(initialBalance) + totalIncomes - totalExpenses + totalTransfersIn - totalTransfersOut;
+
+  return {
+    balance,
+    totalIngresos: totalIncomes,
+    totalGastos: totalExpenses,
+    totalTransfEntrantes: totalTransfersIn,
+    totalTransfSalientes: totalTransfersOut,
+  };
+};
+
+// Calculate next statement balance for credit cards (separated by currency)
+const calculateCreditCardNextStatement = async (accountId, closingDay) => {
+  const userId = await getUserId();
+  const diaCierre = closingDay || 1;
+
+  // Get all expenses for this credit card
+  const { data: expenses } = await supabase
+    .from('movements')
+    .select('amount, date, original_currency')
+    .eq('user_id', userId)
+    .eq('account_id', accountId)
+    .eq('type', 'expense');
+
+  if (!expenses || expenses.length === 0) {
+    return { proximoResumenPesos: 0, proximoResumenDolares: 0, promedioMensual: 0 };
+  }
+
+  // Calculate current statement period
+  const today = new Date();
+  const currentDay = today.getDate();
+  let statementYear = today.getFullYear();
+  let statementMonth = today.getMonth();
+
+  // If we're past the closing day, we're in the next month's statement
+  if (currentDay >= diaCierre) {
+    statementMonth += 1;
+    if (statementMonth > 11) {
+      statementMonth = 0;
+      statementYear += 1;
+    }
+  }
+
+  // Function to get statement period for a date
+  const getStatementPeriod = (dateStr) => {
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    let year = d.getFullYear();
+    let month = d.getMonth();
+
+    if (day >= diaCierre) {
+      month += 1;
+      if (month > 11) {
+        month = 0;
+        year += 1;
+      }
+    }
+    return `${year}-${month}`;
+  };
+
+  const currentPeriod = `${statementYear}-${statementMonth}`;
+
+  // Sum expenses for current statement period and group by month for average
+  let totalPesos = 0;
+  let totalDolares = 0;
+  const expensesByMonth = {};
+
+  expenses.forEach(expense => {
+    const period = getStatementPeriod(expense.date);
+    const amount = parseFloat(expense.amount);
+
+    // For next statement calculation
+    if (period === currentPeriod) {
+      if (expense.original_currency === 'USD') {
+        totalDolares += amount;
+      } else {
+        totalPesos += amount;
+      }
+    }
+
+    // For monthly average (group by month)
+    const expenseDate = new Date(expense.date);
+    const monthKey = `${expenseDate.getFullYear()}-${expenseDate.getMonth()}`;
+    if (!expensesByMonth[monthKey]) {
+      expensesByMonth[monthKey] = 0;
+    }
+    expensesByMonth[monthKey] += amount;
+  });
+
+  // Calculate monthly average
+  const months = Object.keys(expensesByMonth);
+  const totalAllMonths = Object.values(expensesByMonth).reduce((sum, val) => sum + val, 0);
+  const promedioMensual = months.length > 0 ? totalAllMonths / months.length : 0;
+
+  return { proximoResumenPesos: totalPesos, proximoResumenDolares: totalDolares, promedioMensual };
 };
 
 export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon }) => {
@@ -514,12 +626,18 @@ export const bulkDeleteCategories = async (categoryIds) => {
 const mapMovementFromDB = (m, accounts, categories) => {
   const account = accounts?.find(a => a.id === m.account_id);
   const category = categories?.find(c => c.id === m.category_id);
+  const amount = parseFloat(m.amount);
+  const isUSD = m.original_currency === 'USD';
 
   return {
     id: m.id,
     rowIndex: m.id, // compatibility
     fecha: m.date,
-    monto: parseFloat(m.amount),
+    monto: amount,
+    // Montos separados por moneda para tarjetas de crédito
+    montoPesos: isUSD ? 0 : amount,
+    montoDolares: isUSD ? amount : 0,
+    monedaOriginal: m.original_currency || 'ARS',
     cuenta: account?.name || '',
     categoria: category?.name || '',
     nota: m.note || '',
@@ -826,6 +944,8 @@ export const updateMultipleMovements = async (movements, field, value) => {
     updateData.category_id = category?.id;
   } else if (field === 'nota') {
     updateData.note = value;
+  } else if (field === 'fecha') {
+    updateData.date = value;
   }
 
   const { error } = await supabase
@@ -836,6 +956,95 @@ export const updateMultipleMovements = async (movements, field, value) => {
   if (error) throw error;
   invalidateCache('');
   return { success: true };
+};
+
+/**
+ * Update subsequent installments of a purchase
+ * Updates all installments with number > current installment number
+ * @param {Object} movement - The movement that was edited (contains idCompra, cuota info)
+ */
+export const updateSubsequentInstallments = async (movement) => {
+  const userId = await getUserId();
+  const purchaseId = movement.idCompra || movement.installment_purchase_id;
+
+  if (!purchaseId) {
+    console.warn('No purchase ID found for installment update');
+    return { success: false };
+  }
+
+  // Parse current installment number from cuota string (e.g., "2/6" -> 2)
+  let currentNumber = 1;
+  if (movement.cuota) {
+    const match = movement.cuota.match(/^(\d+)/);
+    if (match) currentNumber = parseInt(match[1]);
+  } else if (movement.installment_number) {
+    currentNumber = movement.installment_number;
+  }
+
+  // Get all subsequent installments (number > currentNumber)
+  const { data: subsequentMovements, error: fetchError } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('installment_purchase_id', purchaseId)
+    .gt('installment_number', currentNumber);
+
+  if (fetchError) throw fetchError;
+  if (!subsequentMovements || subsequentMovements.length === 0) {
+    return { success: true, updated: 0 };
+  }
+
+  const ids = subsequentMovements.map(m => m.id);
+
+  // Build update payload with the same fields as the original movement
+  let updateData = {};
+
+  // Handle account
+  if (movement.cuenta) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', movement.cuenta)
+      .single();
+    if (account) updateData.account_id = account.id;
+  }
+
+  // Handle category
+  if (movement.categoria) {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', movement.categoria)
+      .single();
+    if (category) updateData.category_id = category.id;
+  }
+
+  // Handle amount (only if specified)
+  if (movement.monto !== undefined && movement.monto !== null) {
+    updateData.amount = movement.monto;
+  }
+
+  // Handle note
+  if (movement.nota !== undefined) {
+    updateData.note = movement.nota || null;
+  }
+
+  // Only update if there's something to update
+  if (Object.keys(updateData).length === 0) {
+    return { success: true, updated: 0 };
+  }
+
+  const { error: updateError } = await supabase
+    .from('movements')
+    .update(updateData)
+    .in('id', ids);
+
+  if (updateError) throw updateError;
+  invalidateCache('');
+
+  return { success: true, updated: ids.length };
 };
 
 // ============================================

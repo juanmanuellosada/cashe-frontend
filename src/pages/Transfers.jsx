@@ -74,7 +74,7 @@ function Transfers() {
     for (const transfer of transfersToDelete) {
       await deleteTransfer(transfer);
     }
-    fetchData();
+    await fetchData();
   };
 
   return (

@@ -76,19 +76,19 @@ function Income() {
 
     // Borrar en background
     await bulkDeleteMovements(movements);
-    fetchData();
+    await fetchData();
   };
 
   const handleBulkUpdate = async (movements, field, value) => {
     // Actualizar lista inmediatamente (optimistic)
     const rowIndexes = new Set(movements.map(m => m.rowIndex));
-    setIncomes(prev => prev.map(i => 
+    setIncomes(prev => prev.map(i =>
       rowIndexes.has(i.rowIndex) ? { ...i, [field]: value } : i
     ));
 
     // Actualizar en background
     await bulkUpdateMovements(movements, field, value);
-    fetchData();
+    await fetchData();
   };
 
   return (

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { useState, useMemo, useEffect } from 'react';
+import { format, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
@@ -9,6 +9,52 @@ import BudgetGoalImpact from '../common/BudgetGoalImpact';
 import { formatCurrency } from '../../utils/format';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
+
+// Genera opciones de períodos de resumen para tarjetas de crédito
+function generarPeriodosResumen(diaCierre) {
+  const periodos = [];
+  const today = new Date();
+  const currentDay = today.getDate();
+  const cierre = diaCierre || 1;
+
+  // Determinar el período actual
+  let baseDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  // Si estamos después del día de cierre, el período actual es el siguiente mes
+  if (currentDay >= cierre) {
+    baseDate = addMonths(baseDate, 1);
+  }
+
+  // Generar 6 períodos: 1 anterior, actual, y 4 futuros
+  for (let i = -1; i <= 4; i++) {
+    const periodoDate = addMonths(baseDate, i);
+    const periodoId = format(periodoDate, 'yyyy-MM');
+    const periodoLabel = format(periodoDate, "MMMM yyyy", { locale: es });
+
+    periodos.push({
+      value: periodoId,
+      label: periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1),
+      isCurrent: i === 0,
+    });
+  }
+
+  return periodos;
+}
+
+// Calcula una fecha que caiga en el período seleccionado
+function calcularFechaDePeriodo(periodoId, diaCierre) {
+  if (!periodoId) return new Date().toISOString().split('T')[0];
+
+  const [year, month] = periodoId.split('-').map(Number);
+  const cierre = diaCierre || 1;
+
+  // La fecha debe ser ANTES del día de cierre del mes del período
+  // Por ejemplo: período Marzo 2025, cierre día 15 → fecha: 14 de marzo
+  const dia = Math.max(1, cierre - 1);
+  const fecha = new Date(year, month - 1, dia);
+
+  return fecha.toISOString().split('T')[0];
+}
 
 // Calcula la fecha de la primera cuota basada en la fecha de compra y día de cierre
 function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
@@ -48,6 +94,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [periodoResumen, setPeriodoResumen] = useState(''); // Período para tarjetas de crédito
 
   // Encontrar la cuenta seleccionada y verificar si es tarjeta de crédito
   const selectedAccount = useMemo(() => {
@@ -55,7 +102,31 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   }, [accounts, formData.cuenta]);
 
   const esTarjetaCredito = selectedAccount?.esTarjetaCredito || false;
-  const diaCierre = selectedAccount?.diaCierre || null;
+  const diaCierre = selectedAccount?.diaCierre || 1;
+
+  // Generar opciones de períodos para tarjetas de crédito
+  const periodosResumen = useMemo(() => {
+    if (!esTarjetaCredito) return [];
+    return generarPeriodosResumen(diaCierre);
+  }, [esTarjetaCredito, diaCierre]);
+
+  // Establecer período actual por defecto cuando se selecciona una tarjeta
+  useEffect(() => {
+    if (esTarjetaCredito && periodosResumen.length > 0 && !periodoResumen) {
+      const periodoActual = periodosResumen.find(p => p.isCurrent);
+      if (periodoActual) {
+        setPeriodoResumen(periodoActual.value);
+      }
+    }
+  }, [esTarjetaCredito, periodosResumen, periodoResumen]);
+
+  // Actualizar la fecha automáticamente cuando cambia el período
+  useEffect(() => {
+    if (esTarjetaCredito && periodoResumen) {
+      const fechaCalculada = calcularFechaDePeriodo(periodoResumen, diaCierre);
+      setFormData(prev => ({ ...prev, fecha: fechaCalculada }));
+    }
+  }, [periodoResumen, diaCierre, esTarjetaCredito]);
 
   // Encontrar el ID de la categoría seleccionada
   const selectedCategoryId = useMemo(() => {
@@ -177,7 +248,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5">
-        {/* Fecha */}
+        {/* Fecha o Período de Resumen */}
         <div>
           <label
             className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
@@ -186,13 +257,41 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Fecha
+            {esTarjetaCredito ? 'Período de Resumen' : 'Fecha'}
           </label>
-          <DatePicker
-            name="fecha"
-            value={formData.fecha}
-            onChange={handleChange}
-          />
+          {esTarjetaCredito ? (
+            <div className="relative">
+              <select
+                value={periodoResumen}
+                onChange={(e) => setPeriodoResumen(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
+                style={{
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {periodosResumen.map((periodo) => (
+                  <option key={periodo.value} value={periodo.value}>
+                    {periodo.label} {periodo.isCurrent ? '(actual)' : ''}
+                  </option>
+                ))}
+              </select>
+              <div
+                className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          ) : (
+            <DatePicker
+              name="fecha"
+              value={formData.fecha}
+              onChange={handleChange}
+            />
+          )}
       </div>
 
       {/* Monto - Highlighted */}

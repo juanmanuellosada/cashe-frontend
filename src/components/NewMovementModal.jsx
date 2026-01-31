@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
 import { useBudgets } from '../hooks/useBudgets';
@@ -154,22 +155,23 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
   const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
   const shouldClose = dragY > 100;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center overflow-y-auto">
+  // Usar Portal para renderizar fuera de la jerarquía del DOM
+  // Esto evita problemas con contenedores padre que tengan transform
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
         style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={submitting ? undefined : onClose}
       />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md sm:my-auto sm:m-4 mt-0 rounded-b-xl sm:rounded-xl animate-slide-down"
+        className="relative z-10 w-full max-w-md sm:max-w-lg sm:mx-4 mt-0 sm:mt-0 rounded-b-xl sm:rounded-xl animate-slide-down max-h-[85dvh] sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)',
-          maxHeight: 'min(85dvh, 85vh)',
           display: 'flex',
           flexDirection: 'column',
           transform: `translateY(${dragY}px)`,
@@ -245,7 +247,8 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

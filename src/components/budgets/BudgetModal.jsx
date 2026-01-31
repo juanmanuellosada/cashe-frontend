@@ -172,7 +172,7 @@ function BudgetModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
         {/* Backdrop */}
         <div
           className="absolute inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -182,7 +182,7 @@ function BudgetModal({
 
         {/* Modal */}
         <div
-          className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-5 animate-slide-down"
+          className="relative w-full sm:max-w-lg max-h-[90vh] sm:max-h-[calc(100vh-48px)] overflow-y-auto sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-5 animate-slide-down"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             transform: `translateY(${dragY}px)`,

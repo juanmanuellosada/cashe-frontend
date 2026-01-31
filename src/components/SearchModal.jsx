@@ -51,7 +51,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
     try {
       setLoading(true);
       const data = await getRecentMovements(500);
-      setMovements(data.movements || []);
+      setMovements(data.movimientos || []);
       setInitialLoad(false);
     } catch (err) {
       console.error('Error loading movements:', err);
@@ -164,7 +164,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -174,7 +174,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden animate-slide-down"
+        className="relative w-full max-w-lg sm:max-w-xl sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl overflow-hidden animate-slide-down sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           transform: `translateY(${dragY}px)`,

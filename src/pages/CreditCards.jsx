@@ -1,20 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment } from '../services/supabaseApi';
+import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, updateSubsequentInstallments } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
+import DatePicker from '../components/DatePicker';
 import { useError } from '../contexts/ErrorContext';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import { downloadAttachment } from '../services/attachmentStorage';
 import StatementAttachmentsModal from '../components/StatementAttachmentsModal';
+import EditMovementModal from '../components/EditMovementModal';
 
 function CreditCards() {
   const { showError } = useError();
   const [creditCards, setCreditCards] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
+  const [allCategories, setAllCategories] = useState({ ingresos: [], gastos: [] });
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState(null);
   const [currency, setCurrency] = useState('ARS');
@@ -35,6 +38,16 @@ function CreditCards() {
   const [selectedStatementForAttachments, setSelectedStatementForAttachments] = useState(null);
   const [savingAttachment, setSavingAttachment] = useState(false);
 
+  // Estado para editar movimiento
+  const [editingMovement, setEditingMovement] = useState(null);
+
+  // Estado para selección masiva
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState(null); // 'editDate', 'editCategory'
+  const [bulkDateValue, setBulkDateValue] = useState('');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -42,21 +55,24 @@ function CreditCards() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [accountsData, expensesData] = await Promise.all([
+      const [accountsData, expensesData, categoriesData] = await Promise.all([
         getAccounts(),
         getAllExpenses(),
+        getCategories(),
       ]);
-      
+
       const accounts = accountsData.accounts || [];
       const expenses = expensesData.expenses || [];
-      
+      const categories = categoriesData.categorias || { ingresos: [], gastos: [] };
+
       // Filtrar solo tarjetas de crédito
       const cards = accounts.filter(acc => acc.esTarjetaCredito);
-      
+
       setCreditCards(cards);
       setAllAccounts(accounts);
       setAllExpenses(expenses);
-      
+      setAllCategories(categories);
+
       // Seleccionar primera tarjeta por defecto
       if (cards.length > 0 && !selectedCard) {
         setSelectedCard(cards[0]);
@@ -237,7 +253,7 @@ function CreditCards() {
       setShowTaxModal(false);
       setTaxAmount('');
       setSelectedStatement(null);
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error('Error adding tax:', err);
       showError('No se pudo agregar el impuesto de sellos', err.message);
@@ -279,7 +295,7 @@ function CreditCards() {
       setShowPayModal(false);
       setPaymentAccount('');
       setSelectedStatement(null);
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error('Error paying statement:', err);
       showError('No se pudo registrar el pago del resumen', err.message);
@@ -368,6 +384,93 @@ function CreditCards() {
       showError('No se pudo eliminar el adjunto', err.message);
     } finally {
       setSavingAttachment(false);
+    }
+  };
+
+  // Handler para abrir el modal de edición
+  const handleEditMovement = (item) => {
+    // Convertir item del statement a formato de movimiento
+    setEditingMovement({
+      id: item.id,
+      fecha: item.fecha,
+      monto: item.monto,
+      cuenta: item.cuenta || selectedCard?.nombre,
+      categoria: item.categoria,
+      nota: item.nota,
+      tipo: 'gasto',
+      accountId: item.accountId,
+      categoryId: item.categoryId,
+      cuota: item.cuota,
+      idCompra: item.idCompra || item.installment_purchase_id,
+    });
+  };
+
+  // Handler para guardar cambios del movimiento
+  const handleSaveMovement = async (updatedMovement) => {
+    try {
+      await updateMovement(updatedMovement);
+
+      // Si es cuota y el usuario eligió aplicar a las siguientes
+      if (updatedMovement.applyToSubsequent && updatedMovement.idCompra) {
+        await updateSubsequentInstallments(updatedMovement);
+      }
+
+      setEditingMovement(null);
+      await fetchData(); // Await to ensure data is refreshed before closing
+    } catch (err) {
+      console.error('Error updating movement:', err);
+      showError('No se pudo actualizar el movimiento', err.message);
+    }
+  };
+
+  // Funciones para selección masiva
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems(new Set());
+  };
+
+  const toggleItemSelection = (itemId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const selectAllItems = (items) => {
+    const allIds = new Set(items.map(item => item.id));
+    setSelectedItems(allIds);
+  };
+
+  const getSelectedMovementsFromStatement = () => {
+    if (!viewingStatement) return [];
+    const hasBoth = viewingStatement.totalPesos > 0 && viewingStatement.totalDolares > 0;
+    const itemsToShow = hasBoth
+      ? (currency === 'ARS' ? viewingStatement.itemsPesos : viewingStatement.itemsDolares)
+      : viewingStatement.items;
+    return itemsToShow.filter(item => selectedItems.has(item.id));
+  };
+
+  // Handler para edición masiva de fecha
+  const handleBulkDateUpdate = async () => {
+    if (!bulkDateValue) return;
+
+    setBulkProcessing(true);
+    try {
+      const movementsToUpdate = getSelectedMovementsFromStatement();
+      await updateMultipleMovements(movementsToUpdate, 'fecha', bulkDateValue);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      setBulkAction(null);
+      setBulkDateValue('');
+      await fetchData();
+    } catch (err) {
+      console.error('Error in bulk update:', err);
+      showError('No se pudieron actualizar los movimientos', err.message);
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -867,7 +970,11 @@ function CreditCards() {
             style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}
           >
             <button
-              onClick={() => setViewingStatement(null)}
+              onClick={() => {
+                setViewingStatement(null);
+                setSelectionMode(false);
+                setSelectedItems(new Set());
+              }}
               className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
@@ -966,6 +1073,76 @@ function CreditCards() {
             </div>
           )}
 
+          {/* Barra de selección masiva */}
+          {selectionMode && (
+            <div
+              className="px-4 py-3 flex items-center justify-between gap-2 flex-wrap"
+              style={{ backgroundColor: 'rgba(20, 184, 166, 0.1)', borderBottom: '1px solid var(--accent-primary)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {selectedItems.size} seleccionado{selectedItems.size !== 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={() => {
+                    const hasBoth = viewingStatement.totalPesos > 0 && viewingStatement.totalDolares > 0;
+                    const itemsToShow = hasBoth
+                      ? (currency === 'ARS' ? viewingStatement.itemsPesos : viewingStatement.itemsDolares)
+                      : viewingStatement.items;
+                    selectedItems.size === itemsToShow.length ? setSelectedItems(new Set()) : selectAllItems(itemsToShow);
+                  }}
+                  className="text-xs px-2 py-1 rounded-lg"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+                >
+                  {(() => {
+                    const hasBoth = viewingStatement.totalPesos > 0 && viewingStatement.totalDolares > 0;
+                    const itemsToShow = hasBoth
+                      ? (currency === 'ARS' ? viewingStatement.itemsPesos : viewingStatement.itemsDolares)
+                      : viewingStatement.items;
+                    return selectedItems.size === itemsToShow.length ? 'Deseleccionar' : 'Seleccionar todo';
+                  })()}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={() => setBulkAction('editDate')}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Cambiar fecha
+                  </button>
+                )}
+                <button
+                  onClick={toggleSelectionMode}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Botón para activar selección masiva */}
+          {!selectionMode && (
+            <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+              <button
+                onClick={toggleSelectionMode}
+                className="text-xs font-medium flex items-center gap-1.5"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
+                </svg>
+                Selección múltiple
+              </button>
+            </div>
+          )}
+
           {/* Lista de gastos */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
             {(() => {
@@ -978,23 +1155,69 @@ function CreditCards() {
               return itemsToShow?.map((item, idx) => {
                 // Usar el campo monedaOriginal que ya se calculó correctamente
                 const itemCurrency = item.monedaOriginal || 'ARS';
-                const displayAmount = itemCurrency === 'USD' 
-                  ? (item.montoDolaresNum || item.montoDolares || 0) 
+                const displayAmount = itemCurrency === 'USD'
+                  ? (item.montoDolaresNum || item.montoDolares || 0)
                   : (item.montoPesosNum || item.montoPesos || item.monto || 0);
-                
+                const isSelected = selectedItems.has(item.id);
+
                 return (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 p-3 rounded-xl"
-                    style={{ backgroundColor: 'var(--bg-secondary)' }}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${!selectionMode ? 'active:scale-[0.98]' : ''}`}
+                    style={{
+                      backgroundColor: isSelected ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-secondary)',
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                    }}
+                    onClick={() => selectionMode ? toggleItemSelection(item.id) : handleEditMovement(item)}
                   >
+                    {/* Checkbox en modo selección */}
+                    {selectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleItemSelection(item.id);
+                        }}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{
+                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                          border: isSelected ? 'none' : '2px solid var(--border-subtle)',
+                        }}
+                      >
+                        {isSelected && (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: 'var(--bg-tertiary)' }}
                     >
-                      <span className="text-lg">
-                        {item.categoria?.split(' ')[0] || '💳'}
-                      </span>
+                      {(() => {
+                        // Find category icon from allCategories
+                        const categoryData = allCategories.gastos?.find(
+                          c => c.value === item.categoria || c.label === item.categoria
+                        );
+                        const icon = categoryData?.icon;
+
+                        if (icon && isEmoji(icon)) {
+                          return <span className="text-lg">{icon}</span>;
+                        } else if (icon) {
+                          return (
+                            <img
+                              src={resolveIconPath(icon)}
+                              alt=""
+                              className="w-6 h-6 rounded object-cover"
+                            />
+                          );
+                        } else {
+                          // Fallback: try to extract emoji from category string
+                          const firstChar = item.categoria?.split(' ')[0] || '💳';
+                          return <span className="text-lg">{firstChar}</span>;
+                        }
+                      })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
@@ -1025,13 +1248,18 @@ function CreditCards() {
                         {format(new Date(item.fecha), "d 'de' MMMM", { locale: es })}
                       </p>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p 
-                        className="text-sm font-bold" 
+                    <div className="text-right flex-shrink-0 flex items-center gap-2">
+                      <p
+                        className="text-sm font-bold"
                         style={{ color: itemCurrency === 'USD' ? 'var(--accent-green)' : 'var(--accent-red)' }}
                       >
                         {formatCurrency(displayAmount, itemCurrency)}
                       </p>
+                      {!selectionMode && (
+                        <svg className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
                     </div>
                   </div>
                 );
@@ -1099,6 +1327,64 @@ function CreditCards() {
         onRemove={handleRemoveAttachment}
         saving={savingAttachment}
       />
+
+      {/* Modal - Editar Movimiento */}
+      {editingMovement && (
+        <EditMovementModal
+          movement={editingMovement}
+          accounts={allAccounts}
+          categories={allCategories}
+          onSave={handleSaveMovement}
+          onClose={() => setEditingMovement(null)}
+        />
+      )}
+
+      {/* Modal - Cambiar Fecha Masivamente */}
+      {bulkAction === 'editDate' && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              Cambiar fecha
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Cambiar la fecha de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
+            </p>
+
+            <div className="mb-4">
+              <DatePicker
+                value={bulkDateValue}
+                onChange={(e) => setBulkDateValue(e.target.value)}
+                name="bulkDate"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
+                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkDateUpdate}
+                disabled={bulkProcessing || !bulkDateValue}
+                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-purple, #a855f7)' }}
+              >
+                {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

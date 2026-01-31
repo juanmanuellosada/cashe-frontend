@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
+import DatePicker from './DatePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
 import SortDropdown from './SortDropdown';
@@ -45,13 +47,17 @@ function MovementsList({
   // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState(null); // 'delete', 'editAccount', 'editCategory'
+  const [bulkAction, setBulkAction] = useState(null); // 'delete', 'editAccount', 'editCategory', 'editDate'
   const [bulkEditValue, setBulkEditValue] = useState('');
+  const [bulkDateValue, setBulkDateValue] = useState(''); // String in yyyy-MM-dd format
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Sort state - different storage key per type
   const sortStorageKey = `cashe-sort-${type}`;
+  const filterStorageKey = `cashe-filters-${type}`;
   const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
+  const [sortLoaded, setSortLoaded] = useState(false);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
 
   // Load sort preference from localStorage on mount
   useEffect(() => {
@@ -66,12 +72,70 @@ function MovementsList({
         console.error('Error parsing sort preference:', e);
       }
     }
+    setSortLoaded(true);
   }, [sortStorageKey]);
 
   // Save sort preference to localStorage
   useEffect(() => {
+    if (!sortLoaded) return; // Don't save until initial load is complete
     localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
-  }, [sortConfig, sortStorageKey]);
+  }, [sortConfig, sortStorageKey, sortLoaded]);
+
+  // Load filter preferences from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(filterStorageKey);
+    let hasDateRange = false;
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.selectedAccounts) setSelectedAccounts(parsed.selectedAccounts);
+        if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
+        if (parsed.dateRange && (parsed.dateRange.from || parsed.dateRange.to)) {
+          setDateRange(parsed.dateRange);
+          hasDateRange = true;
+        }
+      } catch (e) {
+        console.error('Error parsing filter preference:', e);
+      }
+    }
+
+    // Default to current month for gastos and ingresos if no saved date range
+    if (!hasDateRange && (type === 'gasto' || type === 'ingreso')) {
+      const now = new Date();
+      setDateRange({
+        from: startOfMonth(now),
+        to: endOfMonth(now),
+      });
+    }
+
+    setFiltersLoaded(true);
+  }, [filterStorageKey, type]);
+
+  // Validate stored filters against current accounts/categories (remove deleted ones)
+  useEffect(() => {
+    if (!filtersLoaded || accounts.length === 0) return;
+    const validAccountNames = accounts.map(a => a.nombre);
+    setSelectedAccounts(prev => prev.filter(name => validAccountNames.includes(name)));
+  }, [accounts, filtersLoaded]);
+
+  useEffect(() => {
+    if (!filtersLoaded || categories.length === 0) return;
+    const validCatValues = categories.map(cat =>
+      typeof cat === 'object' ? (cat.value || cat.label) : cat
+    );
+    setSelectedCategories(prev => prev.filter(cat => validCatValues.includes(cat)));
+  }, [categories, filtersLoaded]);
+
+  // Save filter preferences to localStorage
+  useEffect(() => {
+    if (!filtersLoaded) return; // Don't save until initial load is complete
+    localStorage.setItem(filterStorageKey, JSON.stringify({
+      selectedAccounts,
+      selectedCategories,
+      dateRange,
+    }));
+  }, [selectedAccounts, selectedCategories, dateRange, filterStorageKey, filtersLoaded]);
 
   // Sort options based on movement type
   const sortOptions = useMemo(() => {
@@ -284,17 +348,32 @@ function MovementsList({
   };
 
   const handleBulkUpdate = async () => {
-    if (!onBulkUpdate || !bulkEditValue) return;
-    
+    // Determine the field and value based on bulkAction
+    let field, value;
+    if (bulkAction === 'editAccount') {
+      field = 'cuenta';
+      value = bulkEditValue;
+    } else if (bulkAction === 'editCategory') {
+      field = 'categoria';
+      value = bulkEditValue;
+    } else if (bulkAction === 'editDate') {
+      field = 'fecha';
+      value = bulkDateValue; // Already in yyyy-MM-dd format
+    } else {
+      return;
+    }
+
+    if (!onBulkUpdate || !value) return;
+
     setBulkProcessing(true);
     try {
       const movementsToUpdate = getSelectedMovements();
-      const field = bulkAction === 'editAccount' ? 'cuenta' : 'categoria';
-      await onBulkUpdate(movementsToUpdate, field, bulkEditValue);
+      await onBulkUpdate(movementsToUpdate, field, value);
       setSelectedItems(new Set());
       setSelectionMode(false);
       setBulkAction(null);
       setBulkEditValue('');
+      setBulkDateValue('');
     } catch (err) {
       console.error('Error in bulk update:', err);
       showError('No se pudieron actualizar los movimientos', err.message);
@@ -474,6 +553,18 @@ function MovementsList({
                       Categoría
                     </button>
                   )}
+
+                  {/* Bulk Edit Date */}
+                  <button
+                    onClick={() => setBulkAction('editDate')}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Fecha
+                  </button>
                 </>
               )}
               
@@ -553,10 +644,24 @@ function MovementsList({
               USD
             </button>
           </div>
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-          />
+          <div className="flex items-center gap-1">
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+            />
+            {(dateRange.from || dateRange.to) && (
+              <button
+                onClick={() => setDateRange({ from: null, to: null })}
+                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+                title="Limpiar fechas"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -621,7 +726,6 @@ function MovementsList({
           options={sortOptions}
           value={sortConfig}
           onChange={setSortConfig}
-          storageKey={sortStorageKey}
         />
       </div>
 
@@ -661,9 +765,25 @@ function MovementsList({
 
           {/* Accounts filter */}
           <div>
-            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Cuentas
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                Cuentas
+              </label>
+              <button
+                onClick={() => {
+                  const allAccountNames = accounts.map(a => a.nombre);
+                  if (selectedAccounts.length === accounts.length) {
+                    setSelectedAccounts([]);
+                  } else {
+                    setSelectedAccounts(allAccountNames);
+                  }
+                }}
+                className="text-xs font-medium transition-colors hover:opacity-80"
+                style={{ color: getTypeColor() }}
+              >
+                {selectedAccounts.length === accounts.length ? 'Ninguna' : 'Todas'}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
               {accounts.map(account => (
                 <button
@@ -688,27 +808,50 @@ function MovementsList({
           {/* Categories filter (not for transfers) */}
           {type !== 'transferencia' && categories.length > 0 && (
             <div>
-              <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Categorias
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  Categorias
+                </label>
+                <button
+                  onClick={() => {
+                    const allCatValues = categories.map(cat =>
+                      typeof cat === 'object' ? (cat.value || cat.label) : cat
+                    );
+                    if (selectedCategories.length === categories.length) {
+                      setSelectedCategories([]);
+                    } else {
+                      setSelectedCategories(allCatValues);
+                    }
+                  }}
+                  className="text-xs font-medium transition-colors hover:opacity-80"
+                  style={{ color: getTypeColor() }}
+                >
+                  {selectedCategories.length === categories.length ? 'Ninguna' : 'Todas'}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => toggleCategory(cat)}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
-                    style={{
-                      backgroundColor: selectedCategories.includes(cat)
-                        ? getTypeColor()
-                        : 'var(--bg-tertiary)',
-                      color: selectedCategories.includes(cat)
-                        ? 'white'
-                        : 'var(--text-secondary)',
-                    }}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {categories.map((cat, index) => {
+                  // Handle both string and object formats
+                  const catValue = typeof cat === 'object' ? (cat.value || cat.label) : cat;
+                  const catLabel = typeof cat === 'object' ? (cat.label || cat.value) : cat;
+                  return (
+                    <button
+                      key={catValue || `cat-${index}`}
+                      onClick={() => toggleCategory(catValue)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor: selectedCategories.includes(catValue)
+                          ? getTypeColor()
+                          : 'var(--bg-tertiary)',
+                        color: selectedCategories.includes(catValue)
+                          ? 'white'
+                          : 'var(--text-secondary)',
+                      }}
+                    >
+                      {catLabel}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1144,16 +1287,20 @@ function MovementsList({
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
               Cambiar la categoría de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
             </p>
-            
+
             <div className="mb-4">
               <Combobox
                 value={bulkEditValue}
                 onChange={(e) => setBulkEditValue(e.target.value)}
-                options={categories.map(c => ({ value: c, label: c }))}
+                options={categories.map(c => {
+                  const catValue = typeof c === 'object' ? (c.value || c.label) : c;
+                  const catLabel = typeof c === 'object' ? (c.label || c.value) : c;
+                  return { value: catValue, label: catLabel };
+                })}
                 placeholder="Seleccionar categoría..."
               />
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
@@ -1167,6 +1314,53 @@ function MovementsList({
                 disabled={bulkProcessing || !bulkEditValue}
                 className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--accent-primary)' }}
+              >
+                {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Date Modal */}
+      {bulkAction === 'editDate' && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              Cambiar fecha
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Cambiar la fecha de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
+            </p>
+
+            <div className="mb-4">
+              <DatePicker
+                value={bulkDateValue}
+                onChange={(e) => setBulkDateValue(e.target.value)}
+                name="bulkDate"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
+                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkUpdate}
+                disabled={bulkProcessing || !bulkDateValue}
+                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-purple, #a855f7)' }}
               >
                 {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
               </button>

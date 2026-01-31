@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
+import Combobox from './Combobox';
 import LoadingSpinner from './LoadingSpinner';
 import AttachmentInput from './AttachmentInput';
 import { formatCurrency } from '../utils/format';
@@ -37,6 +38,10 @@ function EditMovementModal({
 
   // Estado para modal de confirmación de eliminación
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Estado para modal de confirmación de cuotas
+  const [showInstallmentConfirm, setShowInstallmentConfirm] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState(null);
 
   // Estados para adjuntos
   const [newAttachment, setNewAttachment] = useState(null);
@@ -120,10 +125,23 @@ function EditMovementModal({
     setTransferData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Check if movement is an installment with subsequent installments
+  const isInstallment = !!(movement?.cuota || movement?.installment_number);
+  const hasSubsequentInstallments = () => {
+    if (!movement?.cuota) return false;
+    const match = movement.cuota.match(/^(\d+)\/(\d+)$/);
+    if (!match) return false;
+    const current = parseInt(match[1]);
+    const total = parseInt(match[2]);
+    return current < total;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    let saveData;
     if (isTransfer) {
-      onSave?.({
+      saveData = {
         ...movement,
         fecha: transferData.fecha,
         cuentaSaliente: transferData.cuentaSaliente,
@@ -133,16 +151,37 @@ function EditMovementModal({
         nota: transferData.nota,
         newAttachment,
         removeAttachment: removeExistingAttachment && !newAttachment,
-      });
+      };
+      onSave?.(saveData);
     } else {
-      onSave?.({
+      saveData = {
         ...movement,
         ...formData,
         monto: parseFloat(formData.monto),
         newAttachment,
         removeAttachment: removeExistingAttachment && !newAttachment,
+      };
+
+      // If it's an installment with subsequent installments, ask user
+      if (isInstallment && hasSubsequentInstallments()) {
+        setPendingSaveData(saveData);
+        setShowInstallmentConfirm(true);
+      } else {
+        onSave?.(saveData);
+      }
+    }
+  };
+
+  // Handle installment confirmation
+  const handleInstallmentConfirm = (applyToSubsequent) => {
+    if (pendingSaveData) {
+      onSave?.({
+        ...pendingSaveData,
+        applyToSubsequent,
       });
     }
+    setShowInstallmentConfirm(false);
+    setPendingSaveData(null);
   };
 
   const { showError } = useError();
@@ -212,7 +251,7 @@ function EditMovementModal({
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -222,10 +261,9 @@ function EditMovementModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down"
+        className="relative w-full max-w-md sm:max-w-lg sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down max-h-[calc(100dvh-40px)] sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          maxHeight: 'min(calc(100dvh - 40px), calc(100vh - 40px))',
           transform: `translateY(${dragY}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           opacity: shouldClose ? 0.5 : 1,
@@ -286,20 +324,19 @@ function EditMovementModal({
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Cuenta origen
                 </label>
-                <select
+                <Combobox
                   name="cuentaSaliente"
                   value={transferData.cuentaSaliente}
                   onChange={handleTransferChange}
-                  className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">Seleccionar cuenta</option>
-                  {accounts.map((account) => (
-                    <option key={account.nombre} value={account.nombre}>
-                      {account.nombre}
-                    </option>
-                  ))}
-                </select>
+                  options={accounts.map(a => ({
+                    value: a.nombre,
+                    label: a.nombre,
+                    icon: a.icon || null,
+                  }))}
+                  defaultOptionIcon="💳"
+                  placeholder="Seleccionar cuenta"
+                  emptyMessage="No hay cuentas"
+                />
               </div>
 
               {/* Monto Saliente */}
@@ -333,20 +370,19 @@ function EditMovementModal({
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Cuenta destino
                 </label>
-                <select
+                <Combobox
                   name="cuentaEntrante"
                   value={transferData.cuentaEntrante}
                   onChange={handleTransferChange}
-                  className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">Seleccionar cuenta</option>
-                  {accounts.map((account) => (
-                    <option key={account.nombre} value={account.nombre}>
-                      {account.nombre}
-                    </option>
-                  ))}
-                </select>
+                  options={accounts.map(a => ({
+                    value: a.nombre,
+                    label: a.nombre,
+                    icon: a.icon || null,
+                  }))}
+                  defaultOptionIcon="💳"
+                  placeholder="Seleccionar cuenta"
+                  emptyMessage="No hay cuentas"
+                />
               </div>
 
               {/* Monto Entrante */}
@@ -456,20 +492,19 @@ function EditMovementModal({
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Cuenta
                 </label>
-                <select
+                <Combobox
                   name="cuenta"
                   value={formData.cuenta}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">Seleccionar cuenta</option>
-                  {accounts.map((account) => (
-                    <option key={account.nombre} value={account.nombre}>
-                      {account.nombre}
-                    </option>
-                  ))}
-                </select>
+                  options={accounts.map(a => ({
+                    value: a.nombre,
+                    label: a.nombre,
+                    icon: a.icon || null,
+                  }))}
+                  defaultOptionIcon="💳"
+                  placeholder="Seleccionar cuenta"
+                  emptyMessage="No hay cuentas"
+                />
               </div>
 
               {/* Categoria */}
@@ -477,25 +512,15 @@ function EditMovementModal({
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Categoria
                 </label>
-                <select
+                <Combobox
                   name="categoria"
                   value={formData.categoria}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">Seleccionar categoria</option>
-                  {currentCategories?.map((categoria) => {
-                    // Soportar tanto objetos { value, label } como strings
-                    const value = typeof categoria === 'string' ? categoria : categoria.value;
-                    const label = typeof categoria === 'string' ? categoria : (categoria.icon ? `${categoria.icon} ${categoria.label}` : categoria.label);
-                    return (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
+                  options={currentCategories || []}
+                  defaultOptionIcon="🏷️"
+                  placeholder="Seleccionar categoria"
+                  emptyMessage="No hay categorías"
+                />
               </div>
 
               {/* Nota */}
@@ -584,13 +609,13 @@ function EditMovementModal({
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center">
+          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setShowDeleteConfirm(false)}
             />
             <div
-              className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down"
+              className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
             >
               {/* Drag indicator - mobile only */}
@@ -633,6 +658,64 @@ function EditMovementModal({
                     style={{ backgroundColor: 'var(--accent-red)' }}
                   >
                     Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Installment Confirmation Modal */}
+        {showInstallmentConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => {
+                setShowInstallmentConfirm(false);
+                setPendingSaveData(null);
+              }}
+            />
+            <div
+              className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
+              {/* Drag indicator - mobile only */}
+              <div className="sm:hidden flex justify-center -mt-4 mb-2">
+                <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--border-medium)' }} />
+              </div>
+
+              <div className="text-center">
+                <div
+                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                  style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)' }}
+                >
+                  <svg className="w-7 h-7" style={{ color: 'var(--accent-purple, #a855f7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Aplicar a cuotas siguientes
+                </h3>
+                <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Esta es la cuota <span className="font-bold" style={{ color: 'var(--accent-purple, #a855f7)' }}>{movement?.cuota}</span>
+                </p>
+                <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                  ¿Querés aplicar estos cambios también a las cuotas siguientes de esta compra?
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => handleInstallmentConfirm(true)}
+                    className="w-full py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90"
+                    style={{ backgroundColor: 'var(--accent-purple, #a855f7)' }}
+                  >
+                    Sí, aplicar a todas
+                  </button>
+                  <button
+                    onClick={() => handleInstallmentConfirm(false)}
+                    className="w-full py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                  >
+                    No, solo esta cuota
                   </button>
                 </div>
               </div>

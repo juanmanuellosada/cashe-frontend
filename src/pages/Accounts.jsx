@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { getAccounts, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
+import { useLocation } from 'react-router-dom';
+import { getAccounts, clearCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
 import SortDropdown from '../components/SortDropdown';
@@ -9,6 +10,7 @@ import { isEmoji, isPredefinedIcon, resolveIconPath } from '../services/iconStor
 
 function Accounts() {
   const { showError } = useError();
+  const location = useLocation();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingAccount, setEditingAccount] = useState(null);
@@ -55,13 +57,42 @@ function Accounts() {
     localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
   }, [sortConfig]);
 
+  // Refrescar datos cada vez que se navega a esta página (location.key cambia en cada navegación)
   useEffect(() => {
-    fetchAccounts();
+    fetchAccounts(true); // Forzar limpieza de caché al entrar a la página
+  }, [location.key]);
+
+  // Refrescar datos cuando la página recupera el foco (ej: navegación con botón atrás)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAccounts(true);
+      }
+    };
+
+    const handlePageShow = (event) => {
+      // Si la página viene del bfcache, refrescar datos
+      if (event.persisted) {
+        fetchAccounts(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (forceRefresh = false) => {
     try {
       setLoading(true);
+      // Limpiar caché antes de obtener datos frescos
+      if (forceRefresh) {
+        clearCache();
+      }
       const data = await getAccounts();
       setAccounts(data.accounts || []);
     } catch (err) {
@@ -72,34 +103,37 @@ function Accounts() {
   };
 
   // Calculate total balance across all accounts based on displayCurrency
+  // Exclude credit cards from the total (they represent debt, not assets)
   const totalBalance = useMemo(() => {
-    return accounts.reduce((sum, acc) => {
-      const balance = acc.balanceActual || 0;
-      const tipoCambio = acc.tipoCambio || 1000;
-      
-      if (displayCurrency === 'original') {
-        // En modo original, convertimos todo a pesos para calcular porcentajes
-        if (acc.moneda === 'Peso') {
-          return sum + balance;
+    return accounts
+      .filter(acc => !acc.esTarjetaCredito)
+      .reduce((sum, acc) => {
+        const balance = acc.balanceActual || 0;
+        const tipoCambio = acc.tipoCambio || 1000;
+
+        if (displayCurrency === 'original') {
+          // En modo original, convertimos todo a pesos para calcular porcentajes
+          if (acc.moneda === 'Peso') {
+            return sum + balance;
+          } else {
+            return sum + (balance * tipoCambio);
+          }
+        } else if (displayCurrency === 'ARS') {
+          // Todo a pesos
+          if (acc.moneda === 'Peso') {
+            return sum + balance;
+          } else {
+            return sum + (balance * tipoCambio);
+          }
         } else {
-          return sum + (balance * tipoCambio);
+          // Todo a dólares
+          if (acc.moneda === 'Peso') {
+            return sum + (balance / tipoCambio);
+          } else {
+            return sum + balance;
+          }
         }
-      } else if (displayCurrency === 'ARS') {
-        // Todo a pesos
-        if (acc.moneda === 'Peso') {
-          return sum + balance;
-        } else {
-          return sum + (balance * tipoCambio);
-        }
-      } else {
-        // Todo a dólares
-        if (acc.moneda === 'Peso') {
-          return sum + (balance / tipoCambio);
-        } else {
-          return sum + balance;
-        }
-      }
-    }, 0);
+      }, 0);
   }, [accounts, displayCurrency]);
 
   // Sorted accounts based on sort config
@@ -165,7 +199,7 @@ function Accounts() {
       setSaving(true);
       await addAccount(formData);
       setIsAdding(false);
-      fetchAccounts();
+      await fetchAccounts();
     } catch (err) {
       console.error('Error adding account:', err);
       showError('No se pudo crear la cuenta', err.message);
@@ -179,7 +213,7 @@ function Accounts() {
       setSaving(true);
       await updateAccount(formData);
       setEditingAccount(null);
-      fetchAccounts();
+      await fetchAccounts();
     } catch (err) {
       console.error('Error updating account:', err);
       showError('No se pudo guardar la cuenta', err.message);
@@ -199,7 +233,7 @@ function Accounts() {
       await deleteAccount(deleteConfirm.id);
       setDeleteConfirm(null);
       setEditingAccount(null);
-      fetchAccounts();
+      await fetchAccounts();
     } catch (err) {
       console.error('Error deleting account:', err);
       showError('No se pudo eliminar la cuenta', err.message);
@@ -248,7 +282,7 @@ function Accounts() {
       setBulkDeleteConfirm(false);
       setSelectedAccounts(new Set());
       setSelectionMode(false);
-      fetchAccounts();
+      await fetchAccounts();
     } catch (err) {
       console.error('Error bulk deleting accounts:', err);
       showError('No se pudieron eliminar las cuentas', err.message);
@@ -748,28 +782,54 @@ function Accounts() {
                         {/* Row 2: Type + Balance */}
                         <div className="flex items-baseline justify-between gap-2 mt-1">
                           <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {account.moneda === 'Peso' ? 'ARS' : 'USD'} {account.tipo && `· ${account.tipo}`}
+                            {account.esTarjetaCredito ? 'Próximo resumen' : (
+                              <>
+                                {account.moneda === 'Peso' ? 'ARS' : 'USD'} {account.tipo && `· ${account.tipo}`}
+                              </>
+                            )}
                           </p>
-                          <p className="text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>
-                            {formatCurrency(displayBalance.value, displayBalance.currency)}
-                          </p>
+                          {account.esTarjetaCredito ? (
+                            <div className="flex items-center gap-2">
+                              {account.proximoResumenPesos > 0 && (
+                                <p className="text-sm font-bold" style={{ color: 'var(--accent-red)' }}>
+                                  -{formatCurrency(account.proximoResumenPesos, 'ARS')}
+                                </p>
+                              )}
+                              {account.proximoResumenDolares > 0 && (
+                                <p className="text-sm font-bold" style={{ color: 'var(--accent-green)' }}>
+                                  -{formatCurrency(account.proximoResumenDolares, 'USD')}
+                                </p>
+                              )}
+                              {account.proximoResumenPesos === 0 && account.proximoResumenDolares === 0 && (
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                                  $0
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>
+                              {formatCurrency(displayBalance.value, displayBalance.currency)}
+                            </p>
+                          )}
                         </div>
 
-                        {/* Row 3: Progress bar */}
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${percentage}%`,
-                                backgroundColor: 'var(--accent-primary)',
-                              }}
-                            />
+                        {/* Row 3: Progress bar (hidden for credit cards) */}
+                        {!account.esTarjetaCredito && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${percentage}%`,
+                                  backgroundColor: 'var(--accent-primary)',
+                                }}
+                              />
+                            </div>
+                            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                              {percentage.toFixed(0)}%
+                            </span>
                           </div>
-                          <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                            {percentage.toFixed(0)}%
-                          </span>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -781,70 +841,115 @@ function Accounts() {
                     className="px-4 pb-4 pt-2 animate-scale-in"
                     style={{ borderTop: '1px solid var(--border-subtle)' }}
                   >
-                    <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Balance Inicial</p>
-                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                          {formatCurrency(account.balanceInicial, account.moneda === 'Peso' ? 'ARS' : 'USD')}
-                        </p>
+                    {account.esTarjetaCredito ? (
+                      /* Credit Card specific details */
+                      <>
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                          <div
+                            className="p-3 rounded-xl"
+                            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                          >
+                            <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Próximo resumen $</p>
+                            <p className="font-medium" style={{ color: 'var(--accent-red)' }}>
+                              {account.proximoResumenPesos > 0
+                                ? `-${formatCurrency(account.proximoResumenPesos, 'ARS')}`
+                                : '$0'}
+                            </p>
+                          </div>
+                          <div
+                            className="p-3 rounded-xl"
+                            style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
+                          >
+                            <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Próximo resumen US$</p>
+                            <p className="font-medium" style={{ color: 'var(--accent-green)' }}>
+                              {account.proximoResumenDolares > 0
+                                ? `-${formatCurrency(account.proximoResumenDolares, 'USD')}`
+                                : 'US$0'}
+                            </p>
+                          </div>
+                          <div
+                            className="p-3 rounded-xl"
+                            style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)' }}
+                          >
+                            <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total gastado</p>
+                            <p className="font-medium" style={{ color: 'var(--accent-red)' }}>
+                              -{formatCurrency(account.totalGastos || 0, 'ARS')}
+                            </p>
+                          </div>
+                          <div
+                            className="p-3 rounded-xl"
+                            style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
+                          >
+                            <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Promedio mensual</p>
+                            <p className="font-medium" style={{ color: 'var(--accent-blue)' }}>
+                              {formatCurrency(account.promedioMensual || 0, 'ARS')}
+                            </p>
+                          </div>
+                        </div>
+                        <ClosingDayEditor
+                          account={account}
+                          onSave={handleSave}
+                          loading={saving}
+                        />
+                      </>
+                    ) : (
+                      /* Regular account details */
+                      <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Balance Inicial</p>
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {formatCurrency(account.balanceInicial, account.moneda === 'Peso' ? 'ARS' : 'USD')}
+                          </p>
+                        </div>
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Numero de Cuenta</p>
+                          <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                            {account.numeroCuenta || '-'}
+                          </p>
+                        </div>
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total Ingresos</p>
+                          <p className="font-medium" style={{ color: 'var(--accent-green)' }}>
+                            +{formatCurrency(account.totalIngresos, account.moneda === 'Peso' ? 'ARS' : 'USD')}
+                          </p>
+                        </div>
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total Gastos</p>
+                          <p className="font-medium" style={{ color: 'var(--accent-red)' }}>
+                            -{formatCurrency(account.totalGastos, account.moneda === 'Peso' ? 'ARS' : 'USD')}
+                          </p>
+                        </div>
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Transf. Entrantes</p>
+                          <p className="font-medium" style={{ color: 'var(--accent-blue)' }}>
+                            +{formatCurrency(account.totalTransfEntrantes, account.moneda === 'Peso' ? 'ARS' : 'USD')}
+                          </p>
+                        </div>
+                        <div
+                          className="p-3 rounded-xl"
+                          style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
+                        >
+                          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Transf. Salientes</p>
+                          <p className="font-medium" style={{ color: 'var(--accent-blue)' }}>
+                            -{formatCurrency(account.totalTransfSalientes, account.moneda === 'Peso' ? 'ARS' : 'USD')}
+                          </p>
+                        </div>
                       </div>
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Numero de Cuenta</p>
-                        <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                          {account.numeroCuenta || '-'}
-                        </p>
-                      </div>
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total Ingresos</p>
-                        <p className="font-medium" style={{ color: 'var(--accent-green)' }}>
-                          +{formatCurrency(account.totalIngresos, account.moneda === 'Peso' ? 'ARS' : 'USD')}
-                        </p>
-                      </div>
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total Gastos</p>
-                        <p className="font-medium" style={{ color: 'var(--accent-red)' }}>
-                          -{formatCurrency(account.totalGastos, account.moneda === 'Peso' ? 'ARS' : 'USD')}
-                        </p>
-                      </div>
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Transf. Entrantes</p>
-                        <p className="font-medium" style={{ color: 'var(--accent-blue)' }}>
-                          +{formatCurrency(account.totalTransfEntrantes, account.moneda === 'Peso' ? 'ARS' : 'USD')}
-                        </p>
-                      </div>
-                      <div
-                        className="p-3 rounded-xl"
-                        style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
-                      >
-                        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Transf. Salientes</p>
-                        <p className="font-medium" style={{ color: 'var(--accent-blue)' }}>
-                          -{formatCurrency(account.totalTransfSalientes, account.moneda === 'Peso' ? 'ARS' : 'USD')}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Día de cierre para tarjetas de crédito */}
-                    {account.esTarjetaCredito && (
-                      <ClosingDayEditor
-                        account={account}
-                        onSave={handleSave}
-                        loading={saving}
-                      />
                     )}
 
                     <button
@@ -930,17 +1035,16 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${Math.max(0.6 - dragY / 300, 0)})` }}
         onClick={onClose}
       />
       <div
-        className="relative w-full sm:max-w-md sm:m-4 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down"
+        className="relative w-full sm:max-w-lg sm:mx-4 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down max-h-[calc(100dvh-40px)] sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          maxHeight: 'min(calc(100dvh - 40px), calc(100vh - 40px))',
           transform: `translateY(${dragY}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           opacity: shouldClose ? 0.5 : 1,

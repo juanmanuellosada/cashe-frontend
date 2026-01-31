@@ -45,7 +45,7 @@ function CategorySummary() {
         setLoading(true);
         setError(null);
         const data = await getRecentMovements(5000);
-        setMovements(data.movements || []);
+        setMovements(data.movimientos || []);
       } catch (err) {
         console.error('Error loading movements:', err);
         setError('Error al cargar los movimientos');
@@ -270,12 +270,26 @@ function CategorySummary() {
               USD
             </button>
           </div>
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            presets={PERIOD_PRESETS}
-            defaultPreset="Este mes"
-          />
+          <div className="flex items-center gap-1">
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              presets={PERIOD_PRESETS}
+              defaultPreset="Este mes"
+            />
+            {(dateRange.from || dateRange.to) && (
+              <button
+                onClick={() => setDateRange({ from: null, to: null })}
+                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+                title="Limpiar fechas"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

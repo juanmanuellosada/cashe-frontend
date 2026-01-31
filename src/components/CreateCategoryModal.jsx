@@ -137,14 +137,14 @@ function CreateCategoryModal({ isOpen, onClose, type, onCategoryCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
       <div
-        className="fixed inset-0 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-sm sm:m-4 mt-0 rounded-b-2xl sm:rounded-2xl p-5 animate-slide-down card-elevated"
+        className="relative z-10 w-full max-w-sm sm:max-w-md sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-5 animate-slide-down card-elevated"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)',
