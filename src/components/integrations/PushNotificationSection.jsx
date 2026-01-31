@@ -94,6 +94,7 @@ function PushNotificationSection() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                        window.navigator.standalone === true;
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
   // Not supported
   if (!status.supported && !status.loading) {
@@ -243,7 +244,9 @@ function PushNotificationSection() {
           {/* Info note */}
           {!status.subscribed && (
             <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-              Se te pedirá permiso para enviar notificaciones. Puedes desactivarlas en cualquier momento.
+              {isDevelopment
+                ? 'Nota: Las notificaciones push solo funcionan en producción. Usá "npm run build && npm run preview" para probar.'
+                : 'Se te pedirá permiso para enviar notificaciones. Puedes desactivarlas en cualquier momento.'}
             </p>
           )}
         </div>
