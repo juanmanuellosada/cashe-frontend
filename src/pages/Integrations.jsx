@@ -1,6 +1,7 @@
 import WhatsAppLinkSection from '../components/integrations/WhatsAppLinkSection';
 import TelegramLinkSection from '../components/integrations/TelegramLinkSection';
 import PushNotificationSection from '../components/integrations/PushNotificationSection';
+import ForceUpdateButton from '../components/ForceUpdateButton';
 
 function Integrations() {
   return (
@@ -65,6 +66,9 @@ function Integrations() {
             </div>
           </div>
         </div>
+
+        {/* Force Update */}
+        <ForceUpdateButton />
       </div>
     </div>
   );
