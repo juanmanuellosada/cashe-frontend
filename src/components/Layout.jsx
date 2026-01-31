@@ -58,6 +58,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'D', ctrl: false, alt: true, label: 'Adjuntos', action: () => navigate('/adjuntos') },
     { key: 'P', ctrl: false, alt: true, label: 'Presupuestos', action: () => navigate('/presupuestos') },
     { key: 'M', ctrl: false, alt: true, label: 'Metas', action: () => navigate('/metas') },
+    { key: 'L', ctrl: false, alt: true, label: 'Calendario', action: () => navigate('/calendario') },
+    { key: 'W', ctrl: false, alt: true, label: 'Recurrentes', action: () => navigate('/recurrentes') },
     { key: 'B', ctrl: false, alt: true, label: 'Colapsar menú', action: () => setSidebarCollapsed(prev => !prev) },
     { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); setNewMovementOpen(false); } },
   ];
@@ -180,9 +182,11 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/resumen-categorias', label: 'Por categoría', icon: 'categorysum', color: 'var(--accent-primary)' },
     { path: '/presupuestos', label: 'Presupuestos', icon: 'budget', color: 'var(--accent-yellow)' },
     { path: '/metas', label: 'Metas', icon: 'goal', color: 'var(--accent-green)' },
+    { path: '/calendario', label: 'Calendario', icon: 'calendar', color: 'var(--accent-blue)' },
     { path: '/gastos', label: 'Gastos', icon: 'expense', color: 'var(--accent-red)' },
     { path: '/ingresos', label: 'Ingresos', icon: 'income', color: 'var(--accent-green)' },
     { path: '/transferencias', label: 'Transferencias', icon: 'transfer', color: 'var(--accent-blue)' },
+    { path: '/recurrentes', label: 'Recurrentes', icon: 'recurring', color: 'var(--accent-purple)' },
     { path: '/tarjetas', label: 'Tarjetas', icon: 'creditcard', color: 'var(--accent-purple)' },
     { path: '/cuentas', label: 'Cuentas', icon: 'accounts', color: 'var(--accent-primary)' },
     { path: '/categorias', label: 'Categorias', icon: 'categories', color: 'var(--accent-primary)' },
@@ -271,6 +275,18 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
           </svg>
         );
+      case 'calendar':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'recurring':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        );
       default:
         return null;
     }
@@ -353,7 +369,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(0, 5).map(item => (
+            {menuItems.slice(0, 6).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -375,7 +391,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(5, 8).map(item => (
+            {menuItems.slice(6, 10).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -397,7 +413,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </p>
             )}
             {sidebarCollapsed && <div className="my-2 mx-2 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            {menuItems.slice(8).map(item => (
+            {menuItems.slice(10).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}

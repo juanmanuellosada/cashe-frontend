@@ -999,16 +999,46 @@ function MovementsList({
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                         {type === 'transferencia'
                           ? 'Transferencia'
                           : movement.categoria || '-'}
                       </p>
+                      {/* Future transaction badge */}
+                      {movement.isFuture && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
+                          style={{
+                            backgroundColor: 'var(--accent-yellow-dim)',
+                            color: 'var(--accent-yellow)',
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Futuro
+                        </span>
+                      )}
+                      {/* Recurring badge */}
+                      {movement.isRecurring && (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
+                          style={{
+                            backgroundColor: 'var(--accent-purple-dim)',
+                            color: 'var(--accent-purple)',
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Recurrente
+                        </span>
+                      )}
                       {/* Installment badge */}
                       {movement.cuota && (
                         <span
-                          className="px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1"
+                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
                           style={{
                             backgroundColor: 'rgba(20, 184, 166, 0.15)',
                             color: 'var(--accent-primary)',
@@ -1021,7 +1051,7 @@ function MovementsList({
                         </span>
                       )}
                       {/* Category badge */}
-                      {type !== 'transferencia' && movement.categoria && !movement.cuota && (
+                      {type !== 'transferencia' && movement.categoria && !movement.cuota && !movement.isFuture && !movement.isRecurring && (
                         <span
                           className="px-2 py-0.5 rounded-md text-xs font-medium hidden sm:inline-block"
                           style={{

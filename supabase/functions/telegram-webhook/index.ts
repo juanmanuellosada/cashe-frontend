@@ -320,6 +320,19 @@ async function showMainMenu(chatId: number) {
 // ============================================
 
 async function handleIdleStep(tgUser: any, messageText: string, chatId: number) {
+  // Handle recurring occurrence confirmation
+  if (messageText.startsWith('confirm_occ_')) {
+    const occurrenceId = messageText.replace('confirm_occ_', '')
+    await handleConfirmOccurrence(tgUser, occurrenceId, chatId)
+    return
+  }
+
+  if (messageText.startsWith('skip_occ_')) {
+    const occurrenceId = messageText.replace('skip_occ_', '')
+    await handleSkipOccurrence(tgUser, occurrenceId, chatId)
+    return
+  }
+
   // Handle menu selections
   if (messageText === 'type_expense' || messageText === 'type_income' || messageText === 'type_transfer') {
     const type = messageText === 'type_expense' ? 'expense' : messageText === 'type_income' ? 'income' : 'transfer'
@@ -1138,6 +1151,152 @@ async function answerCallbackQuery(callbackQueryId: string) {
     })
   } catch (error) {
     console.error('Error answering callback query:', error)
+  }
+}
+
+// ============================================
+// RECURRING OCCURRENCE HANDLERS
+// ============================================
+
+async function handleConfirmOccurrence(tgUser: any, occurrenceId: string, chatId: number) {
+  try {
+    // Get occurrence and recurring transaction
+    const { data: occurrence, error: occError } = await supabase
+      .from('recurring_occurrences')
+      .select('*, recurring_transactions(*)')
+      .eq('id', occurrenceId)
+      .eq('user_id', tgUser.user_id)
+      .eq('status', 'pending')
+      .single()
+
+    if (occError || !occurrence) {
+      await sendMessage(chatId, '❌ Esta solicitud ya no está pendiente o expiró.')
+      await showMainMenu(chatId)
+      return
+    }
+
+    const recurring = occurrence.recurring_transactions
+    const today = new Date().toISOString().split('T')[0]
+
+    // Create the movement/transfer
+    if (recurring.type === 'transfer') {
+      const { data: transfer, error: transError } = await supabase
+        .from('transfers')
+        .insert({
+          user_id: tgUser.user_id,
+          date: occurrence.scheduled_date,
+          from_account_id: recurring.from_account_id,
+          to_account_id: recurring.to_account_id,
+          from_amount: recurring.amount,
+          to_amount: recurring.to_amount || recurring.amount,
+          note: recurring.name,
+          recurring_occurrence_id: occurrence.id,
+          is_future: false,
+        })
+        .select()
+        .single()
+
+      if (transError) {
+        console.error('Error creating transfer:', transError)
+        await sendMessage(chatId, '❌ Error al crear la transferencia.')
+        return
+      }
+
+      // Update occurrence
+      await supabase
+        .from('recurring_occurrences')
+        .update({
+          status: 'confirmed',
+          transfer_id: transfer.id,
+          actual_amount: recurring.amount,
+          confirmed_at: new Date().toISOString(),
+          confirmed_via: 'telegram',
+        })
+        .eq('id', occurrenceId)
+
+    } else {
+      const { data: movement, error: movError } = await supabase
+        .from('movements')
+        .insert({
+          user_id: tgUser.user_id,
+          type: recurring.type,
+          date: occurrence.scheduled_date,
+          amount: recurring.amount,
+          account_id: recurring.account_id,
+          category_id: recurring.category_id,
+          note: recurring.name,
+          recurring_occurrence_id: occurrence.id,
+          is_future: false,
+        })
+        .select()
+        .single()
+
+      if (movError) {
+        console.error('Error creating movement:', movError)
+        await sendMessage(chatId, '❌ Error al crear el movimiento.')
+        return
+      }
+
+      // Update occurrence
+      await supabase
+        .from('recurring_occurrences')
+        .update({
+          status: 'confirmed',
+          movement_id: movement.id,
+          actual_amount: recurring.amount,
+          confirmed_at: new Date().toISOString(),
+          confirmed_via: 'telegram',
+        })
+        .eq('id', occurrenceId)
+    }
+
+    // Update last generated date
+    await supabase
+      .from('recurring_transactions')
+      .update({ last_generated_date: occurrence.scheduled_date })
+      .eq('id', recurring.id)
+
+    const typeLabel = recurring.type === 'expense' ? 'Gasto' : recurring.type === 'income' ? 'Ingreso' : 'Transferencia'
+    const amount = formatCurrency(Number(recurring.amount), recurring.currency || 'ARS')
+
+    await sendMessage(chatId, `✅ *${typeLabel} registrado*\n\n📋 ${recurring.name}\n💵 ${amount}`, { parse_mode: 'Markdown' })
+    await showMainMenu(chatId)
+
+  } catch (error) {
+    console.error('Error confirming occurrence:', error)
+    await sendMessage(chatId, '❌ Error al confirmar el movimiento.')
+    await showMainMenu(chatId)
+  }
+}
+
+async function handleSkipOccurrence(tgUser: any, occurrenceId: string, chatId: number) {
+  try {
+    // Update occurrence as skipped
+    const { data: occurrence, error } = await supabase
+      .from('recurring_occurrences')
+      .update({
+        status: 'skipped',
+        skipped_at: new Date().toISOString(),
+      })
+      .eq('id', occurrenceId)
+      .eq('user_id', tgUser.user_id)
+      .eq('status', 'pending')
+      .select('*, recurring_transactions(name)')
+      .single()
+
+    if (error || !occurrence) {
+      await sendMessage(chatId, '❌ Esta solicitud ya no está pendiente o expiró.')
+      await showMainMenu(chatId)
+      return
+    }
+
+    await sendMessage(chatId, `⏭️ *Movimiento saltado*\n\n${occurrence.recurring_transactions?.name || 'Recurrente'}`, { parse_mode: 'Markdown' })
+    await showMainMenu(chatId)
+
+  } catch (error) {
+    console.error('Error skipping occurrence:', error)
+    await sendMessage(chatId, '❌ Error al saltar el movimiento.')
+    await showMainMenu(chatId)
   }
 }
 

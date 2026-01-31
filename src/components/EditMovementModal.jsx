@@ -6,6 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import AttachmentInput from './AttachmentInput';
 import { formatCurrency } from '../utils/format';
 import { useError } from '../contexts/ErrorContext';
+import { convertToRecurring } from '../services/supabaseApi';
 
 function EditMovementModal({
   movement,
@@ -15,6 +16,7 @@ function EditMovementModal({
   onDelete,
   onDuplicate,
   onClose,
+  onConvertedToRecurring,
   loading = false
 }) {
   // Form data for income/expense
@@ -46,6 +48,12 @@ function EditMovementModal({
   // Estados para adjuntos
   const [newAttachment, setNewAttachment] = useState(null);
   const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
+
+  // Estado para convertir a recurrente
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState('monthly');
+  const [recurringAccount, setRecurringAccount] = useState('');
+  const [convertingToRecurring, setConvertingToRecurring] = useState(false);
 
   // Drag to dismiss state
   const [dragY, setDragY] = useState(0);
@@ -89,6 +97,8 @@ function EditMovementModal({
       // Reset attachment states
       setNewAttachment(null);
       setRemoveExistingAttachment(false);
+      // Reset recurring account to movement's account
+      setRecurringAccount(movement.cuenta || '');
     }
   }, [movement, isTransfer]);
 
@@ -183,6 +193,28 @@ function EditMovementModal({
     setShowInstallmentConfirm(false);
     setPendingSaveData(null);
   };
+
+  // Handle convert to recurring
+  const handleConvertToRecurring = async () => {
+    if (!movement?.id) return;
+
+    try {
+      setConvertingToRecurring(true);
+      const frequency = { type: recurringFrequency };
+      await convertToRecurring(movement.id, frequency, recurringAccount);
+      setShowRecurringModal(false);
+      onConvertedToRecurring?.();
+      onClose();
+    } catch (err) {
+      console.error('Error converting to recurring:', err);
+      showError('Error', 'No se pudo convertir a recurrente');
+    } finally {
+      setConvertingToRecurring(false);
+    }
+  };
+
+  // Can convert to recurring? (not installment, not already recurring, not transfer)
+  const canConvertToRecurring = !isInstallment && !movement?.isRecurring && !isTransfer && movement?.id;
 
   const { showError } = useError();
 
@@ -589,6 +621,20 @@ function EditMovementModal({
               </svg>
             </button>
           )}
+          {canConvertToRecurring && (
+            <button
+              type="button"
+              onClick={() => setShowRecurringModal(true)}
+              disabled={loading}
+              className="p-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
+              style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
+              title="Convertir a recurrente"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
           <button
             type="submit"
             onClick={handleSubmit}
@@ -716,6 +762,139 @@ function EditMovementModal({
                     style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                   >
                     No, solo esta cuota
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Convert to Recurring Modal */}
+        {showRecurringModal && (
+          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowRecurringModal(false)}
+            />
+            <div
+              className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
+              {/* Drag indicator - mobile only */}
+              <div className="sm:hidden flex justify-center -mt-4 mb-2">
+                <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--border-medium)' }} />
+              </div>
+
+              <div className="text-center">
+                <div
+                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                  style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)' }}
+                >
+                  <svg className="w-7 h-7" style={{ color: 'var(--accent-purple)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Convertir a recurrente
+                </h3>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  Este {movement?.tipo === 'ingreso' ? 'ingreso' : 'gasto'} se convertirá en una transacción recurrente
+                </p>
+
+                {/* Amount preview */}
+                <div
+                  className="mb-4 p-3 rounded-xl"
+                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                >
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Monto</p>
+                  <p
+                    className="text-xl font-bold"
+                    style={{ color: movement?.tipo === 'ingreso' ? 'var(--accent-green)' : 'var(--accent-red)' }}
+                  >
+                    {formatCurrency(movement?.montoPesos || movement?.monto)}
+                  </p>
+                </div>
+
+                {/* Account selector */}
+                <div className="mb-4 text-left">
+                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Cuenta
+                  </p>
+                  <Combobox
+                    name="recurringAccount"
+                    value={recurringAccount}
+                    onChange={(e) => setRecurringAccount(e.target.value)}
+                    options={accounts.map(a => ({
+                      value: a.nombre,
+                      label: a.nombre,
+                      icon: a.icon || null,
+                    }))}
+                    defaultOptionIcon="💳"
+                    placeholder="Seleccionar cuenta"
+                    emptyMessage="No hay cuentas"
+                  />
+                </div>
+
+                {/* Frequency selector */}
+                <div className="mb-5">
+                  <p className="text-sm font-medium mb-2 text-left" style={{ color: 'var(--text-secondary)' }}>
+                    Frecuencia
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'weekly', label: 'Semanal' },
+                      { value: 'biweekly', label: 'Quincenal' },
+                      { value: 'monthly', label: 'Mensual' },
+                      { value: 'bimonthly', label: 'Bimestral' },
+                      { value: 'quarterly', label: 'Trimestral' },
+                      { value: 'yearly', label: 'Anual' },
+                    ].map((freq) => (
+                      <button
+                        key={freq.value}
+                        type="button"
+                        onClick={() => setRecurringFrequency(freq.value)}
+                        className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
+                          recurringFrequency === freq.value ? 'ring-2' : ''
+                        }`}
+                        style={{
+                          backgroundColor: recurringFrequency === freq.value
+                            ? 'rgba(168, 85, 247, 0.15)'
+                            : 'var(--bg-tertiary)',
+                          color: recurringFrequency === freq.value
+                            ? 'var(--accent-purple)'
+                            : 'var(--text-secondary)',
+                          ringColor: 'var(--accent-purple)',
+                        }}
+                      >
+                        {freq.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleConvertToRecurring}
+                    disabled={convertingToRecurring}
+                    className="w-full py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'var(--accent-purple)' }}
+                  >
+                    {convertingToRecurring ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        Convirtiendo...
+                      </>
+                    ) : (
+                      'Convertir a recurrente'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowRecurringModal(false)}
+                    disabled={convertingToRecurring}
+                    className="w-full py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                  >
+                    Cancelar
                   </button>
                 </div>
               </div>

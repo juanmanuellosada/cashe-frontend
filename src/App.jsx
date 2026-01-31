@@ -31,6 +31,8 @@ const Attachments = lazy(() => import('./pages/Attachments'))
 const Integrations = lazy(() => import('./pages/Integrations'))
 const Budgets = lazy(() => import('./pages/Budgets'))
 const Goals = lazy(() => import('./pages/Goals'))
+const Recurring = lazy(() => import('./pages/Recurring'))
+const Calendar = lazy(() => import('./pages/Calendar'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -206,6 +208,24 @@ function App() {
                 <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                   <Suspense fallback={<PageLoader />}>
                     <Goals />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/recurrentes" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Recurring />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/calendario" element={
+              <ProtectedRoute>
+                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Calendar />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

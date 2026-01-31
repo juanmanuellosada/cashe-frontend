@@ -48,16 +48,19 @@ function CreditCards() {
   const [bulkDateValue, setBulkDateValue] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
+  // Estado para refrescar viewingStatement después de editar
+  const [pendingStatementRefresh, setPendingStatementRefresh] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false, showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [accountsData, expensesData, categoriesData] = await Promise.all([
         getAccounts(),
-        getAllExpenses(),
+        getAllExpenses(forceRefresh),
         getCategories(),
       ]);
 
@@ -80,7 +83,7 @@ function CreditCards() {
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -231,6 +234,17 @@ function CreditCards() {
     // Ordenar por fecha de cierre (más reciente primero)
     return result.sort((a, b) => a.closeDate - b.closeDate);
   }, [selectedCard, allExpenses]);
+
+  // Actualizar viewingStatement cuando hay un refresh pendiente
+  useEffect(() => {
+    if (pendingStatementRefresh && statements.length > 0) {
+      const freshStatement = statements.find(s => s.id === pendingStatementRefresh);
+      if (freshStatement) {
+        setViewingStatement(freshStatement);
+      }
+      setPendingStatementRefresh(null);
+    }
+  }, [pendingStatementRefresh, statements]);
 
   // Manejar agregar impuesto de sellos
   const handleAddTax = async () => {
@@ -416,12 +430,58 @@ function CreditCards() {
       }
 
       setEditingMovement(null);
-      await fetchData(); // Await to ensure data is refreshed before closing
+
+      // Actualización optimista: actualizar viewingStatement inmediatamente
+      if (viewingStatement) {
+        setViewingStatement(prev => {
+          if (!prev) return prev;
+
+          // Actualizar el item en la lista
+          const updateItems = (items) => items.map(item =>
+            item.id === updatedMovement.id
+              ? { ...item, nota: updatedMovement.nota, categoria: updatedMovement.categoria, fecha: updatedMovement.fecha }
+              : item
+          );
+
+          return {
+            ...prev,
+            items: updateItems(prev.items || []),
+            itemsPesos: updateItems(prev.itemsPesos || []),
+            itemsDolares: updateItems(prev.itemsDolares || []),
+          };
+        });
+      }
+
+      // Refrescar datos en background
+      fetchData(true, false);
     } catch (err) {
       console.error('Error updating movement:', err);
       showError('No se pudo actualizar el movimiento', err.message);
     }
   };
+
+  // Navegación entre resúmenes
+  const getCurrentStatementIndex = () => {
+    if (!viewingStatement) return -1;
+    return statements.findIndex(s => s.id === viewingStatement.id);
+  };
+
+  const goToPreviousStatement = () => {
+    const currentIndex = getCurrentStatementIndex();
+    if (currentIndex > 0) {
+      setViewingStatement(statements[currentIndex - 1]);
+    }
+  };
+
+  const goToNextStatement = () => {
+    const currentIndex = getCurrentStatementIndex();
+    if (currentIndex < statements.length - 1) {
+      setViewingStatement(statements[currentIndex + 1]);
+    }
+  };
+
+  const hasPreviousStatement = () => getCurrentStatementIndex() > 0;
+  const hasNextStatement = () => getCurrentStatementIndex() < statements.length - 1;
 
   // Funciones para selección masiva
   const toggleSelectionMode = () => {
@@ -966,7 +1026,7 @@ function CreditCards() {
         <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
           {/* Header */}
           <div
-            className="flex items-center gap-3 px-4 py-3 safe-area-top"
+            className="flex items-center gap-2 px-4 py-3 safe-area-top"
             style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}
           >
             <button
@@ -979,10 +1039,23 @@ function CreditCards() {
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
               <svg className="w-5 h-5" style={{ color: 'var(--text-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Navegación anterior */}
+            <button
+              onClick={goToPreviousStatement}
+              disabled={!hasPreviousStatement()}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <svg className="w-5 h-5" style={{ color: 'var(--text-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <div className="flex-1">
+
+            <div className="flex-1 text-center">
               <h2 className="font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
                 {viewingStatement.monthName}
               </h2>
@@ -990,6 +1063,19 @@ function CreditCards() {
                 {selectedCard?.nombre} · Cierra {format(viewingStatement.closeDate, 'd MMM yyyy', { locale: es })}
               </p>
             </div>
+
+            {/* Navegación siguiente */}
+            <button
+              onClick={goToNextStatement}
+              disabled={!hasNextStatement()}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <svg className="w-5 h-5" style={{ color: 'var(--text-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
             <div
               className="px-3 py-1.5 rounded-xl text-sm font-bold"
               style={{
@@ -1003,7 +1089,7 @@ function CreditCards() {
                   <span style={{ color: 'var(--accent-green)' }}>{formatCurrency(viewingStatement.totalDolares, 'USD')}</span>
                 </div>
               ) : (
-                viewingStatement.totalPesos > 0 
+                viewingStatement.totalPesos > 0
                   ? formatCurrency(viewingStatement.totalPesos, 'ARS')
                   : formatCurrency(viewingStatement.totalDolares, 'USD')
               )}
@@ -1336,6 +1422,7 @@ function CreditCards() {
           categories={allCategories}
           onSave={handleSaveMovement}
           onClose={() => setEditingMovement(null)}
+          onConvertedToRecurring={() => fetchData(true, false)}
         />
       )}
 

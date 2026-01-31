@@ -15,11 +15,11 @@ function Transfers() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false, showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [transfersData, accountsData] = await Promise.all([
-        getAllTransfers(),
+        getAllTransfers(forceRefresh),
         getAccounts(),
       ]);
       setTransfers(transfersData.transfers || []);
@@ -27,7 +27,7 @@ function Transfers() {
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -40,7 +40,7 @@ function Transfers() {
       setSaving(true);
       await updateTransfer(transfer);
       setEditingMovement(null);
-      await fetchData();
+      await fetchData(true, false); // Force refresh, no loading spinner
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar la transferencia', err.message);

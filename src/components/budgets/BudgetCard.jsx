@@ -27,6 +27,11 @@ function BudgetCard({
     category_ids = [],
     account_ids = [],
     icon,
+    // Projected recurring fields
+    projectedRecurring = 0,
+    projectedTotal = 0,
+    projectedRemaining = 0,
+    projectedPercentageUsed = 0,
   } = budget;
 
   // Get category/account names for display
@@ -54,6 +59,8 @@ function BudgetCard({
   };
 
   const isExceeded = percentageUsed > 100;
+  const hasProjectedRecurring = projectedRecurring > 0;
+  const willBeExceeded = !isExceeded && projectedPercentageUsed > 100;
 
   // Calculate daily averages
   const daysElapsed = Math.max(1, (period_type === 'weekly' ? 7 : period_type === 'monthly' ? 30 : 365) - daysRemaining);
@@ -116,6 +123,19 @@ function BudgetCard({
           >
             Excedido
           </span>
+        ) : willBeExceeded ? (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
+            style={{
+              backgroundColor: 'var(--accent-yellow-dim)',
+              color: 'var(--accent-yellow)',
+            }}
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
+            </svg>
+            Atención
+          </span>
         ) : null}
       </div>
 
@@ -170,6 +190,84 @@ function BudgetCard({
           </span>
         )}
       </div>
+
+      {/* Projected recurring section */}
+      {hasProjectedRecurring && !is_paused && (
+        <div
+          className="mt-3 pt-3 border-t"
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
+          <div className="flex items-center gap-1.5 mb-2">
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ color: 'var(--accent-purple)' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span
+              className="text-xs font-medium"
+              style={{ color: 'var(--accent-purple)' }}
+            >
+              Recurrentes pendientes
+            </span>
+          </div>
+
+          {/* Projected progress bar */}
+          <div className="relative h-1.5 rounded-full overflow-hidden mb-2" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+            {/* Current spent (solid) */}
+            <div
+              className="absolute left-0 top-0 h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(percentageUsed, 100)}%`,
+                backgroundColor: isExceeded ? 'var(--accent-red)' : 'var(--accent-primary)',
+              }}
+            />
+            {/* Projected recurring (striped) */}
+            <div
+              className="absolute top-0 h-full rounded-full transition-all"
+              style={{
+                left: `${Math.min(percentageUsed, 100)}%`,
+                width: `${Math.min(projectedPercentageUsed - percentageUsed, 100 - percentageUsed)}%`,
+                background: willBeExceeded
+                  ? 'repeating-linear-gradient(45deg, var(--accent-red), var(--accent-red) 2px, var(--accent-red-dim) 2px, var(--accent-red-dim) 4px)'
+                  : 'repeating-linear-gradient(45deg, var(--accent-purple), var(--accent-purple) 2px, var(--accent-purple-dim) 2px, var(--accent-purple-dim) 4px)',
+              }}
+            />
+          </div>
+
+          {/* Projected amounts */}
+          <div className="flex items-center justify-between text-xs">
+            <span style={{ color: 'var(--text-muted)' }}>
+              +{formatCurrency(projectedRecurring, currency)} programados
+            </span>
+            <span
+              className="font-medium"
+              style={{ color: willBeExceeded ? 'var(--accent-red)' : 'var(--text-secondary)' }}
+            >
+              Proyectado: {projectedPercentageUsed.toFixed(0)}%
+            </span>
+          </div>
+
+          {/* Warning if will exceed */}
+          {willBeExceeded && (
+            <div
+              className="flex items-center gap-1.5 mt-2 px-2 py-1.5 rounded-lg text-xs"
+              style={{
+                backgroundColor: 'var(--accent-red-dim)',
+                color: 'var(--accent-red)',
+              }}
+            >
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Excederá el presupuesto con recurrentes</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Scope tags */}
       {!is_global && (category_ids.length > 0 || account_ids.length > 0) && (

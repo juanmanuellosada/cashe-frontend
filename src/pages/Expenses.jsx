@@ -16,11 +16,11 @@ function Expenses() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false, showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [expensesData, accountsData, categoriesData] = await Promise.all([
-        getAllExpenses(),
+        getAllExpenses(forceRefresh),
         getAccounts(),
         getCategories(),
       ]);
@@ -30,7 +30,7 @@ function Expenses() {
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -49,7 +49,7 @@ function Expenses() {
       }
 
       setEditingMovement(null);
-      await fetchData();
+      await fetchData(true, false); // Force refresh, no loading spinner
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar el gasto', err.message);
@@ -119,6 +119,7 @@ function Expenses() {
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditingMovement(null)}
+          onConvertedToRecurring={() => fetchData(true, false)}
           loading={saving}
         />
       )}

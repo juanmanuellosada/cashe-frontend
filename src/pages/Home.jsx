@@ -319,6 +319,7 @@ function Home() {
           onDelete={handleDeleteMovement}
           onDuplicate={handleDuplicateMovement}
           onClose={() => setEditingMovement(null)}
+          onConvertedToRecurring={handleRefresh}
           loading={savingMovement}
         />
       )}

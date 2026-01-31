@@ -16,11 +16,11 @@ function Income() {
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false, showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [incomesData, accountsData, categoriesData] = await Promise.all([
-        getAllIncomes(),
+        getAllIncomes(forceRefresh),
         getAccounts(),
         getCategories(),
       ]);
@@ -30,7 +30,7 @@ function Income() {
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -43,8 +43,7 @@ function Income() {
       setSaving(true);
       await updateMovement(movement);
       setEditingMovement(null);
-      // Esperar un momento antes de refetch para asegurar que el caché se limpió
-      await fetchData();
+      await fetchData(true, false); // Force refresh, no loading spinner
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar el ingreso', err.message);
@@ -114,6 +113,7 @@ function Income() {
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditingMovement(null)}
+          onConvertedToRecurring={() => fetchData(true, false)}
           loading={saving}
         />
       )}

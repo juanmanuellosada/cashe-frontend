@@ -652,13 +652,20 @@ const mapMovementFromDB = (m, accounts, categories) => {
     // Attachment info
     attachmentUrl: m.attachment_url,
     attachmentName: m.attachment_name,
+    // Future transaction indicator
+    isFuture: m.is_future || false,
+    // Recurring indicator
+    isRecurring: !!m.recurring_occurrence_id,
+    recurringOccurrenceId: m.recurring_occurrence_id,
   };
 };
 
-export const getExpenses = async () => {
+export const getExpenses = async (forceRefresh = false) => {
   const cacheKey = 'expenses';
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  if (!forceRefresh) {
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+  }
 
   const userId = await getUserId();
   
@@ -680,10 +687,12 @@ export const getExpenses = async () => {
   return result;
 };
 
-export const getIncomes = async () => {
+export const getIncomes = async (forceRefresh = false) => {
   const cacheKey = 'incomes';
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  if (!forceRefresh) {
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+  }
 
   const userId = await getUserId();
   
@@ -708,10 +717,10 @@ export const getIncomes = async () => {
 export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment }) => {
   const userId = await getUserId();
 
-  // Get account and category IDs
+  // Get account and category IDs - include is_credit_card to check for future transactions
   const { data: account } = await supabase
     .from('accounts')
-    .select('id')
+    .select('id, is_credit_card')
     .eq('user_id', userId)
     .eq('name', cuenta)
     .single();
@@ -733,6 +742,11 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
     attachmentName = result.name;
   }
 
+  // Determinar si es transacción futura
+  // Solo si: fecha > hoy Y cuenta NO es tarjeta de crédito
+  const today = new Date().toISOString().split('T')[0];
+  const isFuture = fecha > today && !account?.is_credit_card;
+
   const { data, error } = await supabase
     .from('movements')
     .insert({
@@ -745,6 +759,7 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
       note: nota || null,
       attachment_url: attachmentUrl,
       attachment_name: attachmentName,
+      is_future: isFuture,
     })
     .select()
     .single();
@@ -759,7 +774,7 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('id')
+    .select('id, is_credit_card')
     .eq('user_id', userId)
     .eq('name', cuenta)
     .single();
@@ -781,6 +796,11 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
     attachmentName = result.name;
   }
 
+  // Determinar si es transacción futura
+  // Solo si: fecha > hoy Y cuenta NO es tarjeta de crédito
+  const today = new Date().toISOString().split('T')[0];
+  const isFuture = fecha > today && !account?.is_credit_card;
+
   const { data, error } = await supabase
     .from('movements')
     .insert({
@@ -793,6 +813,7 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
       note: nota || null,
       attachment_url: attachmentUrl,
       attachment_name: attachmentName,
+      is_future: isFuture,
     })
     .select()
     .single();
@@ -1050,10 +1071,12 @@ export const updateSubsequentInstallments = async (movement) => {
 // ============================================
 // TRANSFERS
 // ============================================
-export const getTransfers = async () => {
+export const getTransfers = async (forceRefresh = false) => {
   const cacheKey = 'transfers';
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  if (!forceRefresh) {
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+  }
 
   const userId = await getUserId();
   
@@ -1082,6 +1105,11 @@ export const getTransfers = async () => {
         tipo: 'transferencia',
         attachmentUrl: t.attachment_url,
         attachmentName: t.attachment_name,
+        // Future transaction indicator
+        isFuture: t.is_future || false,
+        // Recurring indicator
+        isRecurring: !!t.recurring_occurrence_id,
+        recurringOccurrenceId: t.recurring_occurrence_id,
       };
     })
   };
@@ -1094,14 +1122,14 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
 
   const { data: fromAccount } = await supabase
     .from('accounts')
-    .select('id')
+    .select('id, is_credit_card')
     .eq('user_id', userId)
     .eq('name', cuentaSaliente)
     .single();
 
   const { data: toAccount } = await supabase
     .from('accounts')
-    .select('id')
+    .select('id, is_credit_card')
     .eq('user_id', userId)
     .eq('name', cuentaEntrante)
     .single();
@@ -1116,6 +1144,11 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
     attachmentName = result.name;
   }
 
+  // Determinar si es transacción futura
+  // Solo si: fecha > hoy Y ninguna cuenta es tarjeta de crédito
+  const today = new Date().toISOString().split('T')[0];
+  const isFuture = fecha > today && !fromAccount?.is_credit_card && !toAccount?.is_credit_card;
+
   const { data, error } = await supabase
     .from('transfers')
     .insert({
@@ -1128,6 +1161,7 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
       note: nota || null,
       attachment_url: attachmentUrl,
       attachment_name: attachmentName,
+      is_future: isFuture,
     })
     .select()
     .single();
@@ -1224,17 +1258,19 @@ export const deleteTransfer = async (transfer) => {
 // ============================================
 export const getDashboard = async () => {
   const userId = await getUserId();
-  
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
+  // Excluir transacciones futuras (is_future = true) del balance
   const [{ data: incomes }, { data: expenses }] = await Promise.all([
     supabase
       .from('movements')
       .select('amount')
       .eq('user_id', userId)
       .eq('type', 'income')
+      .or('is_future.is.null,is_future.eq.false')
       .gte('date', startOfMonth)
       .lte('date', endOfMonth),
     supabase
@@ -1242,6 +1278,7 @@ export const getDashboard = async () => {
       .select('amount')
       .eq('user_id', userId)
       .eq('type', 'expense')
+      .or('is_future.is.null,is_future.eq.false')
       .gte('date', startOfMonth)
       .lte('date', endOfMonth)
   ]);
@@ -1272,12 +1309,14 @@ export const getFilteredDashboard = async ({ startDate, endDate }) => {
   const arsAccountIds = (accounts || []).filter(a => a.currency === 'ARS').map(a => a.id);
   const usdAccountIds = (accounts || []).filter(a => a.currency === 'USD').map(a => a.id);
 
+  // Excluir transacciones futuras del balance
   const [{ data: incomes }, { data: expenses }] = await Promise.all([
     supabase
       .from('movements')
       .select('amount, account_id')
       .eq('user_id', userId)
       .eq('type', 'income')
+      .or('is_future.is.null,is_future.eq.false')
       .gte('date', startDate)
       .lte('date', endDate),
     supabase
@@ -1285,6 +1324,7 @@ export const getFilteredDashboard = async ({ startDate, endDate }) => {
       .select('amount, account_id')
       .eq('user_id', userId)
       .eq('type', 'expense')
+      .or('is_future.is.null,is_future.eq.false')
       .gte('date', startDate)
       .lte('date', endDate)
   ]);
@@ -1366,7 +1406,12 @@ export const getRecentMovements = async (limit = 10) => {
       montoEntrante: parseFloat(t.to_amount),
       monto: parseFloat(t.from_amount),
       nota: t.note || '',
-      tipo: 'transferencia'
+      tipo: 'transferencia',
+      // Future transaction indicator
+      isFuture: t.is_future || false,
+      // Recurring indicator
+      isRecurring: !!t.recurring_occurrence_id,
+      recurringOccurrenceId: t.recurring_occurrence_id,
     };
   });
 
@@ -1722,18 +1767,18 @@ export const initializeUserData = async () => {
 // ============================================
 // ALIASES for backwards compatibility with sheetsApi
 // ============================================
-export const getAllExpenses = async () => {
-  const result = await getExpenses();
+export const getAllExpenses = async (forceRefresh = false) => {
+  const result = await getExpenses(forceRefresh);
   return { success: true, expenses: result.gastos };
 };
 
-export const getAllIncomes = async () => {
-  const result = await getIncomes();
+export const getAllIncomes = async (forceRefresh = false) => {
+  const result = await getIncomes(forceRefresh);
   return { success: true, incomes: result.ingresos };
 };
 
-export const getAllTransfers = async () => {
-  const result = await getTransfers();
+export const getAllTransfers = async (forceRefresh = false) => {
+  const result = await getTransfers(forceRefresh);
   return { success: true, transfers: result.transferencias };
 };
 
@@ -2029,6 +2074,7 @@ const calculateBudgetSpent = async (budget, startDate, endDate) => {
     .select('amount')
     .eq('user_id', userId)
     .eq('type', 'expense')
+    .or('is_future.is.null,is_future.eq.false') // Exclude future transactions
     .gte('date', startDate)
     .lte('date', endDate);
 
@@ -2044,6 +2090,95 @@ const calculateBudgetSpent = async (budget, startDate, endDate) => {
 
   const { data: movements } = await query;
   return (movements || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+};
+
+// Calculate projected recurring expenses for a budget period
+const calculateProjectedRecurringExpenses = async (budget, startDate, endDate) => {
+  const userId = await getUserId();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Only calculate projections from today onwards
+  const projectionStart = startDate > today ? startDate : today;
+  if (projectionStart > endDate) return 0;
+
+  // Get active expense recurring transactions
+  let query = supabase
+    .from('recurring_transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', 'expense')
+    .eq('is_active', true)
+    .eq('is_paused', false);
+
+  // Apply category/account filters if not global
+  if (!budget.is_global) {
+    if (budget.category_ids && budget.category_ids.length > 0) {
+      query = query.in('category_id', budget.category_ids);
+    }
+    if (budget.account_ids && budget.account_ids.length > 0) {
+      query = query.in('account_id', budget.account_ids);
+    }
+  }
+
+  const { data: recurringList } = await query;
+  if (!recurringList || recurringList.length === 0) return 0;
+
+  let totalProjected = 0;
+  const start = new Date(projectionStart);
+  const end = new Date(endDate);
+
+  // Calculate occurrences for each recurring transaction
+  for (const recurring of recurringList) {
+    let nextDate = recurring.next_execution_date
+      ? new Date(recurring.next_execution_date)
+      : new Date(recurring.start_date);
+
+    // Skip if start date is after period end
+    if (nextDate > end) continue;
+
+    // Find occurrences within the date range
+    while (nextDate <= end) {
+      if (nextDate >= start) {
+        totalProjected += parseFloat(recurring.amount);
+      }
+
+      // Calculate next occurrence
+      const freq = recurring.frequency;
+      switch (freq.type) {
+        case 'daily':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 1));
+          break;
+        case 'weekly':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 7));
+          break;
+        case 'biweekly':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 14));
+          break;
+        case 'monthly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
+          break;
+        case 'bimonthly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 2));
+          break;
+        case 'quarterly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 3));
+          break;
+        case 'biannual':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 6));
+          break;
+        case 'yearly':
+          nextDate = new Date(nextDate.setFullYear(nextDate.getFullYear() + 1));
+          break;
+        case 'custom_days':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + (freq.interval || 30)));
+          break;
+        default:
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
+      }
+    }
+  }
+
+  return totalProjected;
 };
 
 export const getBudgets = () => withDeduplication('budgets', async () => {
@@ -2089,10 +2224,18 @@ export const getBudgetsWithProgress = async () => {
       }
 
       const periodDates = calculatePeriodDates(budget.period_type, budget.start_date, budget.end_date);
-      const spent = await calculateBudgetSpent(budget, periodDates.start, periodDates.end);
+      const [spent, projectedRecurring] = await Promise.all([
+        calculateBudgetSpent(budget, periodDates.start, periodDates.end),
+        calculateProjectedRecurringExpenses(budget, periodDates.start, periodDates.end),
+      ]);
       const remaining = budget.amount - spent;
       const percentageUsed = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
       const daysRemaining = calculateDaysRemaining(periodDates.end);
+
+      // Projected total includes current spent + future recurring expenses
+      const projectedTotal = spent + projectedRecurring;
+      const projectedRemaining = budget.amount - projectedTotal;
+      const projectedPercentageUsed = budget.amount > 0 ? (projectedTotal / budget.amount) * 100 : 0;
 
       return {
         ...budget,
@@ -2101,6 +2244,11 @@ export const getBudgetsWithProgress = async () => {
         percentageUsed,
         currentPeriod: periodDates,
         daysRemaining,
+        // Recurring projections
+        projectedRecurring,
+        projectedTotal,
+        projectedRemaining,
+        projectedPercentageUsed,
       };
     })
   );
@@ -2543,4 +2691,901 @@ export const completeGoal = async (goalId, completed = true) => {
   if (error) throw error;
   invalidateCache('goals');
   return { success: true, goal: data };
+};
+
+// ============================================
+// RECURRING TRANSACTIONS (Transacciones Recurrentes)
+// ============================================
+
+// Helper: Map recurring from DB to frontend format
+const mapRecurringFromDB = (r, accounts, categories) => {
+  const account = accounts?.find(a => a.id === r.account_id);
+  const fromAccount = accounts?.find(a => a.id === r.from_account_id);
+  const toAccount = accounts?.find(a => a.id === r.to_account_id);
+  const category = categories?.find(c => c.id === r.category_id);
+
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    amount: parseFloat(r.amount),
+    currency: r.currency,
+    type: r.type,
+    // Account info
+    accountId: r.account_id,
+    accountName: account?.name || '',
+    categoryId: r.category_id,
+    categoryName: category?.name || '',
+    // Transfer info
+    fromAccountId: r.from_account_id,
+    fromAccountName: fromAccount?.name || '',
+    toAccountId: r.to_account_id,
+    toAccountName: toAccount?.name || '',
+    toAmount: r.to_amount ? parseFloat(r.to_amount) : null,
+    // Frequency
+    frequency: r.frequency,
+    executionHour: r.execution_hour,
+    weekendHandling: r.weekend_handling,
+    // Dates
+    startDate: r.start_date,
+    endDate: r.end_date,
+    // Mode
+    creationMode: r.creation_mode,
+    preferredBot: r.preferred_bot,
+    // Status
+    isActive: r.is_active,
+    isPaused: r.is_paused,
+    isCreditCardRecurring: r.is_credit_card_recurring,
+    // Tracking
+    lastGeneratedDate: r.last_generated_date,
+    nextExecutionDate: r.next_execution_date,
+    // Timestamps
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+};
+
+// ============================================
+// TRANSACCIONES FUTURAS
+// ============================================
+
+// Procesar transacciones futuras cuya fecha ya llegó
+// Convierte is_future = true a false para que afecten el balance
+export const processFutureTransactions = async () => {
+  const userId = await getUserId();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Actualizar movimientos cuya fecha ya pasó
+  const { data: updatedMovements, error: movError } = await supabase
+    .from('movements')
+    .update({ is_future: false })
+    .eq('user_id', userId)
+    .eq('is_future', true)
+    .lte('date', today)
+    .select();
+
+  if (movError) {
+    console.error('Error processing future movements:', movError);
+  }
+
+  // Actualizar transferencias cuya fecha ya pasó
+  const { data: updatedTransfers, error: transError } = await supabase
+    .from('transfers')
+    .update({ is_future: false })
+    .eq('user_id', userId)
+    .eq('is_future', true)
+    .lte('date', today)
+    .select();
+
+  if (transError) {
+    console.error('Error processing future transfers:', transError);
+  }
+
+  const count = (updatedMovements?.length || 0) + (updatedTransfers?.length || 0);
+
+  if (count > 0) {
+    invalidateCache('all');
+  }
+
+  return {
+    processed: count,
+    movements: updatedMovements?.length || 0,
+    transfers: updatedTransfers?.length || 0,
+  };
+};
+
+// Obtener transacciones futuras pendientes
+export const getPendingFutureTransactions = async () => {
+  const userId = await getUserId();
+  const today = new Date().toISOString().split('T')[0];
+
+  const [{ data: movements }, { data: transfers }, { data: accounts }, { data: categories }] = await Promise.all([
+    supabase
+      .from('movements')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_future', true)
+      .gt('date', today)
+      .order('date'),
+    supabase
+      .from('transfers')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_future', true)
+      .gt('date', today)
+      .order('date'),
+    supabase.from('accounts').select('id, name').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId)
+  ]);
+
+  const futureTransactions = [
+    ...(movements || []).map(m => ({
+      id: m.id,
+      type: m.type,
+      date: m.date,
+      amount: parseFloat(m.amount),
+      account: accounts?.find(a => a.id === m.account_id)?.name || '',
+      category: categories?.find(c => c.id === m.category_id)?.name || '',
+      note: m.note,
+      eventType: 'movement',
+    })),
+    ...(transfers || []).map(t => ({
+      id: t.id,
+      type: 'transfer',
+      date: t.date,
+      amount: parseFloat(t.from_amount),
+      fromAccount: accounts?.find(a => a.id === t.from_account_id)?.name || '',
+      toAccount: accounts?.find(a => a.id === t.to_account_id)?.name || '',
+      note: t.note,
+      eventType: 'transfer',
+    })),
+  ];
+
+  // Ordenar por fecha
+  futureTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return futureTransactions;
+};
+
+// ============================================
+// TRANSACCIONES RECURRENTES
+// ============================================
+
+export const getRecurringTransactions = () => withDeduplication('recurring', async () => {
+  const userId = await getUserId();
+
+  const [{ data: recurring, error }, { data: accounts }, { data: categories }] = await Promise.all([
+    supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase.from('accounts').select('id, name').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId)
+  ]);
+
+  if (error) throw error;
+
+  const result = {
+    recurring: (recurring || []).map(r => mapRecurringFromDB(r, accounts, categories))
+  };
+  setCachedData('recurring', result);
+  return result;
+});
+
+export const getRecurringWithStats = async () => {
+  const userId = await getUserId();
+
+  const [{ data: recurring, error }, { data: accounts }, { data: categories }, { data: occurrences }] = await Promise.all([
+    supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase.from('accounts').select('id, name').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId),
+    supabase
+      .from('recurring_occurrences')
+      .select('recurring_id, status, actual_amount')
+      .eq('user_id', userId)
+  ]);
+
+  if (error) throw error;
+
+  // Calculate stats for each recurring
+  const recurringWithStats = (recurring || []).map(r => {
+    const rOccurrences = (occurrences || []).filter(o => o.recurring_id === r.id);
+    const confirmed = rOccurrences.filter(o => o.status === 'confirmed');
+    const skipped = rOccurrences.filter(o => o.status === 'skipped');
+    const totalPaid = confirmed.reduce((sum, o) => sum + (parseFloat(o.actual_amount) || parseFloat(r.amount)), 0);
+
+    return {
+      ...mapRecurringFromDB(r, accounts, categories),
+      stats: {
+        totalOccurrences: rOccurrences.length,
+        confirmedCount: confirmed.length,
+        skippedCount: skipped.length,
+        totalPaid,
+        averageAmount: confirmed.length > 0 ? totalPaid / confirmed.length : parseFloat(r.amount),
+      }
+    };
+  });
+
+  return { recurring: recurringWithStats };
+};
+
+export const addRecurringTransaction = async (data) => {
+  const userId = await getUserId();
+
+  // Get account and category IDs if provided by name
+  let accountId = data.accountId;
+  let categoryId = data.categoryId;
+  let fromAccountId = data.fromAccountId;
+  let toAccountId = data.toAccountId;
+
+  if (data.accountName && !accountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.accountName)
+      .single();
+    accountId = account?.id;
+  }
+
+  if (data.categoryName && !categoryId) {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.categoryName)
+      .single();
+    categoryId = category?.id;
+  }
+
+  if (data.fromAccountName && !fromAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.fromAccountName)
+      .single();
+    fromAccountId = account?.id;
+  }
+
+  if (data.toAccountName && !toAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.toAccountName)
+      .single();
+    toAccountId = account?.id;
+  }
+
+  // Calculate initial next_execution_date
+  const startDate = new Date(data.startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // If start date is today or in the past, calculate next execution
+  // Otherwise, next execution is the start date
+  let nextExecutionDate = data.startDate;
+  if (startDate <= today) {
+    // We'll let the database function calculate this, or set it to start_date for now
+    nextExecutionDate = data.startDate;
+  }
+
+  const { data: result, error } = await supabase
+    .from('recurring_transactions')
+    .insert({
+      user_id: userId,
+      name: data.name,
+      description: data.description || null,
+      amount: data.amount,
+      currency: data.currency || 'ARS',
+      type: data.type,
+      account_id: accountId,
+      category_id: categoryId,
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
+      to_amount: data.toAmount || null,
+      frequency: data.frequency,
+      execution_hour: data.executionHour || 9,
+      weekend_handling: data.weekendHandling || 'as_is',
+      start_date: data.startDate,
+      end_date: data.endDate || null,
+      creation_mode: data.creationMode || 'automatic',
+      preferred_bot: data.preferredBot || null,
+      is_credit_card_recurring: data.isCreditCardRecurring || false,
+      next_execution_date: nextExecutionDate,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true, recurring: result };
+};
+
+export const updateRecurringTransaction = async (data) => {
+  const userId = await getUserId();
+
+  // Get account and category IDs if provided by name
+  let accountId = data.accountId;
+  let categoryId = data.categoryId;
+  let fromAccountId = data.fromAccountId;
+  let toAccountId = data.toAccountId;
+
+  if (data.accountName && !accountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.accountName)
+      .single();
+    accountId = account?.id;
+  }
+
+  if (data.categoryName && !categoryId) {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.categoryName)
+      .single();
+    categoryId = category?.id;
+  }
+
+  if (data.fromAccountName && !fromAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.fromAccountName)
+      .single();
+    fromAccountId = account?.id;
+  }
+
+  if (data.toAccountName && !toAccountId) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', data.toAccountName)
+      .single();
+    toAccountId = account?.id;
+  }
+
+  const updatePayload = {
+    name: data.name,
+    description: data.description,
+    amount: data.amount,
+    currency: data.currency,
+    type: data.type,
+    account_id: accountId,
+    category_id: categoryId,
+    from_account_id: fromAccountId,
+    to_account_id: toAccountId,
+    to_amount: data.toAmount,
+    frequency: data.frequency,
+    execution_hour: data.executionHour,
+    weekend_handling: data.weekendHandling,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    creation_mode: data.creationMode,
+    preferred_bot: data.preferredBot,
+    is_credit_card_recurring: data.isCreditCardRecurring,
+    is_active: data.isActive,
+    is_paused: data.isPaused,
+  };
+
+  // If frequency changed, recalculate next_execution_date
+  if (data.frequency) {
+    updatePayload.next_execution_date = data.nextExecutionDate || data.startDate;
+  }
+
+  const { data: result, error } = await supabase
+    .from('recurring_transactions')
+    .update(updatePayload)
+    .eq('id', data.id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true, recurring: result };
+};
+
+export const deleteRecurringTransaction = async (recurringId) => {
+  const { error } = await supabase
+    .from('recurring_transactions')
+    .delete()
+    .eq('id', recurringId);
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true };
+};
+
+export const pauseRecurringTransaction = async (recurringId) => {
+  const { data, error } = await supabase
+    .from('recurring_transactions')
+    .update({ is_paused: true })
+    .eq('id', recurringId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true, recurring: data };
+};
+
+export const resumeRecurringTransaction = async (recurringId) => {
+  const { data, error } = await supabase
+    .from('recurring_transactions')
+    .update({ is_paused: false })
+    .eq('id', recurringId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true, recurring: data };
+};
+
+export const skipNextOccurrence = async (recurringId) => {
+  const userId = await getUserId();
+
+  // Get the recurring transaction
+  const { data: recurring, error: fetchError } = await supabase
+    .from('recurring_transactions')
+    .select('*')
+    .eq('id', recurringId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Create a skipped occurrence
+  const { error: occurrenceError } = await supabase
+    .from('recurring_occurrences')
+    .insert({
+      recurring_id: recurringId,
+      user_id: userId,
+      scheduled_date: recurring.next_execution_date,
+      status: 'skipped',
+      skipped_at: new Date().toISOString(),
+    });
+
+  if (occurrenceError) throw occurrenceError;
+
+  // Update next_execution_date (the database function will calculate it)
+  // For now, we'll just mark the last_generated_date
+  const { data, error: updateError } = await supabase
+    .from('recurring_transactions')
+    .update({
+      last_generated_date: recurring.next_execution_date,
+    })
+    .eq('id', recurringId)
+    .select()
+    .single();
+
+  if (updateError) throw updateError;
+  invalidateCache('recurring');
+  return { success: true, recurring: data };
+};
+
+// ============================================
+// RECURRING OCCURRENCES
+// ============================================
+
+export const getRecurringOccurrences = async (recurringId) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('recurring_occurrences')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('recurring_id', recurringId)
+    .order('scheduled_date', { ascending: false });
+
+  if (error) throw error;
+  return { occurrences: data || [] };
+};
+
+export const getPendingOccurrences = async () => {
+  const userId = await getUserId();
+
+  const { data: occurrences, error } = await supabase
+    .from('recurring_occurrences')
+    .select(`
+      *,
+      recurring:recurring_id (
+        name, amount, currency, type, account_id, category_id,
+        from_account_id, to_account_id
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .order('scheduled_date', { ascending: true });
+
+  if (error) throw error;
+  return { occurrences: occurrences || [] };
+};
+
+export const confirmOccurrence = async (occurrenceId, actualAmount = null) => {
+  const userId = await getUserId();
+
+  // Get the occurrence with recurring info
+  const { data: occurrence, error: fetchError } = await supabase
+    .from('recurring_occurrences')
+    .select(`
+      *,
+      recurring:recurring_id (*)
+    `)
+    .eq('id', occurrenceId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  const recurring = occurrence.recurring;
+  const amount = actualAmount || recurring.amount;
+
+  let movementId = null;
+  let transferId = null;
+
+  // Create the movement or transfer
+  if (recurring.type === 'transfer') {
+    const { data: transfer, error: transferError } = await supabase
+      .from('transfers')
+      .insert({
+        user_id: userId,
+        date: occurrence.scheduled_date,
+        from_account_id: recurring.from_account_id,
+        to_account_id: recurring.to_account_id,
+        from_amount: amount,
+        to_amount: recurring.to_amount || amount,
+        note: `${recurring.name} (recurrente)`,
+        recurring_occurrence_id: occurrenceId,
+      })
+      .select()
+      .single();
+
+    if (transferError) throw transferError;
+    transferId = transfer.id;
+  } else {
+    const { data: movement, error: movementError } = await supabase
+      .from('movements')
+      .insert({
+        user_id: userId,
+        type: recurring.type,
+        date: occurrence.scheduled_date,
+        amount: amount,
+        account_id: recurring.account_id,
+        category_id: recurring.category_id,
+        note: `${recurring.name} (recurrente)`,
+        recurring_occurrence_id: occurrenceId,
+      })
+      .select()
+      .single();
+
+    if (movementError) throw movementError;
+    movementId = movement.id;
+  }
+
+  // Update the occurrence
+  const { error: updateError } = await supabase
+    .from('recurring_occurrences')
+    .update({
+      status: 'confirmed',
+      movement_id: movementId,
+      transfer_id: transferId,
+      actual_amount: amount,
+      confirmed_at: new Date().toISOString(),
+      confirmed_via: 'web',
+    })
+    .eq('id', occurrenceId);
+
+  if (updateError) throw updateError;
+
+  invalidateCache('');
+  return { success: true };
+};
+
+export const skipOccurrence = async (occurrenceId) => {
+  const { error } = await supabase
+    .from('recurring_occurrences')
+    .update({
+      status: 'skipped',
+      skipped_at: new Date().toISOString(),
+    })
+    .eq('id', occurrenceId);
+
+  if (error) throw error;
+  invalidateCache('recurring');
+  return { success: true };
+};
+
+// ============================================
+// FUTURE TRANSACTIONS (Transacciones Futuras)
+// ============================================
+
+export const getFutureTransactions = async () => {
+  const userId = await getUserId();
+  const today = new Date().toISOString().split('T')[0];
+
+  const [{ data: movements }, { data: transfers }, { data: accounts }, { data: categories }] = await Promise.all([
+    supabase
+      .from('movements')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_future', true)
+      .gte('date', today)
+      .order('date', { ascending: true }),
+    supabase
+      .from('transfers')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_future', true)
+      .gte('date', today)
+      .order('date', { ascending: true }),
+    supabase.from('accounts').select('id, name, is_credit_card').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId)
+  ]);
+
+  const futureMovements = (movements || []).map(m => ({
+    ...mapMovementFromDB(m, accounts, categories),
+    isFuture: true,
+    transactionType: 'movement',
+  }));
+
+  const futureTransfers = (transfers || []).map(t => {
+    const fromAccount = accounts?.find(a => a.id === t.from_account_id);
+    const toAccount = accounts?.find(a => a.id === t.to_account_id);
+    return {
+      id: t.id,
+      rowIndex: t.id,
+      fecha: t.date,
+      cuentaSaliente: fromAccount?.name || '',
+      cuentaEntrante: toAccount?.name || '',
+      montoSaliente: parseFloat(t.from_amount),
+      montoEntrante: parseFloat(t.to_amount),
+      nota: t.note || '',
+      tipo: 'transferencia',
+      isFuture: true,
+      transactionType: 'transfer',
+    };
+  });
+
+  return {
+    futureTransactions: [...futureMovements, ...futureTransfers].sort(
+      (a, b) => new Date(a.fecha) - new Date(b.fecha)
+    )
+  };
+};
+
+// ============================================
+// CALENDAR EVENTS
+// ============================================
+
+export const getCalendarEvents = async (startDate, endDate) => {
+  const userId = await getUserId();
+
+  const [
+    { data: movements },
+    { data: transfers },
+    { data: recurring },
+    { data: accounts },
+    { data: categories }
+  ] = await Promise.all([
+    supabase
+      .from('movements')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date'),
+    supabase
+      .from('transfers')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date'),
+    supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .eq('is_paused', false),
+    supabase.from('accounts').select('id, name').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId)
+  ]);
+
+  // Map movements
+  const movementEvents = (movements || []).map(m => ({
+    id: m.id,
+    date: m.date,
+    type: m.type === 'income' ? 'income' : 'expense',
+    amount: parseFloat(m.amount),
+    name: categories?.find(c => c.id === m.category_id)?.name || 'Sin categoría',
+    account: accounts?.find(a => a.id === m.account_id)?.name || '',
+    isFuture: m.is_future,
+    isRecurring: !!m.recurring_occurrence_id,
+    eventType: 'movement',
+  }));
+
+  // Map transfers
+  const transferEvents = (transfers || []).map(t => ({
+    id: t.id,
+    date: t.date,
+    type: 'transfer',
+    amount: parseFloat(t.from_amount),
+    name: `${accounts?.find(a => a.id === t.from_account_id)?.name || ''} → ${accounts?.find(a => a.id === t.to_account_id)?.name || ''}`,
+    isFuture: t.is_future,
+    isRecurring: !!t.recurring_occurrence_id,
+    eventType: 'transfer',
+  }));
+
+  // Calculate future recurring occurrences within the date range
+  const recurringEvents = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  (recurring || []).forEach(r => {
+    let nextDate = r.next_execution_date ? new Date(r.next_execution_date) : new Date(r.start_date);
+
+    // Find all occurrences within the date range
+    while (nextDate <= end) {
+      if (nextDate >= start) {
+        recurringEvents.push({
+          id: `${r.id}-${nextDate.toISOString().split('T')[0]}`,
+          date: nextDate.toISOString().split('T')[0],
+          type: r.type,
+          amount: parseFloat(r.amount),
+          name: r.name,
+          account: accounts?.find(a => a.id === r.account_id)?.name || '',
+          isRecurring: true,
+          recurringId: r.id,
+          eventType: 'recurring_scheduled',
+        });
+      }
+
+      // Calculate next occurrence (simplified - just add based on frequency type)
+      const freq = r.frequency;
+      switch (freq.type) {
+        case 'daily':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 1));
+          break;
+        case 'weekly':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 7));
+          break;
+        case 'biweekly':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 14));
+          break;
+        case 'monthly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
+          break;
+        case 'bimonthly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 2));
+          break;
+        case 'quarterly':
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 3));
+          break;
+        case 'yearly':
+          nextDate = new Date(nextDate.setFullYear(nextDate.getFullYear() + 1));
+          break;
+        case 'custom_days':
+          nextDate = new Date(nextDate.setDate(nextDate.getDate() + (freq.interval || 30)));
+          break;
+        default:
+          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
+      }
+    }
+  });
+
+  // Combine all events and return as flat array
+  const allEvents = [...movementEvents, ...transferEvents, ...recurringEvents];
+
+  return allEvents;
+};
+
+// ============================================
+// CONVERT MOVEMENT TO RECURRING
+// ============================================
+
+export const convertToRecurring = async (movementId, frequency, accountName = null) => {
+  const userId = await getUserId();
+
+  // Get the movement
+  const { data: movement, error: fetchError } = await supabase
+    .from('movements')
+    .select('*')
+    .eq('id', movementId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Get category name for the recurring
+  const { data: category } = await supabase
+    .from('categories')
+    .select('name')
+    .eq('id', movement.category_id)
+    .single();
+
+  // Determine account_id - use provided account name or movement's account
+  let accountId = movement.account_id;
+  if (accountName) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', accountName)
+      .single();
+    if (account) {
+      accountId = account.id;
+    }
+  }
+
+  // Create the recurring transaction
+  const { data: recurring, error: createError } = await supabase
+    .from('recurring_transactions')
+    .insert({
+      user_id: userId,
+      name: category?.name || movement.note || 'Gasto recurrente',
+      description: movement.note,
+      amount: movement.amount,
+      currency: movement.original_currency || 'ARS',
+      type: movement.type,
+      account_id: accountId,
+      category_id: movement.category_id,
+      frequency: frequency,
+      start_date: movement.date,
+      next_execution_date: movement.date,
+      last_generated_date: movement.date, // Mark this movement as already generated
+      creation_mode: 'automatic',
+    })
+    .select()
+    .single();
+
+  if (createError) throw createError;
+
+  // Create an occurrence for the original movement
+  const { error: occurrenceError } = await supabase
+    .from('recurring_occurrences')
+    .insert({
+      recurring_id: recurring.id,
+      user_id: userId,
+      scheduled_date: movement.date,
+      status: 'confirmed',
+      movement_id: movementId,
+      actual_amount: movement.amount,
+      confirmed_at: new Date().toISOString(),
+      confirmed_via: 'web',
+    });
+
+  if (occurrenceError) throw occurrenceError;
+
+  // Update the movement to reference the occurrence
+  // (We'd need to get the occurrence ID, but for simplicity we'll skip this)
+
+  invalidateCache('');
+  return { success: true, recurring };
+};
+
+// ============================================
+// HOLIDAYS
+// ============================================
+
+export const getHolidays = async (year) => {
+  const { data, error } = await supabase
+    .from('argentine_holidays')
+    .select('*')
+    .eq('year', year)
+    .order('date');
+
+  if (error) throw error;
+  return { holidays: data || [] };
 };
