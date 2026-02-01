@@ -11,8 +11,12 @@ import Toast from './Toast';
 
 /**
  * Modal para crear nuevo movimiento (Desktop)
+ * @param {boolean} isOpen - Si el modal está abierto
+ * @param {function} onClose - Función para cerrar el modal
+ * @param {string} defaultType - Tipo de movimiento por defecto ('income', 'expense', 'transfer')
+ * @param {object} prefillData - Datos precargados para el formulario (fecha, cuenta, categoria, etc.)
  */
-function NewMovementModal({ isOpen, onClose, defaultType }) {
+function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalPrefillData }) {
   const { accounts, loading: loadingAccounts, refetch: refetchAccounts } = useAccounts();
   const { categories, categoriesWithId, loading: loadingCategories, refetch: refetchCategories } = useCategories();
   const { budgets } = useBudgets();
@@ -143,6 +147,15 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
 
   // Determinar título y subtítulo según el tipo
   const getModalTitle = () => {
+    // Si hay prefillData externo, usar su tipo
+    if (externalPrefillData?.tipo) {
+      switch (externalPrefillData.tipo) {
+        case 'gasto': return 'Nuevo Gasto';
+        case 'ingreso': return 'Nuevo Ingreso';
+        case 'transferencia': return 'Nueva Transferencia';
+        default: return 'Nuevo Movimiento';
+      }
+    }
     if (!defaultType) return 'Nuevo Movimiento';
     switch (defaultType) {
       case 'expense': return 'Nuevo Gasto';
@@ -229,8 +242,8 @@ function NewMovementModal({ isOpen, onClose, defaultType }) {
               goals={goals}
               onSubmit={handleSubmit}
               loading={submitting}
-              prefillData={defaultType ? { tipo: defaultType === 'income' ? 'ingreso' : defaultType === 'expense' ? 'gasto' : 'transferencia' } : null}
-              hideTypeSelector={!!defaultType}
+              prefillData={externalPrefillData || (defaultType ? { tipo: defaultType === 'income' ? 'ingreso' : defaultType === 'expense' ? 'gasto' : 'transferencia' } : null)}
+              hideTypeSelector={!!defaultType || !!externalPrefillData?.tipo}
               onCategoryCreated={refetchCategories}
             />
           )}

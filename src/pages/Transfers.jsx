@@ -5,6 +5,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Transfers() {
   const { showError } = useError();
@@ -34,6 +35,9 @@ function Transfers() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.TRANSFERS_CHANGED, () => fetchData(true, false));
 
   const handleSave = async (transfer) => {
     try {

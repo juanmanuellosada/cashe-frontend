@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase';
 import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from './attachmentStorage';
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
+import { emit, DataEvents } from './dataEvents';
 
 // ============================================
 // CACHE MANAGEMENT (mantener compatibilidad)
@@ -51,9 +52,10 @@ const invalidateCache = (type) => {
   if (!type) {
     cache.clear();
     pendingRequests.clear();
+    emit(DataEvents.ALL_DATA_CHANGED);
     return;
   }
-  
+
   const keysToDelete = [];
   for (const key of cache.keys()) {
     // Incluir 'accounts' porque los balances dependen de movimientos
@@ -68,6 +70,22 @@ const invalidateCache = (type) => {
     if (!type || key.includes(type) || key.includes('dashboard') || key.includes('movements') || key.includes('income') || key.includes('expense') || key.includes('accounts')) {
       pendingRequests.delete(key);
     }
+  }
+
+  // Emitir evento según el tipo de datos invalidados
+  if (type.includes('expense')) {
+    emit(DataEvents.EXPENSES_CHANGED);
+  } else if (type.includes('income')) {
+    emit(DataEvents.INCOMES_CHANGED);
+  } else if (type.includes('transfer')) {
+    emit(DataEvents.TRANSFERS_CHANGED);
+  } else if (type.includes('account')) {
+    emit(DataEvents.ACCOUNTS_CHANGED);
+  } else if (type.includes('categor')) {
+    emit(DataEvents.CATEGORIES_CHANGED);
+  } else {
+    // Para otros tipos, emitir evento general
+    emit(DataEvents.ALL_DATA_CHANGED);
   }
 };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getCategoriesAll, addCategory, updateCategory, deleteCategory, bulkDeleteCategories } from '../services/supabaseApi';
 import ConfirmModal from '../components/ConfirmModal';
 import Toast from '../components/Toast';
@@ -7,6 +7,7 @@ import CategoryIconPicker from '../components/CategoryIconPicker';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 import SortDropdown from '../components/SortDropdown';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Categories() {
   const { showError } = useError();
@@ -54,17 +55,20 @@ function Categories() {
     setToast({ message, type });
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await getCategoriesAll();
       setCategories(data.categories || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  };
+  }, []);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.CATEGORIES_CHANGED, () => fetchCategories(false));
 
   const handleAdd = async (formData) => {
     try {

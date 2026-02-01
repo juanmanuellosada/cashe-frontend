@@ -5,6 +5,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Income() {
   const { showError } = useError();
@@ -37,6 +38,9 @@ function Income() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.INCOMES_CHANGED, () => fetchData(true, false));
 
   const handleSave = async (movement) => {
     try {

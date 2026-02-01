@@ -12,6 +12,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Home() {
   const navigate = useNavigate();
@@ -125,6 +126,9 @@ function Home() {
   const handleRefresh = useCallback(async () => {
     await Promise.all([fetchDashboard(), fetchMovements()]);
   }, [fetchDashboard, fetchMovements]);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, handleRefresh);
 
   // Handle movement edit save
   const handleSaveMovement = async (updatedMovement) => {

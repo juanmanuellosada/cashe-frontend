@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getAccounts, clearCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
@@ -7,6 +7,7 @@ import SortDropdown from '../components/SortDropdown';
 import { useError } from '../contexts/ErrorContext';
 import IconPicker from '../components/IconPicker';
 import { isEmoji, isPredefinedIcon, resolveIconPath } from '../services/iconStorage';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Accounts() {
   const { showError } = useError();
@@ -85,6 +86,13 @@ function Accounts() {
       window.removeEventListener('pageshow', handlePageShow);
     };
   }, []);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  const handleDataChange = useCallback(() => {
+    fetchAccounts(true);
+  }, []);
+
+  useDataEvent([DataEvents.ACCOUNTS_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED], handleDataChange);
 
   const fetchAccounts = async (forceRefresh = false) => {
     try {

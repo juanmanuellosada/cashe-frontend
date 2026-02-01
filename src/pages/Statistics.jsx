@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getRecentMovements } from '../services/supabaseApi';
@@ -7,6 +7,7 @@ import DateRangePicker from '../components/DateRangePicker';
 import ExpensePieChart from '../components/charts/ExpensePieChart';
 import IncomeExpenseBarChart from '../components/charts/IncomeExpenseBarChart';
 import BalanceLineChart from '../components/charts/BalanceLineChart';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 // Presets específicos para estadísticas
 const STATS_PRESETS = [
@@ -26,20 +27,24 @@ function Statistics() {
   // Estado global de moneda para toda la sección
   const [currency, setCurrency] = useState('ARS');
 
-  useEffect(() => {
-    async function loadMovements() {
-      try {
-        setLoading(true);
-        const data = await getRecentMovements(1000);
-        setMovements(data.movimientos || []);
-      } catch (err) {
-        console.error('Error loading movements:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadMovements = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      const data = await getRecentMovements(1000, true); // forceRefresh
+      setMovements(data.movimientos || []);
+    } catch (err) {
+      console.error('Error loading movements:', err);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    loadMovements();
   }, []);
+
+  useEffect(() => {
+    loadMovements();
+  }, [loadMovements]);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => loadMovements(false));
 
   // Process data for pie chart (expenses by category)
   const pieChartData = useMemo(() => {

@@ -1,16 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, updateSubsequentInstallments } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
-import DatePicker from '../components/DatePicker';
 import { useError } from '../contexts/ErrorContext';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import { downloadAttachment } from '../services/attachmentStorage';
 import StatementAttachmentsModal from '../components/StatementAttachmentsModal';
 import EditMovementModal from '../components/EditMovementModal';
+import NewMovementModal from '../components/NewMovementModal';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function CreditCards() {
   const { showError } = useError();
@@ -44,9 +45,11 @@ function CreditCards() {
   // Estado para selección masiva
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState(null); // 'editDate', 'editCategory'
-  const [bulkDateValue, setBulkDateValue] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  // Estado para agregar nuevo gasto al resumen
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [addExpensePrefill, setAddExpensePrefill] = useState(null);
 
   // Estado para refrescar viewingStatement después de editar
   const [pendingStatementRefresh, setPendingStatementRefresh] = useState(null);
@@ -54,6 +57,13 @@ function CreditCards() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  const handleDataChange = useCallback(() => {
+    fetchData(true, false);
+  }, []);
+
+  useDataEvent([DataEvents.EXPENSES_CHANGED, DataEvents.ACCOUNTS_CHANGED], handleDataChange);
 
   const fetchData = async (forceRefresh = false, showLoading = true) => {
     try {
@@ -513,22 +523,63 @@ function CreditCards() {
     return itemsToShow.filter(item => selectedItems.has(item.id));
   };
 
-  // Handler para edición masiva de fecha
-  const handleBulkDateUpdate = async () => {
-    if (!bulkDateValue) return;
+  // Calcular una fecha válida para un período de resumen dado
+  const getDateForStatementPeriod = (statement, diaCierre) => {
+    // El período es "YYYY-MM" donde el mes es el mes del cierre
+    // Para que un gasto caiga en ese período, la fecha debe ser < diaCierre de ese mes
+    // Por ejemplo: período "2026-03" con cierre día 29 → usar fecha como "2026-03-15" (cualquier día < 29)
+    const year = statement.year;
+    const month = statement.month; // 0-indexed
+
+    // Usar el día 15 del mes del período (seguro que está antes del cierre)
+    const dia = Math.min(15, diaCierre - 1);
+    const fecha = new Date(year, month, dia);
+    return format(fecha, 'yyyy-MM-dd');
+  };
+
+  // Abrir modal para agregar gasto al resumen actual
+  const handleAddExpenseToStatement = () => {
+    if (!viewingStatement || !selectedCard) return;
+
+    const diaCierre = selectedCard.diaCierre || 1;
+    const fecha = getDateForStatementPeriod(viewingStatement, diaCierre);
+
+    setAddExpensePrefill({
+      tipo: 'gasto',
+      cuenta: selectedCard.nombre,
+      fecha: fecha,
+    });
+    setShowAddExpenseModal(true);
+  };
+
+  // Mover gastos seleccionados al resumen anterior o siguiente
+  const handleBulkMoveToStatement = async (direction) => {
+    if (!viewingStatement || !selectedCard) return;
+
+    const currentIndex = getCurrentStatementIndex();
+    const targetIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+
+    if (targetIndex < 0 || targetIndex >= statements.length) {
+      showError('No se puede mover', `No hay resumen ${direction === 'prev' ? 'anterior' : 'siguiente'}`);
+      return;
+    }
+
+    const targetStatement = statements[targetIndex];
+    const diaCierre = selectedCard.diaCierre || 1;
+    const newDate = getDateForStatementPeriod(targetStatement, diaCierre);
 
     setBulkProcessing(true);
     try {
       const movementsToUpdate = getSelectedMovementsFromStatement();
-      await updateMultipleMovements(movementsToUpdate, 'fecha', bulkDateValue);
+      await updateMultipleMovements(movementsToUpdate, 'fecha', newDate);
       setSelectedItems(new Set());
       setSelectionMode(false);
-      setBulkAction(null);
-      setBulkDateValue('');
-      await fetchData();
+      // Guardar el ID del statement destino para navegar a él después del refresh
+      setPendingStatementRefresh(targetStatement.id);
+      await fetchData(true, false);
     } catch (err) {
-      console.error('Error in bulk update:', err);
-      showError('No se pudieron actualizar los movimientos', err.message);
+      console.error('Error moving to statement:', err);
+      showError('No se pudieron mover los movimientos', err.message);
     } finally {
       setBulkProcessing(false);
     }
@@ -1191,19 +1242,34 @@ function CreditCards() {
               </div>
               <div className="flex items-center gap-2">
                 {selectedItems.size > 0 && (
-                  <button
-                    onClick={() => setBulkAction('editDate')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Cambiar fecha
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleBulkMoveToStatement('prev')}
+                      disabled={bulkProcessing || !hasPreviousStatement()}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Resumen ant.
+                    </button>
+                    <button
+                      onClick={() => handleBulkMoveToStatement('next')}
+                      disabled={bulkProcessing || !hasNextStatement()}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
+                    >
+                      Resumen sig.
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={toggleSelectionMode}
+                  disabled={bulkProcessing}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                 >
@@ -1355,35 +1421,49 @@ function CreditCards() {
 
           {/* Acciones en footer */}
           <div
-            className="px-4 py-4 safe-area-bottom flex gap-3"
+            className="px-4 py-4 safe-area-bottom flex gap-2"
             style={{ backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-subtle)' }}
           >
+            {/* Botón Agregar Gasto */}
+            <button
+              onClick={handleAddExpenseToStatement}
+              className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'var(--accent-red)', color: 'white' }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            {/* Botón Impuesto de Sellos */}
             {!viewingStatement.hasTax && (
               <button
                 onClick={() => {
                   openTaxModal(viewingStatement);
                   setViewingStatement(null);
                 }}
-                className="flex-1 py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-yellow)' }}
+                title="Agregar Impuesto de Sellos"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
                 </svg>
-                Imp. Sellos
               </button>
             )}
+            {/* Botón Adjuntos */}
             <button
               onClick={() => {
                 openAttachmentsModal(viewingStatement);
               }}
               className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+              title="Adjuntos"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </button>
+            {/* Botón Pagar Resumen */}
             <button
               onClick={() => {
                 openPayModal(viewingStatement);
@@ -1395,7 +1475,7 @@ function CreditCards() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              Pagar Resumen
+              Pagar
             </button>
           </div>
         </div>
@@ -1426,52 +1506,15 @@ function CreditCards() {
         />
       )}
 
-      {/* Modal - Cambiar Fecha Masivamente */}
-      {bulkAction === 'editDate' && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
-          />
-          <div
-            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
-          >
-            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Cambiar fecha
-            </h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Cambiar la fecha de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
-            </p>
-
-            <div className="mb-4">
-              <DatePicker
-                value={bulkDateValue}
-                onChange={(e) => setBulkDateValue(e.target.value)}
-                name="bulkDate"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setBulkAction(null); setBulkDateValue(''); }}
-                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleBulkDateUpdate}
-                disabled={bulkProcessing || !bulkDateValue}
-                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent-purple, #a855f7)' }}
-              >
-                {bulkProcessing ? 'Actualizando...' : 'Aplicar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal - Agregar Gasto al Resumen */}
+      <NewMovementModal
+        isOpen={showAddExpenseModal}
+        onClose={() => {
+          setShowAddExpenseModal(false);
+          setAddExpensePrefill(null);
+        }}
+        prefillData={addExpensePrefill}
+      />
     </div>
   );
 }
