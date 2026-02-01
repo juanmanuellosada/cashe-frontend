@@ -239,7 +239,7 @@ async function handleUnlinkedUser(phoneNumber: string, messageText: string) {
       unlinkedUserLastMessage.delete(phoneNumber)
 
       await sendWhatsAppMessage(phoneNumber, `✅ *¡Cuenta vinculada!*\n\nYa podés usar Cashé por WhatsApp.`)
-      await showMainMenu(phoneNumber)
+      await showWelcomeMessage(phoneNumber)
       return
     }
 
@@ -282,115 +282,52 @@ async function handleFlowStep(
 ) {
   const lowerText = messageText.toLowerCase().trim()
 
-  // Global commands - cancel/restart
-  const cancelWords = [
-    'cancelar', 'cancel', 'salir', 'volver', 'atras', 'atrás',
-    'volver atras', 'volver atrás', 'empezar de nuevo', 'reiniciar',
-    'no', 'x', '0'
-  ]
-
-  const menuWords = ['menu', 'menú', 'inicio', 'empezar', 'hola', 'hi', 'hello', 'start']
-
-  if (menuWords.includes(lowerText)) {
-    if (pendingAction) {
-      await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
-    }
-    await showMainMenu(phoneNumber)
-    return
+  // Cancel any old button-flow pending actions - we now use NLP
+  if (pendingAction && flowState.step !== 'idle') {
+    await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
   }
+
+  // Global commands - cancel/restart
+  const cancelWords = ['cancelar', 'cancel', 'salir', 'x']
 
   if (cancelWords.includes(lowerText)) {
-    if (pendingAction) {
-      await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
-      await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
-    }
-    await showMainMenu(phoneNumber)
+    // Also clear NLP conversation state
+    await deleteConversationState(supabase, 'whatsapp', phoneNumber)
+    await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
     return
   }
 
-  // Handle based on current step
-  switch (flowState.step) {
-    case 'idle':
-      await handleIdleStep(whatsappUser, buttonId, listId, phoneNumber, messageText)
-      break
-    case 'select_account':
-      await handleSelectAccount(whatsappUser, pendingAction, flowState, listId, phoneNumber)
-      break
-    case 'select_from_account':
-      await handleSelectFromAccount(whatsappUser, pendingAction, flowState, listId, phoneNumber)
-      break
-    case 'select_to_account':
-      await handleSelectToAccount(whatsappUser, pendingAction, flowState, listId, phoneNumber)
-      break
-    case 'select_category':
-    case 'select_category_page2':
-      await handleSelectCategory(whatsappUser, pendingAction, flowState, listId, buttonId, phoneNumber)
-      break
-    case 'enter_amount':
-      await handleEnterAmount(whatsappUser, pendingAction, flowState, messageText, phoneNumber)
-      break
-    case 'enter_to_amount':
-      await handleEnterToAmount(whatsappUser, pendingAction, flowState, messageText, phoneNumber)
-      break
-    case 'enter_note':
-      await handleEnterNote(whatsappUser, pendingAction, flowState, messageText, buttonId, phoneNumber)
-      break
-    case 'confirm':
-      await handleConfirm(whatsappUser, pendingAction, flowState, buttonId, phoneNumber)
-      break
-    case 'query_select':
-      await handleQuerySelect(whatsappUser, pendingAction, flowState, buttonId, listId, phoneNumber)
-      break
-    case 'query_category_select':
-      await handleQueryCategorySelect(whatsappUser, pendingAction, flowState, listId, phoneNumber)
-      break
-    case 'query_period_select':
-      await handleQueryPeriodSelect(whatsappUser, pendingAction, flowState, listId, phoneNumber)
-      break
-    default:
-      await showMainMenu(phoneNumber)
-  }
+  // All messages go through NLP now
+  await handleIdleStep(whatsappUser, buttonId, listId, phoneNumber, messageText)
 }
 
 // ============================================
-// SHOW MAIN MENU
+// SHOW WELCOME MESSAGE
 // ============================================
-async function showMainMenu(phoneNumber: string) {
-  await sendWhatsAppButtons(
-    phoneNumber,
-    '¿Qué querés hacer?',
-    [
-      { id: 'type_expense', title: '💸 Gasto' },
-      { id: 'type_income', title: '💰 Ingreso' },
-      { id: 'show_more_options', title: '📋 Más opciones' }
-    ]
-  )
-}
+async function showWelcomeMessage(phoneNumber: string) {
+  await sendWhatsAppMessage(phoneNumber, `¡Hola! 👋 Soy tu asistente de *Cashé*.
 
-// Show more options (transfer + queries)
-async function showMoreOptions(phoneNumber: string) {
-  await sendWhatsAppList(
-    phoneNumber,
-    '¿Qué querés hacer?',
-    'Ver opciones',
-    [
-      {
-        title: '📝 Registrar',
-        rows: [
-          { id: 'type_transfer', title: '🔄 Transferencia', description: 'Mover plata entre cuentas' }
-        ]
-      },
-      {
-        title: '📊 Consultar',
-        rows: [
-          { id: 'query_balances', title: '💰 Ver saldos', description: 'Saldo de cada cuenta' },
-          { id: 'query_summary', title: '📈 Resumen mensual', description: 'Gastos e ingresos del mes' },
-          { id: 'query_category', title: '📁 Por categoría', description: 'Detalle de una categoría' },
-          { id: 'query_recent', title: '🕐 Últimos movimientos', description: 'Los 10 más recientes' }
-        ]
-      }
-    ]
-  )
+Podés escribirme con lenguaje natural, por ejemplo:
+
+💸 *Registrar gastos:*
+• "Gasté 5000 en el super con la visa"
+• "500 en café"
+• "Pagué 1500 de luz"
+
+💰 *Registrar ingresos:*
+• "Cobré 50000 de sueldo"
+• "Me transfirieron 10000"
+
+🔄 *Transferencias:*
+• "Pasé 20000 de Galicia a MP"
+
+📊 *Consultas:*
+• "Cuánto tengo en Galicia?"
+• "Saldo"
+• "Resumen del mes"
+• "Últimos movimientos"
+
+_Escribime lo que necesites y yo lo entiendo_ 🤖`)
 }
 
 // ============================================
@@ -398,42 +335,11 @@ async function showMoreOptions(phoneNumber: string) {
 // ============================================
 
 async function handleIdleStep(whatsappUser: any, buttonId: string, listId: string, phoneNumber: string, messageText: string = '') {
-  // Main menu uses buttons, more options uses list
   const selection = buttonId || listId
+  const lowerText = messageText.toLowerCase().trim()
 
-  // Handle "More options" button
-  if (selection === 'show_more_options') {
-    await showMoreOptions(phoneNumber)
-    return
-  }
-
-  // Handle main menu selections
-  if (selection === 'type_expense' || selection === 'type_income' || selection === 'type_transfer') {
-    const type = selection === 'type_expense' ? 'expense' : selection === 'type_income' ? 'income' : 'transfer'
-
-    await supabase.from('whatsapp_pending_actions').insert({
-      whatsapp_user_id: whatsappUser.id,
-      action_type: type === 'transfer' ? 'transfer' : 'movement',
-      action_data: { step: type === 'transfer' ? 'select_from_account' : 'select_account', type },
-      status: 'pending'
-    })
-
-    if (type === 'transfer') {
-      await showAccountList(whatsappUser.user_id, phoneNumber, '¿Desde qué cuenta transferís?', 'from_')
-    } else {
-      await showAccountList(whatsappUser.user_id, phoneNumber, type === 'expense' ? '¿De qué cuenta sale?' : '¿A qué cuenta entra?', '')
-    }
-    return
-  }
-
-  // Handle query selections
-  if (selection && selection.startsWith('query_')) {
-    await handleQueryStart(whatsappUser, selection, phoneNumber)
-    return
-  }
-
-  // Handle NLP confirmation callbacks
-  if (selection && (selection.startsWith('confirm_') || selection.startsWith('edit_') || selection.startsWith('sel_'))) {
+  // Handle NLP confirmation/edit callbacks (buttons from confirmation flow)
+  if (selection && (selection.startsWith('confirm_') || selection.startsWith('edit_') || selection.startsWith('sel_') || selection.startsWith('acc_') || selection.startsWith('cat_'))) {
     try {
       const nlpResult = await processNLPCallback(
         supabase,
@@ -462,8 +368,17 @@ async function handleIdleStep(whatsappUser: any, buttonId: string, listId: strin
     }
   }
 
-  // Try NLP processing for natural language messages (when no button/list was pressed)
-  if (!selection && messageText && messageText.length > 3) {
+  // Greeting words - show welcome message
+  const greetingWords = ['hola', 'hello', 'hi', 'hey', 'buenas', 'buen dia', 'buen día', 'buenos dias', 'buenos días', 'que tal', 'qué tal']
+  const helpWords = ['ayuda', 'help', 'menu', 'menú', 'opciones', 'que puedo hacer', 'qué puedo hacer', 'como funciona', 'cómo funciona', 'start', 'inicio', 'empezar']
+
+  if (greetingWords.some(w => lowerText === w || lowerText.startsWith(w + ' ')) || helpWords.includes(lowerText)) {
+    await showWelcomeMessage(phoneNumber)
+    return
+  }
+
+  // Try NLP processing for all other messages
+  if (messageText && messageText.length >= 2) {
     try {
       const nlpResult = await processNLPMessage(
         supabase,
@@ -472,32 +387,24 @@ async function handleIdleStep(whatsappUser: any, buttonId: string, listId: strin
         messageText
       )
 
-      // Check if NLP understood the message
-      const notUnderstoodMessage = '🤔 No entendí bien. Probá decirme algo como:\n• "gasté 500 en comida"\n• "saldo galicia"\n• "resumen del mes"\n\nEscribí "ayuda" para ver todo lo que puedo hacer.'
-
-      if (nlpResult.success || nlpResult.response !== notUnderstoodMessage) {
-        if (nlpResult.buttons?.length) {
-          await sendWhatsAppButtons(
-            phoneNumber,
-            nlpResult.response,
-            nlpResult.buttons.slice(0, 3).map(btn => ({
-              id: btn.callbackData || btn.id || btn.text,
-              title: btn.text.substring(0, 20)
-            }))
-          )
-        } else {
-          await sendWhatsAppMessage(phoneNumber, nlpResult.response)
-        }
-        return
+      if (nlpResult.buttons?.length) {
+        await sendWhatsAppButtons(
+          phoneNumber,
+          nlpResult.response,
+          nlpResult.buttons.slice(0, 3).map(btn => ({
+            id: btn.callbackData || btn.id || btn.text,
+            title: btn.text.substring(0, 20)
+          }))
+        )
       }
+      return
     } catch (nlpError) {
       console.error('NLP processing error:', nlpError)
-      // Fall through to show menu
     }
   }
 
-  // Show menu if nothing matched
-  await showMainMenu(phoneNumber)
+  // If nothing matched, show welcome message
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function handleSelectAccount(
@@ -751,7 +658,7 @@ async function handleConfirm(
   } else if (buttonId === 'confirm_no') {
     await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
     await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
   } else {
     await sendWhatsAppMessage(phoneNumber, '⚠️ Usá los botones para confirmar.')
   }
@@ -788,7 +695,7 @@ async function handleQueryStart(whatsappUser: any, queryType: string, phoneNumbe
       break
 
     default:
-      await showMainMenu(phoneNumber)
+      await showWelcomeMessage(phoneNumber)
   }
 }
 
@@ -801,7 +708,7 @@ async function handleQuerySelect(
   phoneNumber: string
 ) {
   // Not used currently but kept for future expansion
-  await showMainMenu(phoneNumber)
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function handleQueryCategorySelect(
@@ -901,7 +808,7 @@ async function showBalances(userId: string, phoneNumber: string) {
 
   if (!accounts || accounts.length === 0) {
     await sendWhatsAppMessage(phoneNumber, '❌ No tenés cuentas configuradas.')
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
     return
   }
 
@@ -915,7 +822,7 @@ async function showBalances(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showMainMenu(phoneNumber)
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function showMonthlySummary(userId: string, phoneNumber: string) {
@@ -965,7 +872,7 @@ async function showMonthlySummary(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showMainMenu(phoneNumber)
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function showCategoryDetail(
@@ -988,7 +895,7 @@ async function showCategoryDetail(
 
   if (!movements || movements.length === 0) {
     await sendWhatsAppMessage(phoneNumber, `📊 No hay movimientos en *${categoryName}* para ${periodLabel}.`)
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
     return
   }
 
@@ -1010,7 +917,7 @@ async function showCategoryDetail(
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showMainMenu(phoneNumber)
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function showRecentMovements(userId: string, phoneNumber: string) {
@@ -1024,7 +931,7 @@ async function showRecentMovements(userId: string, phoneNumber: string) {
 
   if (!movements || movements.length === 0) {
     await sendWhatsAppMessage(phoneNumber, '📊 No hay movimientos recientes.')
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
     return
   }
 
@@ -1041,7 +948,7 @@ async function showRecentMovements(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showMainMenu(phoneNumber)
+  await showWelcomeMessage(phoneNumber)
 }
 
 async function showQueryCategoryList(userId: string, phoneNumber: string) {
@@ -1054,7 +961,7 @@ async function showQueryCategoryList(userId: string, phoneNumber: string) {
 
   if (!categories || categories.length === 0) {
     await sendWhatsAppMessage(phoneNumber, '❌ No tenés categorías.')
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
     return
   }
 
@@ -1125,12 +1032,12 @@ async function executeAction(
     }
 
     await supabase.from('whatsapp_pending_actions').update({ status: 'confirmed' }).eq('id', pendingAction.id)
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
 
   } catch (error) {
     console.error('Error executing action:', error)
     await sendWhatsAppMessage(phoneNumber, '❌ Error al guardar.')
-    await showMainMenu(phoneNumber)
+    await showWelcomeMessage(phoneNumber)
   }
 }
 
