@@ -346,6 +346,8 @@ export function extractRemainingAsNote(
     /[\$]?\s*[\d.,]+\s*(k|lucas?|mil|palos?)?\b/gi,
     // Palabras de moneda
     /\b(pesos|dolares|usd|ars)\b/gi,
+    // Tarjetas de crédito
+    /\b(visa|mastercard|master|amex|cabal|naranja|nativa|tarjeta)\b/gi,
   ];
 
   // Remover patterns conocidos
@@ -470,9 +472,27 @@ export function extractAccountReferences(
       }
     }
   } else {
-    // Para gastos/ingresos, buscar "con X", "en X", "de X"
+    // Para gastos/ingresos, buscar patrones de cuenta
+    // Primero buscar patrones de tarjeta combinados: "visa galicia", "master santander", etc.
+    const cardBankPattern = /\b(visa|mastercard|master|amex|cabal|naranja|nativa)[,\s]+([a-záéíóúñ]+)/i;
+    const cardBankMatch = normalized.match(cardBankPattern);
+    if (cardBankMatch) {
+      // Combinar tarjeta + banco: "visa galicia" -> "visa galicia"
+      result.account = `${cardBankMatch[1]} ${cardBankMatch[2]}`.trim();
+      return result;
+    }
+
+    // Buscar solo tarjeta: "con visa", "con master"
+    const cardOnlyPattern = /\b(?:con|en)\s+(visa|mastercard|master|amex|cabal|naranja|nativa)\b/i;
+    const cardOnlyMatch = normalized.match(cardOnlyPattern);
+    if (cardOnlyMatch) {
+      result.account = cardOnlyMatch[1];
+      return result;
+    }
+
+    // Buscar "con X", "en X"
     const accountPatterns = [
-      /\b(?:con|en|desde|cuenta)\s+([a-záéíóúñ\s]+?)(?:\s+(?:ayer|hoy|el|\d)|$)/i,
+      /\b(?:con|en|desde|cuenta)\s+([a-záéíóúñ\s]+?)(?:\s+(?:ayer|hoy|el|\d|en\s+\d|primera|resumen)|$)/i,
       /([a-záéíóúñ]+)\s*$/i, // última palabra (común: "gasté 500 en comida mp")
     ];
 

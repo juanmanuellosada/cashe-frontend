@@ -46,6 +46,14 @@ export const ACCOUNT_ALIASES: Record<string, string[]> = {
   paypal: ["paypal", "pp"],
   wise: ["wise", "transferwise"],
 
+  // Tarjetas de crédito
+  visa: ["visa", "tarjeta visa", "tc visa"],
+  mastercard: ["mastercard", "master", "tarjeta master", "tc master", "mc"],
+  amex: ["amex", "american express", "tarjeta amex", "americanexpress"],
+  cabal: ["cabal", "tarjeta cabal"],
+  naranja: ["naranja", "tarjeta naranja"],
+  nativa: ["nativa", "tarjeta nativa"],
+
   // Genéricos
   efectivo: ["efectivo", "cash", "plata fisica", "plata", "fisico", "billetera"],
   dolares: ["dolares", "dólares", "usd", "verdes", "dolars"],
@@ -53,6 +61,7 @@ export const ACCOUNT_ALIASES: Record<string, string[]> = {
   ahorro: ["caja de ahorro", "ahorro", "ca"],
   corriente: ["cuenta corriente", "corriente", "cc"],
   inversion: ["inversion", "inversión", "fci", "plazo fijo", "pf"],
+  tarjeta: ["tarjeta", "tc", "tarjeta de credito", "credito"],
 };
 
 // Aliases de categorías de gastos

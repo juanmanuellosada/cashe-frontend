@@ -147,6 +147,8 @@ export function normalizeText(text: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(NORMALIZE_PATTERN, "")
+    .replace(/[,;.]+/g, " ")  // Reemplazar puntuación por espacios
+    .replace(/\s+/g, " ")     // Colapsar múltiples espacios
     .trim();
 }
 
