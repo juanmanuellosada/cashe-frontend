@@ -111,24 +111,31 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   }, [esTarjetaCredito, diaCierre]);
 
   // Calcular info de cierre de tarjeta
+  // En Argentina, los resúmenes se nombran por el mes de VENCIMIENTO (no de cierre)
+  // Ej: Si cierra el 29 de enero, el resumen "vence" en febrero, se llama "Resumen de Febrero"
+  // Los gastos del 30/ene al 28/feb van al resumen que vence en marzo = "Resumen de Marzo"
   const infoCierreTarjeta = useMemo(() => {
     if (!esTarjetaCredito) return null;
 
     const today = new Date();
     const currentDay = today.getDate();
-    const yaCerro = currentDay >= diaCierre;
 
-    // Período que corresponde según la fecha actual
-    let periodoCorrespondiente = new Date(today.getFullYear(), today.getMonth(), 1);
-    if (yaCerro) {
-      periodoCorrespondiente = addMonths(periodoCorrespondiente, 1);
+    // Calcular el mes de vencimiento del resumen actual
+    // Si estamos antes del cierre: el resumen cierra este mes, vence el próximo
+    // Si estamos después del cierre: el resumen cierra el próximo mes, vence en 2 meses
+    let mesVencimiento = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (currentDay < diaCierre) {
+      // Todavía no cerró este mes, el resumen vence el próximo mes
+      mesVencimiento = addMonths(mesVencimiento, 1);
+    } else {
+      // Ya cerró este mes, el resumen vence en 2 meses
+      mesVencimiento = addMonths(mesVencimiento, 2);
     }
 
-    const periodoLabel = format(periodoCorrespondiente, "MMMM yyyy", { locale: es });
+    const periodoLabel = format(mesVencimiento, "MMMM yyyy", { locale: es });
     const periodoCapitalized = periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1);
 
     return {
-      yaCerro,
       diaCierre,
       periodoCorrespondiente: periodoCapitalized,
     };
@@ -317,23 +324,15 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                 <div
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
                   style={{
-                    backgroundColor: infoCierreTarjeta.yaCerro
-                      ? 'rgba(251, 191, 36, 0.1)'
-                      : 'rgba(34, 197, 94, 0.1)',
-                    color: infoCierreTarjeta.yaCerro
-                      ? 'var(--accent-yellow, #fbbf24)'
-                      : 'var(--accent-green)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    color: 'var(--accent-blue, #3b82f6)',
                   }}
                 >
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>
-                    {infoCierreTarjeta.yaCerro ? (
-                      <>Tu tarjeta ya cerró (día {infoCierreTarjeta.diaCierre}). Hoy corresponde cargar en: <strong>{infoCierreTarjeta.periodoCorrespondiente}</strong></>
-                    ) : (
-                      <>Tu tarjeta cierra el día {infoCierreTarjeta.diaCierre}. Hoy corresponde al resumen actual</>
-                    )}
+                    Cierra el día {infoCierreTarjeta.diaCierre}. Hoy corresponde al resumen de <strong>{infoCierreTarjeta.periodoCorrespondiente}</strong>
                   </span>
                 </div>
               )}
