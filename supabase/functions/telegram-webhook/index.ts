@@ -1,8 +1,13 @@
 // Telegram Webhook for Cashé
-// Same functionality as WhatsApp bot but using Telegram Bot API
+// Supports both button flow and natural language processing (NLP)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  processNLPMessage,
+  processCallbackQuery as processNLPCallback,
+  deleteConversationState,
+} from '../_shared/nlp/index.ts'
 
 // Environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -103,6 +108,43 @@ async function handleCallbackQuery(callbackQuery: any) {
   // Acknowledge the callback
   await answerCallbackQuery(callbackQuery.id)
 
+  // Check if this is an NLP callback (confirm_yes, confirm_edit, etc.)
+  const nlpCallbacks = ['confirm_yes', 'confirm_edit', 'confirm_cancel']
+  const isNLPCallback = nlpCallbacks.includes(data) ||
+    data.startsWith('edit_') ||
+    data.startsWith('acc_') ||
+    data.startsWith('cat_') ||
+    data.startsWith('sel_')
+
+  if (isNLPCallback) {
+    try {
+      const nlpResult = await processNLPCallback(
+        supabase,
+        'telegram',
+        String(telegramId),
+        data
+      )
+
+      if (nlpResult.success || nlpResult.response) {
+        const replyMarkup = nlpResult.buttons?.length ? {
+          inline_keyboard: nlpResult.buttons.map(btn => [{
+            text: btn.text,
+            callback_data: btn.callbackData || btn.id || btn.text
+          }])
+        } : undefined
+
+        await sendMessage(chatId, nlpResult.response, {
+          parse_mode: 'Markdown',
+          reply_markup: replyMarkup
+        })
+        return
+      }
+    } catch (nlpError) {
+      console.error('NLP callback error:', nlpError)
+      // Fall through to regular processing
+    }
+  }
+
   // Process as if it were a message with the callback data
   await processMessage(chatId, telegramId, data, callbackQuery.from, true)
 }
@@ -143,7 +185,7 @@ async function processMessage(
       .single()
 
     const flowState: FlowState = pendingAction?.action_data || { step: 'idle' }
-    await handleFlowStep(tgUser, pendingAction, flowState, messageText, chatId, isCallback)
+    await handleFlowStep(tgUser, pendingAction, flowState, messageText, chatId, isCallback, telegramId)
 
   } catch (error) {
     console.error('Error in processMessage:', error)
@@ -222,7 +264,8 @@ async function handleFlowStep(
   flowState: FlowState,
   messageText: string,
   chatId: number,
-  isCallback: boolean
+  isCallback: boolean,
+  telegramId: number
 ) {
   const lowerText = messageText.toLowerCase().trim()
 
@@ -250,7 +293,7 @@ async function handleFlowStep(
   // Handle based on current step
   switch (flowState.step) {
     case 'idle':
-      await handleIdleStep(tgUser, messageText, chatId)
+      await handleIdleStep(tgUser, messageText, chatId, telegramId)
       break
     case 'select_account':
       await handleSelectAccount(tgUser, pendingAction, flowState, messageText, chatId)
@@ -319,7 +362,7 @@ async function showMainMenu(chatId: number) {
 // STEP HANDLERS
 // ============================================
 
-async function handleIdleStep(tgUser: any, messageText: string, chatId: number) {
+async function handleIdleStep(tgUser: any, messageText: string, chatId: number, telegramId: number) {
   // Handle recurring occurrence confirmation
   if (messageText.startsWith('confirm_occ_')) {
     const occurrenceId = messageText.replace('confirm_occ_', '')
@@ -333,7 +376,7 @@ async function handleIdleStep(tgUser: any, messageText: string, chatId: number) 
     return
   }
 
-  // Handle menu selections
+  // Handle menu selections (button callbacks)
   if (messageText === 'type_expense' || messageText === 'type_income' || messageText === 'type_transfer') {
     const type = messageText === 'type_expense' ? 'expense' : messageText === 'type_income' ? 'income' : 'transfer'
 
@@ -356,6 +399,47 @@ async function handleIdleStep(tgUser: any, messageText: string, chatId: number) 
   if (messageText.startsWith('query_')) {
     await handleQueryStart(tgUser, messageText, chatId)
     return
+  }
+
+  // Try NLP processing for natural language messages
+  // Only for messages that look like natural language (not button callbacks)
+  const isNaturalLanguage = messageText.length > 3 &&
+    !messageText.startsWith('acc_') &&
+    !messageText.startsWith('cat_') &&
+    !messageText.startsWith('from_') &&
+    !messageText.startsWith('to_') &&
+    !messageText.startsWith('sel_') &&
+    !messageText.startsWith('edit_') &&
+    !messageText.startsWith('confirm_')
+
+  if (isNaturalLanguage) {
+    try {
+      const nlpResult = await processNLPMessage(
+        supabase,
+        'telegram',
+        String(telegramId),
+        messageText
+      )
+
+      if (nlpResult.success || nlpResult.response !== '🤔 No entendí bien. Probá decirme algo como:\n• "gasté 500 en comida"\n• "saldo galicia"\n• "resumen del mes"\n\nEscribí "ayuda" para ver todo lo que puedo hacer.') {
+        // NLP processed the message - send response
+        const replyMarkup = nlpResult.buttons?.length ? {
+          inline_keyboard: nlpResult.buttons.map(btn => [{
+            text: btn.text,
+            callback_data: btn.callbackData || btn.id || btn.text
+          }])
+        } : undefined
+
+        await sendMessage(chatId, nlpResult.response, {
+          parse_mode: 'Markdown',
+          reply_markup: replyMarkup
+        })
+        return
+      }
+    } catch (nlpError) {
+      console.error('NLP processing error:', nlpError)
+      // Fall through to show menu
+    }
   }
 
   await showMainMenu(chatId)

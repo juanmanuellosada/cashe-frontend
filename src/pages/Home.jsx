@@ -159,8 +159,8 @@ function Home() {
     // Borrar en background
     try {
       await deleteMovement(movement);
-      // Refrescar datos para sincronizar
-      await fetchDashboard();
+      // Refrescar todos los datos para sincronizar (dashboard + movements)
+      await Promise.all([fetchDashboard(), fetchMovements()]);
     } catch (err) {
       console.error('Error deleting movement:', err);
       showError('No se pudo eliminar el movimiento', err.message);

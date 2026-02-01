@@ -28,8 +28,15 @@ export const emit = (event) => {
   // Emit specific event
   listeners.get(event)?.forEach(callback => callback());
 
-  // Also emit ALL_DATA_CHANGED for components that want to listen to everything
-  if (event !== DataEvents.ALL_DATA_CHANGED) {
+  // If emitting ALL_DATA_CHANGED, also notify all specific event listeners
+  if (event === DataEvents.ALL_DATA_CHANGED) {
+    Object.values(DataEvents).forEach(specificEvent => {
+      if (specificEvent !== DataEvents.ALL_DATA_CHANGED) {
+        listeners.get(specificEvent)?.forEach(callback => callback());
+      }
+    });
+  } else {
+    // Also emit ALL_DATA_CHANGED for components that want to listen to everything
     listeners.get(DataEvents.ALL_DATA_CHANGED)?.forEach(callback => callback());
   }
 };

@@ -1,8 +1,13 @@
-// WhatsApp Webhook for Cashé - Button Flow Version v2
-// No AI required - uses interactive buttons and lists
+// WhatsApp Webhook for Cashé - Button Flow Version v3
+// Supports both button flow and natural language processing (NLP)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  processNLPMessage,
+  processCallbackQuery as processNLPCallback,
+  deleteConversationState,
+} from '../_shared/nlp/index.ts'
 
 // Environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -114,18 +119,54 @@ serve(async (req) => {
 })
 
 // ============================================
+// NORMALIZE PHONE NUMBER
+// ============================================
+function normalizePhoneNumber(phone: string): string[] {
+  // Returns array of possible formats to search
+  const cleaned = phone.replace(/\D/g, '')
+  const formats: string[] = [cleaned]
+
+  // Argentine mobile numbers: WhatsApp sends 5491XXXXXXXXX, DB might have 541XXXXXXXXX
+  if (cleaned.startsWith('549') && cleaned.length === 13) {
+    // Remove the 9 after 54
+    formats.push('54' + cleaned.slice(3))
+  }
+  // If DB has format without 9, but we receive with 9
+  if (cleaned.startsWith('54') && !cleaned.startsWith('549') && cleaned.length === 12) {
+    // Add the 9 after 54
+    formats.push('549' + cleaned.slice(2))
+  }
+
+  return formats
+}
+
+// ============================================
 // PROCESS MESSAGE
 // ============================================
 async function processMessage(phoneNumber: string, messageText: string, buttonId: string, listId: string) {
   try {
-    const { data: whatsappUser } = await supabase
-      .from('whatsapp_users')
-      .select('*, user_id')
-      .eq('phone_number', phoneNumber)
-      .eq('verified', true)
-      .single()
+    // Try multiple phone number formats
+    const phoneFormats = normalizePhoneNumber(phoneNumber)
+    console.log(`Looking for phone in formats: ${phoneFormats.join(', ')}`)
+
+    let whatsappUser = null
+    for (const phone of phoneFormats) {
+      const { data } = await supabase
+        .from('whatsapp_users')
+        .select('*, user_id')
+        .eq('phone_number', phone)
+        .eq('verified', true)
+        .single()
+
+      if (data) {
+        whatsappUser = data
+        console.log(`Found user with phone format: ${phone}`)
+        break
+      }
+    }
 
     if (!whatsappUser) {
+      console.log(`User not found for any phone format`)
       await handleUnlinkedUser(phoneNumber, messageText)
       return
     }
@@ -152,6 +193,11 @@ async function processMessage(phoneNumber: string, messageText: string, buttonId
 // ============================================
 // HANDLE UNLINKED USER
 // ============================================
+
+// Simple in-memory cache to prevent spam to unlinked users
+const unlinkedUserLastMessage: Map<string, number> = new Map()
+const UNLINKED_MESSAGE_COOLDOWN = 5 * 60 * 1000 // 5 minutes
+
 async function handleUnlinkedUser(phoneNumber: string, messageText: string) {
   const codeMatch = messageText.trim().match(/^\d{6}$/)
 
@@ -189,6 +235,9 @@ async function handleUnlinkedUser(phoneNumber: string, messageText: string) {
         })
         .eq('id', pendingLink.id)
 
+      // Clear cooldown for this user
+      unlinkedUserLastMessage.delete(phoneNumber)
+
       await sendWhatsAppMessage(phoneNumber, `✅ *¡Cuenta vinculada!*\n\nYa podés usar Cashé por WhatsApp.`)
       await showMainMenu(phoneNumber)
       return
@@ -197,6 +246,18 @@ async function handleUnlinkedUser(phoneNumber: string, messageText: string) {
     await sendWhatsAppMessage(phoneNumber, '❌ Código inválido o expirado.\n\nGenerá uno nuevo desde cashe.ar')
     return
   }
+
+  // Rate limit: don't spam unlinked users with the same message
+  const now = Date.now()
+  const lastSent = unlinkedUserLastMessage.get(phoneNumber)
+
+  if (lastSent && (now - lastSent) < UNLINKED_MESSAGE_COOLDOWN) {
+    // Don't send the message again within 5 minutes
+    console.log(`Skipping unlinked user message for ${phoneNumber} - sent ${Math.round((now - lastSent) / 1000)}s ago`)
+    return
+  }
+
+  unlinkedUserLastMessage.set(phoneNumber, now)
 
   await sendWhatsAppMessage(phoneNumber, `¡Hola! 👋 Soy el bot de *Cashé*.
 
@@ -250,7 +311,7 @@ async function handleFlowStep(
   // Handle based on current step
   switch (flowState.step) {
     case 'idle':
-      await handleIdleStep(whatsappUser, buttonId, listId, phoneNumber)
+      await handleIdleStep(whatsappUser, buttonId, listId, phoneNumber, messageText)
       break
     case 'select_account':
       await handleSelectAccount(whatsappUser, pendingAction, flowState, listId, phoneNumber)
@@ -336,7 +397,7 @@ async function showMoreOptions(phoneNumber: string) {
 // STEP HANDLERS
 // ============================================
 
-async function handleIdleStep(whatsappUser: any, buttonId: string, listId: string, phoneNumber: string) {
+async function handleIdleStep(whatsappUser: any, buttonId: string, listId: string, phoneNumber: string, messageText: string = '') {
   // Main menu uses buttons, more options uses list
   const selection = buttonId || listId
 
@@ -369,6 +430,70 @@ async function handleIdleStep(whatsappUser: any, buttonId: string, listId: strin
   if (selection && selection.startsWith('query_')) {
     await handleQueryStart(whatsappUser, selection, phoneNumber)
     return
+  }
+
+  // Handle NLP confirmation callbacks
+  if (selection && (selection.startsWith('confirm_') || selection.startsWith('edit_') || selection.startsWith('sel_'))) {
+    try {
+      const nlpResult = await processNLPCallback(
+        supabase,
+        'whatsapp',
+        phoneNumber,
+        selection
+      )
+
+      if (nlpResult.success || nlpResult.response) {
+        if (nlpResult.buttons?.length) {
+          await sendWhatsAppButtons(
+            phoneNumber,
+            nlpResult.response,
+            nlpResult.buttons.slice(0, 3).map(btn => ({
+              id: btn.callbackData || btn.id || btn.text,
+              title: btn.text.substring(0, 20)
+            }))
+          )
+        } else {
+          await sendWhatsAppMessage(phoneNumber, nlpResult.response)
+        }
+        return
+      }
+    } catch (nlpError) {
+      console.error('NLP callback error:', nlpError)
+    }
+  }
+
+  // Try NLP processing for natural language messages (when no button/list was pressed)
+  if (!selection && messageText && messageText.length > 3) {
+    try {
+      const nlpResult = await processNLPMessage(
+        supabase,
+        'whatsapp',
+        phoneNumber,
+        messageText
+      )
+
+      // Check if NLP understood the message
+      const notUnderstoodMessage = '🤔 No entendí bien. Probá decirme algo como:\n• "gasté 500 en comida"\n• "saldo galicia"\n• "resumen del mes"\n\nEscribí "ayuda" para ver todo lo que puedo hacer.'
+
+      if (nlpResult.success || nlpResult.response !== notUnderstoodMessage) {
+        if (nlpResult.buttons?.length) {
+          await sendWhatsAppButtons(
+            phoneNumber,
+            nlpResult.response,
+            nlpResult.buttons.slice(0, 3).map(btn => ({
+              id: btn.callbackData || btn.id || btn.text,
+              title: btn.text.substring(0, 20)
+            }))
+          )
+        } else {
+          await sendWhatsAppMessage(phoneNumber, nlpResult.response)
+        }
+        return
+      }
+    } catch (nlpError) {
+      console.error('NLP processing error:', nlpError)
+      // Fall through to show menu
+    }
   }
 
   // Show menu if nothing matched
@@ -1168,7 +1293,8 @@ async function showConfirmation(flowState: FlowState, phoneNumber: string) {
 // WHATSAPP API FUNCTIONS
 // ============================================
 
-function normalizePhoneNumber(phone: string): string {
+function formatPhoneForSending(phone: string): string {
+  // Format phone for sending messages via WhatsApp API
   let normalized = phone.startsWith('+') ? phone : `+${phone}`
   if (normalized.startsWith('+549')) {
     normalized = '+54' + normalized.slice(4)
@@ -1177,7 +1303,7 @@ function normalizePhoneNumber(phone: string): string {
 }
 
 async function sendWhatsAppMessage(to: string, message: string) {
-  const normalizedTo = normalizePhoneNumber(to)
+  const normalizedTo = formatPhoneForSending(to)
   try {
     await fetch(`https://graph.facebook.com/v18.0/${whatsappPhoneId}/messages`, {
       method: 'POST',
@@ -1195,7 +1321,7 @@ async function sendWhatsAppMessage(to: string, message: string) {
 }
 
 async function sendWhatsAppButtons(to: string, body: string, buttons: { id: string, title: string }[], header?: string) {
-  const normalizedTo = normalizePhoneNumber(to)
+  const normalizedTo = formatPhoneForSending(to)
   const interactive: any = {
     type: 'button',
     body: { text: body },
@@ -1225,7 +1351,7 @@ async function sendWhatsAppButtons(to: string, body: string, buttons: { id: stri
 }
 
 async function sendWhatsAppList(to: string, body: string, buttonText: string, sections: { title: string, rows: { id: string, title: string, description?: string }[] }[]) {
-  const normalizedTo = normalizePhoneNumber(to)
+  const normalizedTo = formatPhoneForSending(to)
   try {
     const response = await fetch(`https://graph.facebook.com/v18.0/${whatsappPhoneId}/messages`, {
       method: 'POST',

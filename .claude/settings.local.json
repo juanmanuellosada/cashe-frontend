@@ -49,7 +49,10 @@
       "Bash(curl -s https://pqyrbbylglzmcmhlyybc.supabase.co/functions/v1/scheduled-notifications)",
       "mcp__supabase__get_edge_function",
       "Bash(supabase secrets set:*)",
-      "Bash(supabase secrets list:*)"
+      "Bash(supabase secrets list:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase functions deploy:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -155,39 +155,103 @@ function TelegramLinkSection() {
 
   // Bot features
   const BotFeatures = () => (
-    <div
-      className="p-4 rounded-xl mb-4"
-      style={{ backgroundColor: 'var(--bg-tertiary)' }}
-    >
-      <h4 className="font-medium text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
-        ¿Qué podés hacer con el bot?
-      </h4>
-      <ul className="text-sm space-y-2" style={{ color: 'var(--text-secondary)' }}>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>💸</span>
-          <span><strong>Registrar gastos</strong> - Seleccioná cuenta, categoría y monto</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>💰</span>
-          <span><strong>Registrar ingresos</strong> - Rápido y desde el celular</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>🔄</span>
-          <span><strong>Transferencias</strong> - Entre tus cuentas en pesos y dólares</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>📊</span>
-          <span><strong>Ver saldos</strong> - Consultá el balance de todas tus cuentas</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>📈</span>
-          <span><strong>Resumen mensual</strong> - Gastos por categoría del mes</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span style={{ color: '#0088cc' }}>🕐</span>
-          <span><strong>Últimos movimientos</strong> - Los 10 más recientes</span>
-        </li>
-      </ul>
+    <div className="space-y-4 mb-4">
+      {/* AI Feature highlight */}
+      <div
+        className="p-4 rounded-xl border"
+        style={{
+          backgroundColor: 'rgba(0, 136, 204, 0.08)',
+          borderColor: 'rgba(0, 136, 204, 0.2)'
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: 'rgba(0, 136, 204, 0.15)' }}
+          >
+            <span className="text-xl">🤖</span>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm mb-1" style={{ color: '#0088cc' }}>
+              Con Inteligencia Artificial
+            </h4>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Chateá naturalmente como si hablaras con una persona. El bot entiende lenguaje natural en español argentino.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Examples */}
+      <div
+        className="p-4 rounded-xl"
+        style={{ backgroundColor: 'var(--bg-tertiary)' }}
+      >
+        <h4 className="font-medium text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
+          Ejemplos de lo que podés decir:
+        </h4>
+        <div className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <span>💬</span>
+            <code className="text-xs" style={{ color: '#0088cc' }}>"Gasté 500 en comida con galicia"</code>
+          </div>
+          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <span>💬</span>
+            <code className="text-xs" style={{ color: '#0088cc' }}>"Cobré 50000 de sueldo en santander"</code>
+          </div>
+          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <span>💬</span>
+            <code className="text-xs" style={{ color: '#0088cc' }}>"Transferí 10k de mp a brubank"</code>
+          </div>
+          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <span>💬</span>
+            <code className="text-xs" style={{ color: '#0088cc' }}>"Cuánto gasté en comida este mes?"</code>
+          </div>
+          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <span>💬</span>
+            <code className="text-xs" style={{ color: '#0088cc' }}>"Saldo mercadopago"</code>
+          </div>
+        </div>
+      </div>
+
+      {/* Features list */}
+      <div
+        className="p-4 rounded-xl"
+        style={{ backgroundColor: 'var(--bg-tertiary)' }}
+      >
+        <h4 className="font-medium text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
+          Funcionalidades
+        </h4>
+        <div className="grid grid-cols-2 gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>💸</span>
+            <span>Gastos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>💰</span>
+            <span>Ingresos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>🔄</span>
+            <span>Transferencias</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>📊</span>
+            <span>Saldos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>📈</span>
+            <span>Resumen mensual</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: '#0088cc' }}>🕐</span>
+            <span>Últimos movimientos</span>
+          </div>
+        </div>
+        <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+          También podés usar los botones del menú si preferís
+        </p>
+      </div>
     </div>
   );
 

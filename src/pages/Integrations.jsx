@@ -15,6 +15,54 @@ function Integrations() {
         </p>
       </div>
 
+      {/* AI Bot Banner */}
+      <div
+        className="rounded-2xl p-5 border"
+        style={{
+          background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
+          borderColor: 'rgba(20, 184, 166, 0.2)'
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: 'rgba(20, 184, 166, 0.2)' }}
+          >
+            <span className="text-2xl">🤖</span>
+          </div>
+          <div>
+            <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Bots con Inteligencia Artificial
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Nuestros bots de Telegram y WhatsApp entienden <strong>lenguaje natural</strong>.
+              Escribí como si chatearas con un amigo: <em>"gasté 500 en el super con mp"</em> y
+              el bot lo entiende automáticamente.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
+              >
+                <span>✨</span> Español argentino
+              </span>
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
+              >
+                <span>🎯</span> Entiende aliases (mp, gal, bru)
+              </span>
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
+              >
+                <span>✅</span> Confirmación antes de guardar
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Integrations list */}
       <div className="space-y-4">
         {/* Push Notifications */}
