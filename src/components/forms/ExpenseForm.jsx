@@ -110,6 +110,30 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     return generarPeriodosResumen(diaCierre);
   }, [esTarjetaCredito, diaCierre]);
 
+  // Calcular info de cierre de tarjeta
+  const infoCierreTarjeta = useMemo(() => {
+    if (!esTarjetaCredito) return null;
+
+    const today = new Date();
+    const currentDay = today.getDate();
+    const yaCerro = currentDay >= diaCierre;
+
+    // Período que corresponde según la fecha actual
+    let periodoCorrespondiente = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (yaCerro) {
+      periodoCorrespondiente = addMonths(periodoCorrespondiente, 1);
+    }
+
+    const periodoLabel = format(periodoCorrespondiente, "MMMM yyyy", { locale: es });
+    const periodoCapitalized = periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1);
+
+    return {
+      yaCerro,
+      diaCierre,
+      periodoCorrespondiente: periodoCapitalized,
+    };
+  }, [esTarjetaCredito, diaCierre]);
+
   // Establecer período actual por defecto cuando se selecciona una tarjeta
   useEffect(() => {
     if (esTarjetaCredito && periodosResumen.length > 0 && !periodoResumen) {
@@ -262,30 +286,57 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
               : 'Fecha'}
           </label>
           {esTarjetaCredito ? (
-            <div className="relative">
-              <select
-                value={periodoResumen}
-                onChange={(e) => setPeriodoResumen(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
-                style={{
-                  backgroundColor: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {periodosResumen.map((periodo) => (
-                  <option key={periodo.value} value={periodo.value}>
-                    {periodo.label} {periodo.isCurrent ? '(actual)' : ''}
-                  </option>
-                ))}
-              </select>
-              <div
-                className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+            <div className="space-y-2">
+              <div className="relative">
+                <select
+                  value={periodoResumen}
+                  onChange={(e) => setPeriodoResumen(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl appearance-none cursor-pointer transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {periodosResumen.map((periodo) => (
+                    <option key={periodo.value} value={periodo.value}>
+                      {periodo.label} {periodo.isCurrent ? '(actual)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <div
+                  className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
+              {/* Info de cierre de tarjeta */}
+              {infoCierreTarjeta && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                  style={{
+                    backgroundColor: infoCierreTarjeta.yaCerro
+                      ? 'rgba(251, 191, 36, 0.1)'
+                      : 'rgba(34, 197, 94, 0.1)',
+                    color: infoCierreTarjeta.yaCerro
+                      ? 'var(--accent-yellow, #fbbf24)'
+                      : 'var(--accent-green)',
+                  }}
+                >
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    {infoCierreTarjeta.yaCerro ? (
+                      <>Tu tarjeta ya cerró (día {infoCierreTarjeta.diaCierre}). Hoy corresponde cargar en: <strong>{infoCierreTarjeta.periodoCorrespondiente}</strong></>
+                    ) : (
+                      <>Tu tarjeta cierra el día {infoCierreTarjeta.diaCierre}. Hoy corresponde al resumen actual</>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <DatePicker
