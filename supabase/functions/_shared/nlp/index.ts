@@ -131,12 +131,13 @@ async function processStatefulMessage(
 ): Promise<ProcessMessageResult> {
   const normalized = normalizeText(text);
 
-  // Verificar cancelación en cualquier estado
-  if (/^(cancel(?:ar)?|salir|x|0)$/i.test(normalized)) {
+  // Verificar cancelación/reset en cualquier estado
+  const resetPattern = /^(cancel(?:ar)?|salir|x|0|reiniciar|reset(?:ear)?|volver|atr[aá]s|back|empezar|comenzar|inicio|nuevo|nueva|limpiar|clear|stop|parar|detener|no|nada|olvida(?:te|lo)?|dej[aá])$/i;
+  if (resetPattern.test(normalized)) {
     await deleteConversationState(supabase, platform, platformUserId);
     return {
       success: true,
-      response: RESPONSES.CANCELADO,
+      response: "❌ Conversación reiniciada. Escribí lo que necesites.",
       shouldClearState: true,
     };
   }
@@ -485,9 +486,11 @@ async function processNewMessage(
 ): Promise<ProcessMessageResult> {
   // 1. Clasificar intent con regex
   const intentResult = classifyIntent(text);
+  console.log(`[NLP] Intent classification: ${intentResult.intent} (confidence: ${intentResult.confidence}, pattern: ${intentResult.matchedPattern})`);
 
   // 2. Extraer entidades con regex
   let entities = extractEntities(text, intentResult.intent);
+  console.log(`[NLP] Extracted entities:`, JSON.stringify(entities));
 
   // 3. Si la confianza es baja, usar Groq como fallback
   let finalIntent = intentResult.intent;
@@ -528,6 +531,8 @@ async function processNewMessage(
   // 6. Resolver entidades con fuzzy matching
   const { resolved, needsDisambiguation, disambiguationField, disambiguationOptions } =
     resolveEntities(entities, context, finalIntent);
+  console.log(`[NLP] Resolved entities:`, JSON.stringify(resolved));
+  console.log(`[NLP] Needs disambiguation: ${needsDisambiguation}, field: ${disambiguationField}`);
 
   // 7. Si necesita desambiguación, solicitar
   if (needsDisambiguation && disambiguationOptions && disambiguationField) {

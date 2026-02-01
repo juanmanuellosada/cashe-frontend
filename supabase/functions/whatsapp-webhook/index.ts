@@ -89,6 +89,7 @@ serve(async (req) => {
       }
 
       const phoneNumber = message.from
+      const messageId = message.id // WhatsApp message ID for deduplication
       let messageText = ''
       let buttonId = ''
       let listId = ''
@@ -105,8 +106,8 @@ serve(async (req) => {
         }
       }
 
-      console.log(`Message from ${phoneNumber}: ${messageText}`)
-      await processMessage(phoneNumber, messageText, buttonId, listId)
+      console.log(`Message from ${phoneNumber} (id: ${messageId}): ${messageText}`)
+      await processMessage(phoneNumber, messageText, buttonId, listId, messageId)
 
       return new Response('OK', { status: 200 })
     } catch (error) {
@@ -143,8 +144,42 @@ function normalizePhoneNumber(phone: string): string[] {
 // ============================================
 // PROCESS MESSAGE
 // ============================================
-async function processMessage(phoneNumber: string, messageText: string, buttonId: string, listId: string) {
+async function processMessage(phoneNumber: string, messageText: string, buttonId: string, listId: string, messageId?: string) {
   try {
+    // Database-based deduplication: prevent processing the same message twice
+    // This works across multiple function instances
+    if (messageId) {
+      // Try to insert the message ID - if it already exists, skip processing
+      const { error: dedupError } = await supabase
+        .from('whatsapp_processed_messages')
+        .insert({
+          message_id: messageId,
+          phone_number: phoneNumber
+        })
+
+      if (dedupError) {
+        // Unique constraint violation means message was already processed
+        if (dedupError.code === '23505') {
+          console.log(`Skipping duplicate message (DB): ${messageId}`)
+          return
+        }
+        // Other errors - log but continue (table might not exist yet)
+        console.warn('Dedup insert warning:', dedupError.message)
+      } else {
+        console.log(`Message ${messageId} marked as processed`)
+      }
+
+      // Clean old entries periodically (1% chance to trigger cleanup)
+      if (Math.random() < 0.01) {
+        supabase
+          .from('whatsapp_processed_messages')
+          .delete()
+          .lt('processed_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+          .then(() => console.log('Cleaned old processed messages'))
+          .catch(() => {}) // Ignore cleanup errors
+      }
+    }
+
     // Try multiple phone number formats
     const phoneFormats = normalizePhoneNumber(phoneNumber)
     console.log(`Looking for phone in formats: ${phoneFormats.join(', ')}`)
@@ -287,13 +322,21 @@ async function handleFlowStep(
     await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
   }
 
-  // Global commands - cancel/restart
-  const cancelWords = ['cancelar', 'cancel', 'salir', 'x']
+  // Global commands - cancel/restart conversation
+  const resetWords = [
+    'cancelar', 'cancel', 'salir', 'x', '0',
+    'reiniciar', 'reset', 'resetear',
+    'volver', 'atras', 'atrás', 'back',
+    'empezar', 'comenzar', 'inicio',
+    'nuevo', 'nueva', 'limpiar', 'clear',
+    'stop', 'parar', 'detener',
+    'no', 'nada', 'olvidate', 'olvidalo', 'dejá', 'deja'
+  ]
 
-  if (cancelWords.includes(lowerText)) {
+  if (resetWords.includes(lowerText)) {
     // Also clear NLP conversation state
     await deleteConversationState(supabase, 'whatsapp', phoneNumber)
-    await sendWhatsAppMessage(phoneNumber, '❌ Cancelado.')
+    await sendWhatsAppMessage(phoneNumber, '❌ Conversación reiniciada. Escribí lo que necesites.')
     return
   }
 
@@ -387,17 +430,22 @@ async function handleIdleStep(whatsappUser: any, buttonId: string, listId: strin
         messageText
       )
 
-      if (nlpResult.buttons?.length) {
-        await sendWhatsAppButtons(
-          phoneNumber,
-          nlpResult.response,
-          nlpResult.buttons.slice(0, 3).map(btn => ({
-            id: btn.callbackData || btn.id || btn.text,
-            title: btn.text.substring(0, 20)
-          }))
-        )
+      // Always send NLP response if we got one
+      if (nlpResult.response) {
+        if (nlpResult.buttons?.length) {
+          await sendWhatsAppButtons(
+            phoneNumber,
+            nlpResult.response,
+            nlpResult.buttons.slice(0, 3).map(btn => ({
+              id: btn.callbackData || btn.id || btn.text,
+              title: btn.text.substring(0, 20)
+            }))
+          )
+        } else {
+          await sendWhatsAppMessage(phoneNumber, nlpResult.response)
+        }
+        return
       }
-      return
     } catch (nlpError) {
       console.error('NLP processing error:', nlpError)
     }

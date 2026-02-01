@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, updateSubsequentInstallments } from '../services/supabaseApi';
+import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, updateSubsequentInstallments, deleteMovement } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
@@ -467,6 +467,37 @@ function CreditCards() {
     } catch (err) {
       console.error('Error updating movement:', err);
       showError('No se pudo actualizar el movimiento', err.message);
+    }
+  };
+
+  // Handler para eliminar movimiento
+  const handleDeleteMovement = async (movement) => {
+    try {
+      await deleteMovement(movement);
+      setEditingMovement(null);
+
+      // Actualización optimista: remover el item del viewingStatement
+      if (viewingStatement) {
+        setViewingStatement(prev => {
+          if (!prev) return prev;
+
+          const removeFromItems = (items) => items.filter(item => item.id !== movement.id);
+
+          return {
+            ...prev,
+            items: removeFromItems(prev.items || []),
+            itemsPesos: removeFromItems(prev.itemsPesos || []),
+            itemsDolares: removeFromItems(prev.itemsDolares || []),
+            itemCount: (prev.itemCount || 1) - 1,
+          };
+        });
+      }
+
+      // Refrescar datos en background
+      fetchData(true, false);
+    } catch (err) {
+      console.error('Error deleting movement:', err);
+      showError('No se pudo eliminar el movimiento', err.message);
     }
   };
 
@@ -1501,6 +1532,7 @@ function CreditCards() {
           accounts={allAccounts}
           categories={allCategories}
           onSave={handleSaveMovement}
+          onDelete={handleDeleteMovement}
           onClose={() => setEditingMovement(null)}
           onConvertedToRecurring={() => fetchData(true, false)}
         />

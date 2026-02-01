@@ -31,6 +31,12 @@ const MATCH_THRESHOLD = 0.4;
 const EXACT_MATCH_THRESHOLD = 0.85;
 
 /**
+ * Diferencia mínima de score para considerar al primer match como claramente mejor
+ * Si el primer match tiene 0.9 y el segundo 0.7, la diferencia es 0.2 > 0.15, así que usamos el primero
+ */
+const CLEAR_WINNER_THRESHOLD = 0.15;
+
+/**
  * Busca una cuenta en los datos del usuario
  */
 export function findAccount(
@@ -40,20 +46,37 @@ export function findAccount(
   if (!query || !accounts.length) return [];
 
   const normalizedQuery = normalizeText(query);
+  const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 1);
   const matches: FuzzyMatch[] = [];
 
   for (const account of accounts) {
     let bestScore = 0;
     let bestAlias: string | undefined;
 
-    // 1. Match directo con nombre de cuenta
+    // 1. Match directo con nombre de cuenta (normalizado, sin comas ni puntuación)
     const normalizedName = normalizeText(account.name);
     const directScore = calculateSimilarity(normalizedQuery, normalizedName);
     if (directScore > bestScore) {
       bestScore = directScore;
     }
 
-    // 2. Match con aliases conocidos
+    // 2. Match especial para tarjetas: "visa galicia" debe matchear "VISA, Galicia" con score alto
+    // Verificar si TODAS las palabras del query están en el nombre de la cuenta
+    const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 1);
+    const allQueryWordsMatch = queryWords.length > 0 && queryWords.every(qw =>
+      nameWords.some(nw => nw.includes(qw) || qw.includes(nw))
+    );
+
+    if (allQueryWordsMatch) {
+      // Calcular score basado en cuántas palabras coinciden y qué tan exactamente
+      const matchRatio = queryWords.length / Math.max(nameWords.length, 1);
+      const allWordsScore = 0.85 + (matchRatio * 0.1); // 0.85-0.95
+      if (allWordsScore > bestScore) {
+        bestScore = allWordsScore;
+      }
+    }
+
+    // 3. Match con aliases conocidos
     for (const [key, aliases] of Object.entries(ACCOUNT_ALIASES)) {
       for (const alias of aliases) {
         const normalizedAlias = normalizeText(alias);
@@ -81,16 +104,13 @@ export function findAccount(
       }
     }
 
-    // 3. Match parcial con palabras del nombre
-    const nameWords = normalizedName.split(/\s+/);
-    const queryWords = normalizedQuery.split(/\s+/);
-
+    // 4. Match parcial con palabras del nombre (penalizado)
     for (const nameWord of nameWords) {
       for (const queryWord of queryWords) {
         if (nameWord.length > 2 && queryWord.length > 2) {
           const wordScore = calculateSimilarity(queryWord, nameWord);
-          // Ajustar score por longitud de match
-          const adjustedScore = wordScore * 0.8;
+          // Penalizar más los matches parciales para evitar falsos positivos
+          const adjustedScore = wordScore * 0.7;
           if (adjustedScore > bestScore) {
             bestScore = adjustedScore;
           }
@@ -224,34 +244,42 @@ export function resolveEntities(
   if (entities.account && !entities.accountId) {
     const accountMatches = findAccount(entities.account, context.accounts);
 
-    if (accountMatches.length === 1 && accountMatches[0].score >= EXACT_MATCH_THRESHOLD) {
-      // Match exacto
-      const account = accountMatches[0].item as UserAccount;
-      resolved.accountId = account.id;
-      resolved.account = account.name;
-    } else if (accountMatches.length > 1) {
-      // Múltiples matches - necesita desambiguación
-      return {
-        resolved,
-        needsDisambiguation: true,
-        disambiguationField: "account",
-        disambiguationOptions: accountMatches.slice(0, 5).map((m) => {
-          const acc = m.item as UserAccount;
-          return {
-            id: acc.id,
-            name: acc.name,
-            displayName: acc.name,
-            icon: acc.icon,
-            balance: acc.balance,
-            currency: acc.currency,
-          };
-        }),
-      };
-    } else if (accountMatches.length === 1) {
-      // Un solo match pero no exacto - usar igual
-      const account = accountMatches[0].item as UserAccount;
-      resolved.accountId = account.id;
-      resolved.account = account.name;
+    if (accountMatches.length >= 1) {
+      const bestMatch = accountMatches[0];
+      const secondBestScore = accountMatches.length > 1 ? accountMatches[1].score : 0;
+      const scoreDifference = bestMatch.score - secondBestScore;
+
+      // Usar el mejor match si:
+      // 1. Es el único match, O
+      // 2. Tiene score exacto (>= 0.85), O
+      // 3. Hay diferencia clara con el segundo (>= 0.15)
+      if (
+        accountMatches.length === 1 ||
+        bestMatch.score >= EXACT_MATCH_THRESHOLD ||
+        scoreDifference >= CLEAR_WINNER_THRESHOLD
+      ) {
+        const account = bestMatch.item as UserAccount;
+        resolved.accountId = account.id;
+        resolved.account = account.name;
+      } else {
+        // Múltiples matches muy cercanos - necesita desambiguación
+        return {
+          resolved,
+          needsDisambiguation: true,
+          disambiguationField: "account",
+          disambiguationOptions: accountMatches.slice(0, 5).map((m) => {
+            const acc = m.item as UserAccount;
+            return {
+              id: acc.id,
+              name: acc.name,
+              displayName: acc.name,
+              icon: acc.icon,
+              balance: acc.balance,
+              currency: acc.currency,
+            };
+          }),
+        };
+      }
     }
   }
 
@@ -259,31 +287,37 @@ export function resolveEntities(
   if (entities.fromAccount && !entities.fromAccountId) {
     const fromMatches = findAccount(entities.fromAccount, context.accounts);
 
-    if (fromMatches.length === 1 && fromMatches[0].score >= EXACT_MATCH_THRESHOLD) {
-      const account = fromMatches[0].item as UserAccount;
-      resolved.fromAccountId = account.id;
-      resolved.fromAccount = account.name;
-    } else if (fromMatches.length > 1) {
-      return {
-        resolved,
-        needsDisambiguation: true,
-        disambiguationField: "fromAccount",
-        disambiguationOptions: fromMatches.slice(0, 5).map((m) => {
-          const acc = m.item as UserAccount;
-          return {
-            id: acc.id,
-            name: acc.name,
-            displayName: acc.name,
-            icon: acc.icon,
-            balance: acc.balance,
-            currency: acc.currency,
-          };
-        }),
-      };
-    } else if (fromMatches.length === 1) {
-      const account = fromMatches[0].item as UserAccount;
-      resolved.fromAccountId = account.id;
-      resolved.fromAccount = account.name;
+    if (fromMatches.length >= 1) {
+      const bestMatch = fromMatches[0];
+      const secondBestScore = fromMatches.length > 1 ? fromMatches[1].score : 0;
+      const scoreDifference = bestMatch.score - secondBestScore;
+
+      if (
+        fromMatches.length === 1 ||
+        bestMatch.score >= EXACT_MATCH_THRESHOLD ||
+        scoreDifference >= CLEAR_WINNER_THRESHOLD
+      ) {
+        const account = bestMatch.item as UserAccount;
+        resolved.fromAccountId = account.id;
+        resolved.fromAccount = account.name;
+      } else {
+        return {
+          resolved,
+          needsDisambiguation: true,
+          disambiguationField: "fromAccount",
+          disambiguationOptions: fromMatches.slice(0, 5).map((m) => {
+            const acc = m.item as UserAccount;
+            return {
+              id: acc.id,
+              name: acc.name,
+              displayName: acc.name,
+              icon: acc.icon,
+              balance: acc.balance,
+              currency: acc.currency,
+            };
+          }),
+        };
+      }
     }
   }
 
@@ -291,31 +325,37 @@ export function resolveEntities(
   if (entities.toAccount && !entities.toAccountId) {
     const toMatches = findAccount(entities.toAccount, context.accounts);
 
-    if (toMatches.length === 1 && toMatches[0].score >= EXACT_MATCH_THRESHOLD) {
-      const account = toMatches[0].item as UserAccount;
-      resolved.toAccountId = account.id;
-      resolved.toAccount = account.name;
-    } else if (toMatches.length > 1) {
-      return {
-        resolved,
-        needsDisambiguation: true,
-        disambiguationField: "toAccount",
-        disambiguationOptions: toMatches.slice(0, 5).map((m) => {
-          const acc = m.item as UserAccount;
-          return {
-            id: acc.id,
-            name: acc.name,
-            displayName: acc.name,
-            icon: acc.icon,
-            balance: acc.balance,
-            currency: acc.currency,
-          };
-        }),
-      };
-    } else if (toMatches.length === 1) {
-      const account = toMatches[0].item as UserAccount;
-      resolved.toAccountId = account.id;
-      resolved.toAccount = account.name;
+    if (toMatches.length >= 1) {
+      const bestMatch = toMatches[0];
+      const secondBestScore = toMatches.length > 1 ? toMatches[1].score : 0;
+      const scoreDifference = bestMatch.score - secondBestScore;
+
+      if (
+        toMatches.length === 1 ||
+        bestMatch.score >= EXACT_MATCH_THRESHOLD ||
+        scoreDifference >= CLEAR_WINNER_THRESHOLD
+      ) {
+        const account = bestMatch.item as UserAccount;
+        resolved.toAccountId = account.id;
+        resolved.toAccount = account.name;
+      } else {
+        return {
+          resolved,
+          needsDisambiguation: true,
+          disambiguationField: "toAccount",
+          disambiguationOptions: toMatches.slice(0, 5).map((m) => {
+            const acc = m.item as UserAccount;
+            return {
+              id: acc.id,
+              name: acc.name,
+              displayName: acc.name,
+              icon: acc.icon,
+              balance: acc.balance,
+              currency: acc.currency,
+            };
+          }),
+        };
+      }
     }
   }
 
@@ -327,29 +367,35 @@ export function resolveEntities(
       expectedCategoryType || undefined
     );
 
-    if (categoryMatches.length === 1 && categoryMatches[0].score >= EXACT_MATCH_THRESHOLD) {
-      const category = categoryMatches[0].item as UserCategory;
-      resolved.categoryId = category.id;
-      resolved.category = category.name;
-    } else if (categoryMatches.length > 1) {
-      return {
-        resolved,
-        needsDisambiguation: true,
-        disambiguationField: "category",
-        disambiguationOptions: categoryMatches.slice(0, 5).map((m) => {
-          const cat = m.item as UserCategory;
-          return {
-            id: cat.id,
-            name: cat.name,
-            displayName: `${cat.icon || ""} ${cat.name}`.trim(),
-            icon: cat.icon,
-          };
-        }),
-      };
-    } else if (categoryMatches.length === 1) {
-      const category = categoryMatches[0].item as UserCategory;
-      resolved.categoryId = category.id;
-      resolved.category = category.name;
+    if (categoryMatches.length >= 1) {
+      const bestMatch = categoryMatches[0];
+      const secondBestScore = categoryMatches.length > 1 ? categoryMatches[1].score : 0;
+      const scoreDifference = bestMatch.score - secondBestScore;
+
+      if (
+        categoryMatches.length === 1 ||
+        bestMatch.score >= EXACT_MATCH_THRESHOLD ||
+        scoreDifference >= CLEAR_WINNER_THRESHOLD
+      ) {
+        const category = bestMatch.item as UserCategory;
+        resolved.categoryId = category.id;
+        resolved.category = category.name;
+      } else {
+        return {
+          resolved,
+          needsDisambiguation: true,
+          disambiguationField: "category",
+          disambiguationOptions: categoryMatches.slice(0, 5).map((m) => {
+            const cat = m.item as UserCategory;
+            return {
+              id: cat.id,
+              name: cat.name,
+              displayName: `${cat.icon || ""} ${cat.name}`.trim(),
+              icon: cat.icon,
+            };
+          }),
+        };
+      }
     }
   }
 

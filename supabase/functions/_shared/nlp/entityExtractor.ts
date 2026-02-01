@@ -47,12 +47,13 @@ export function extractEntities(
     const installments = extractInstallments(text);
     if (installments) {
       entities.installments = installments;
+    }
 
-      // Si hay cuotas, buscar fecha de primera cuota
-      const firstInstallmentDate = extractFirstInstallmentDate(text);
-      if (firstInstallmentDate) {
-        entities.firstInstallmentDate = firstInstallmentDate;
-      }
+    // Buscar fecha de primera cuota/resumen SIEMPRE para gastos
+    // Esto permite que "primera cuota marzo 2026" funcione aunque no haya cuotas explícitas
+    const firstInstallmentDate = extractFirstInstallmentDate(text);
+    if (firstInstallmentDate) {
+      entities.firstInstallmentDate = firstInstallmentDate;
     }
   }
 
@@ -332,12 +333,12 @@ export function extractRemainingAsNote(
 
   // Palabras/patrones a remover (verbos, preposiciones, etc.)
   const wordsToRemove = [
-    // Verbos de acción
-    /\b(compr[eéo]|gast[eéo]|pagu[eé]|cobr[eé]|recib[ií]|transfer[ií]|pas[eé])\b/gi,
-    // Preposiciones y artículos
-    /\b(con|en|de|del|la|el|los|las|un|una|unos|unas|a|al|para|por)\b/gi,
+    // Verbos de acción (en todas sus conjugaciones comunes)
+    /\b(compr[eéoa]r?|gast[eéoa]r?|pagu[eéo]|pagar|cobr[eéoa]r?|recib[iíoa]r?|transfer[iíoa]r?|pas[eéoa]r?|abon[eéoa]r?|debit[eéoa]r?|puse|puso)\b/gi,
+    // Preposiciones, artículos y conectores
+    /\b(con|en|de|del|la|el|los|las|un|una|unos|unas|a|al|para|por|que|y|o)\b/gi,
     // Palabras de cuotas
-    /\b(cuotas?|primera\s+cuota|resumen|cierra|entra)\b/gi,
+    /\b(cuotas?|primera\s+cuota|primera|resumen|cierra|entra)\b/gi,
     // Meses
     /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi,
     // Años
@@ -347,7 +348,11 @@ export function extractRemainingAsNote(
     // Palabras de moneda
     /\b(pesos|dolares|usd|ars)\b/gi,
     // Tarjetas de crédito
-    /\b(visa|mastercard|master|amex|cabal|naranja|nativa|tarjeta)\b/gi,
+    /\b(visa|mastercard|master|amex|cabal|naranja|nativa|tarjeta|tc)\b/gi,
+    // Bancos y entidades financieras argentinas
+    /\b(galicia|santander|bbva|frances|macro|nacion|provincia|ciudad|icbc|hsbc|brubank|ual[aá]|mercadopago|mercado\s*pago|mp|bru|gal|san|personal\s*pay|prex|bna|lemon|modo)\b/gi,
+    // Tipos de cuenta
+    /\b(caja\s+de\s+ahorro|cuenta\s+corriente|efectivo|billetera|fima|premium)\b/gi,
   ];
 
   // Remover patterns conocidos
@@ -355,16 +360,24 @@ export function extractRemainingAsNote(
     text = text.replace(pattern, ' ');
   }
 
-  // Remover nombre de cuenta si se extrajo
+  // Remover nombre de cuenta si se extrajo (cada palabra por separado)
   if (extractedEntities.account) {
-    const accountLower = extractedEntities.account.toLowerCase();
-    text = text.replace(new RegExp(`\\b${escapeRegex(accountLower)}\\b`, 'gi'), ' ');
+    const accountWords = extractedEntities.account.toLowerCase().split(/[\s,]+/);
+    for (const word of accountWords) {
+      if (word.length > 1) {
+        text = text.replace(new RegExp(`\\b${escapeRegex(word)}\\b`, 'gi'), ' ');
+      }
+    }
   }
 
-  // Remover nombre de categoría si se extrajo
+  // Remover nombre de categoría si se extrajo (cada palabra por separado)
   if (extractedEntities.category) {
-    const categoryLower = extractedEntities.category.toLowerCase();
-    text = text.replace(new RegExp(`\\b${escapeRegex(categoryLower)}\\b`, 'gi'), ' ');
+    const categoryWords = extractedEntities.category.toLowerCase().split(/[\s,]+/);
+    for (const word of categoryWords) {
+      if (word.length > 1) {
+        text = text.replace(new RegExp(`\\b${escapeRegex(word)}\\b`, 'gi'), ' ');
+      }
+    }
   }
 
   // Limpiar puntuación y espacios múltiples

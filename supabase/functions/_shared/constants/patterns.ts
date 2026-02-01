@@ -147,8 +147,10 @@ export function normalizeText(text: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(NORMALIZE_PATTERN, "")
-    .replace(/[,;.]+/g, " ")  // Reemplazar puntuación por espacios
-    .replace(/\s+/g, " ")     // Colapsar múltiples espacios
+    // Reemplazar comas que NO están entre dígitos (evitar romper números como 36.666)
+    .replace(/,(?!\d)/g, " ")
+    .replace(/(?<!\d),/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 

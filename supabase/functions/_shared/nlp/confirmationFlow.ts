@@ -43,11 +43,14 @@ export function buildConfirmationPreview(
   const installments = entities.installments || 0;
   const installmentAmount = installments > 1 ? Math.round(totalAmount / installments) : totalAmount;
 
-  // Calcular fecha de primera cuota para mostrar el mes del resumen
+  // Verificar si es una tarjeta de crédito
+  const account = context.accounts.find(a => a.id === entities.accountId);
+  const isCreditCard = account?.is_credit_card === true;
+
+  // Calcular fecha del resumen para tarjetas de crédito (incluso con 1 cuota)
   let resumenLabel = "-";
-  if (installments > 1) {
-    // Si el usuario especificó fecha, usarla; si no, calcular automáticamente
-    const account = context.accounts.find(a => a.id === entities.accountId);
+  if (isCreditCard || installments > 1) {
+    // Si el usuario especificó fecha de primera cuota, usarla; si no, calcular automáticamente
     const closingDay = account?.closing_day || 1;
     const purchaseDate = entities.date || new Date().toISOString().split("T")[0];
     const firstDate = entities.firstInstallmentDate || calculateFirstCuotaDate(purchaseDate, closingDay);
@@ -70,8 +73,17 @@ export function buildConfirmationPreview(
   let template: string;
   switch (intent) {
     case "REGISTRAR_GASTO":
-      // Usar template de cuotas si hay más de 1 cuota
-      template = installments > 1 ? RESPONSES.PREVIEW_GASTO_CUOTAS : RESPONSES.PREVIEW_GASTO;
+      // Usar template según tipo:
+      // - Más de 1 cuota: PREVIEW_GASTO_CUOTAS (muestra total, cuotas y resumen)
+      // - Tarjeta con 1 cuota: PREVIEW_GASTO_TARJETA (muestra resumen)
+      // - Cuenta normal: PREVIEW_GASTO
+      if (installments > 1) {
+        template = RESPONSES.PREVIEW_GASTO_CUOTAS;
+      } else if (isCreditCard) {
+        template = RESPONSES.PREVIEW_GASTO_TARJETA;
+      } else {
+        template = RESPONSES.PREVIEW_GASTO;
+      }
       break;
     case "REGISTRAR_INGRESO":
       template = RESPONSES.PREVIEW_INGRESO;

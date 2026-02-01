@@ -66,11 +66,33 @@ async function createMovement(
   entities: ParsedEntities,
   context: UserContext
 ): Promise<ActionResult> {
-  const date = entities.date || getTodayISO();
-
-  // Si es un gasto con cuotas, crear compra en cuotas
+  // Si es un gasto con cuotas (más de 1), crear compra en cuotas
   if (type === "expense" && entities.installments && entities.installments > 1) {
+    const date = entities.date || getTodayISO();
     return await createInstallmentPurchase(supabase, userId, entities, context, date);
+  }
+
+  // Verificar si es tarjeta de crédito para usar la fecha correcta
+  const account = context.accounts.find(a => a.id === entities.accountId);
+  const isCreditCard = account?.is_credit_card === true;
+
+  // Determinar la fecha del movimiento
+  let date: string;
+
+  // PRIORIDAD 1: Si el usuario especificó fecha de primera cuota/resumen, usarla SIEMPRE
+  // Esto cubre casos como "primera cuota marzo 2026" o "resumen abril"
+  if (entities.firstInstallmentDate) {
+    date = entities.firstInstallmentDate;
+  }
+  // PRIORIDAD 2: Si es tarjeta de crédito sin fecha especificada, calcular automáticamente
+  else if (isCreditCard) {
+    const purchaseDate = entities.date || getTodayISO();
+    const closingDay = account?.closing_day || 1;
+    date = calculateFirstInstallmentDate(purchaseDate, closingDay);
+  }
+  // PRIORIDAD 3: Usar fecha especificada o hoy
+  else {
+    date = entities.date || getTodayISO();
   }
 
   // Movimiento simple (sin cuotas)

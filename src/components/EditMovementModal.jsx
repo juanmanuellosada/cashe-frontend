@@ -222,8 +222,9 @@ function EditMovementModal({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!movement?.rowIndex) {
-      showError('No se puede eliminar el movimiento', 'Falta información del movimiento (rowIndex)');
+    // Aceptar tanto id como rowIndex para identificar el movimiento
+    if (!movement?.id && !movement?.rowIndex) {
+      showError('No se puede eliminar el movimiento', 'Falta información del movimiento');
       return;
     }
     if (!onDelete) {
