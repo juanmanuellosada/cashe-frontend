@@ -104,6 +104,9 @@ export const INSTALLMENT_PATTERNS = {
 
   // "cuota 3 de 12", "3/12"
   current: /(?:cuota\s+)?(\d{1,2})\s*(?:de|\/)\s*(\d{1,2})/i,
+
+  // "primera cuota en marzo", "resumen marzo", "cierra en abril", "entra en mayo"
+  firstInstallment: /(?:primera\s+cuota\s+(?:en\s+)?|resumen\s+(?:de\s+)?|cierra\s+(?:en\s+)?|entra\s+(?:en\s+)?)([a-záéíóú]+)(?:\s+(\d{4}))?/i,
 };
 
 // Patrones para confirmación

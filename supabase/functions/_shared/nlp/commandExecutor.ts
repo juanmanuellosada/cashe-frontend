@@ -57,6 +57,7 @@ export async function executeWriteAction(
 
 /**
  * Crea un movimiento (gasto o ingreso)
+ * Si es un gasto con cuotas, crea la compra en cuotas y todos los movimientos
  */
 async function createMovement(
   supabase: SupabaseClient,
@@ -67,6 +68,12 @@ async function createMovement(
 ): Promise<ActionResult> {
   const date = entities.date || getTodayISO();
 
+  // Si es un gasto con cuotas, crear compra en cuotas
+  if (type === "expense" && entities.installments && entities.installments > 1) {
+    return await createInstallmentPurchase(supabase, userId, entities, context, date);
+  }
+
+  // Movimiento simple (sin cuotas)
   const movementData = {
     user_id: userId,
     type,
@@ -118,6 +125,163 @@ async function createMovement(
       date,
     },
   };
+}
+
+/**
+ * Crea una compra en cuotas con tarjeta de crédito
+ */
+async function createInstallmentPurchase(
+  supabase: SupabaseClient,
+  userId: string,
+  entities: ParsedEntities,
+  context: UserContext,
+  startDate: string
+): Promise<ActionResult> {
+  const totalAmount = entities.amount || 0;
+  const installments = entities.installments || 1;
+  const installmentAmount = Math.round(totalAmount / installments);
+
+  // Obtener info de la cuenta (tarjeta)
+  const account = context.accounts.find(a => a.id === entities.accountId);
+  const closingDay = account?.closing_day || 1;
+
+  // Usar la fecha de primera cuota especificada por el usuario, o calcularla automáticamente
+  const firstInstallmentDate = entities.firstInstallmentDate || calculateFirstInstallmentDate(startDate, closingDay);
+
+  // Crear registro de compra en cuotas
+  const purchaseData = {
+    user_id: userId,
+    description: entities.note || "Compra en cuotas",
+    total_amount: totalAmount,
+    installments: installments,
+    account_id: entities.accountId,
+    category_id: entities.categoryId || null,
+    start_date: firstInstallmentDate,
+  };
+
+  const { data: purchase, error: purchaseError } = await supabase
+    .from("installment_purchases")
+    .insert(purchaseData)
+    .select()
+    .single();
+
+  if (purchaseError) {
+    console.error("Error creating installment purchase:", purchaseError);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  // Crear los movimientos individuales para cada cuota
+  const movementsToInsert = [];
+  for (let i = 0; i < installments; i++) {
+    const cuotaDate = addMonths(firstInstallmentDate, i);
+    movementsToInsert.push({
+      user_id: userId,
+      type: "expense",
+      date: cuotaDate,
+      amount: installmentAmount,
+      account_id: entities.accountId,
+      category_id: entities.categoryId || null,
+      note: entities.note ? `${entities.note} (${i + 1}/${installments})` : `Cuota ${i + 1}/${installments}`,
+      installment_purchase_id: purchase.id,
+      installment_number: i + 1,
+      total_installments: installments,
+    });
+  }
+
+  const { error: movementsError } = await supabase
+    .from("movements")
+    .insert(movementsToInsert);
+
+  if (movementsError) {
+    console.error("Error creating installment movements:", movementsError);
+    // Intentar eliminar la compra creada
+    await supabase.from("installment_purchases").delete().eq("id", purchase.id);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  const accountName = getAccountName(entities.accountId, context);
+  const categoryName = getCategoryName(entities.categoryId, context);
+
+  // Obtener nombre del mes para el resumen
+  const resumenMonth = getMonthYearLabel(firstInstallmentDate);
+
+  const message = `✅ *Compra en cuotas registrada*
+
+💸 *Total:* ${formatCurrency(totalAmount, entities.currency || "ARS")}
+📦 *Cuotas:* ${installments}x ${formatCurrency(installmentAmount, entities.currency || "ARS")}
+💳 *Tarjeta:* ${accountName || "Sin cuenta"}
+📁 *Categoría:* ${categoryName || "Sin categoría"}
+🗓️ *Resumen:* ${resumenMonth}`;
+
+  return {
+    success: true,
+    message,
+    data: {
+      id: purchase.id,
+      amount: totalAmount,
+      category: categoryName,
+      account: accountName,
+      date: firstInstallmentDate,
+    },
+  };
+}
+
+/**
+ * Calcula la fecha de la primera cuota basada en la fecha de compra y el día de cierre
+ */
+function calculateFirstInstallmentDate(purchaseDate: string, closingDay: number): string {
+  const purchase = new Date(purchaseDate + "T12:00:00");
+  const purchaseDay = purchase.getDate();
+
+  let year = purchase.getFullYear();
+  let month = purchase.getMonth();
+
+  // Si la compra es antes del cierre, la primera cuota es el mes siguiente
+  // Si es después del cierre, la primera cuota es en 2 meses
+  if (purchaseDay <= closingDay) {
+    month += 1;
+  } else {
+    month += 2;
+  }
+
+  // Ajustar año si es necesario
+  if (month > 11) {
+    month -= 12;
+    year += 1;
+  }
+
+  // Usar el día de cierre como fecha de la cuota (o el último día del mes si es menor)
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const day = Math.min(closingDay, lastDayOfMonth);
+
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Suma meses a una fecha
+ */
+function addMonths(dateStr: string, months: number): string {
+  const date = new Date(dateStr + "T12:00:00");
+  let year = date.getFullYear();
+  let month = date.getMonth() + months;
+  const day = date.getDate();
+
+  while (month > 11) {
+    month -= 12;
+    year += 1;
+  }
+
+  // Ajustar día si el mes no tiene suficientes días
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const adjustedDay = Math.min(day, lastDayOfMonth);
+
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(adjustedDay).padStart(2, "0")}`;
 }
 
 /**
@@ -614,6 +778,18 @@ function getTodayISO(): string {
 
 function formatDateISO(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Convierte una fecha ISO a "Marzo 2026"
+ */
+function getMonthYearLabel(dateStr: string): string {
+  const months = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  const date = new Date(dateStr + "T12:00:00");
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 function getDateRange(entities: ParsedEntities): {

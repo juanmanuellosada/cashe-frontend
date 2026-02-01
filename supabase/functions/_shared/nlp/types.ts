@@ -52,6 +52,7 @@ export interface ParsedEntities {
   date?: string; // formato ISO: YYYY-MM-DD
   note?: string;
   installments?: number;
+  firstInstallmentDate?: string; // fecha de primera cuota (YYYY-MM-DD)
   queryType?: "total" | "categoria" | "cuenta";
   queryCategoryId?: string;
   queryAccountId?: string;

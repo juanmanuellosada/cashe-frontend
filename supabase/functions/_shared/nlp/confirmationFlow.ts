@@ -39,20 +39,39 @@ export function buildConfirmationPreview(
   entities: ParsedEntities,
   context: UserContext
 ): string {
+  const totalAmount = entities.amount || 0;
+  const installments = entities.installments || 0;
+  const installmentAmount = installments > 1 ? Math.round(totalAmount / installments) : totalAmount;
+
+  // Calcular fecha de primera cuota para mostrar el mes del resumen
+  let resumenLabel = "-";
+  if (installments > 1) {
+    // Si el usuario especificó fecha, usarla; si no, calcular automáticamente
+    const account = context.accounts.find(a => a.id === entities.accountId);
+    const closingDay = account?.closing_day || 1;
+    const purchaseDate = entities.date || new Date().toISOString().split("T")[0];
+    const firstDate = entities.firstInstallmentDate || calculateFirstCuotaDate(purchaseDate, closingDay);
+    resumenLabel = getMonthYearLabel(firstDate);
+  }
+
   const values: Record<string, string> = {
-    monto: formatCurrency(entities.amount || 0, entities.currency || "ARS"),
+    monto: formatCurrency(totalAmount, entities.currency || "ARS"),
+    monto_cuota: formatCurrency(installmentAmount, entities.currency || "ARS"),
+    cuotas: String(installments),
     categoria: getDisplayName("category", entities.categoryId, context) || "-",
     cuenta: getDisplayName("account", entities.accountId, context) || "-",
     cuenta_origen: getDisplayName("account", entities.fromAccountId, context) || "-",
     cuenta_destino: getDisplayName("account", entities.toAccountId, context) || "-",
     fecha: entities.date ? formatDateDisplay(entities.date) : "Hoy",
     nota: entities.note || "-",
+    resumen: resumenLabel,
   };
 
   let template: string;
   switch (intent) {
     case "REGISTRAR_GASTO":
-      template = RESPONSES.PREVIEW_GASTO;
+      // Usar template de cuotas si hay más de 1 cuota
+      template = installments > 1 ? RESPONSES.PREVIEW_GASTO_CUOTAS : RESPONSES.PREVIEW_GASTO;
       break;
     case "REGISTRAR_INGRESO":
       template = RESPONSES.PREVIEW_INGRESO;
@@ -65,6 +84,45 @@ export function buildConfirmationPreview(
   }
 
   return interpolate(template, values);
+}
+
+/**
+ * Calcula la fecha de la primera cuota basada en la fecha de compra y el día de cierre
+ */
+function calculateFirstCuotaDate(purchaseDate: string, closingDay: number): string {
+  const purchase = new Date(purchaseDate + "T12:00:00");
+  const purchaseDay = purchase.getDate();
+
+  let year = purchase.getFullYear();
+  let month = purchase.getMonth();
+
+  // Si la compra es antes del cierre, la primera cuota es el mes siguiente
+  // Si es después del cierre, la primera cuota es en 2 meses
+  if (purchaseDay <= closingDay) {
+    month += 1;
+  } else {
+    month += 2;
+  }
+
+  // Ajustar año si es necesario
+  if (month > 11) {
+    month -= 12;
+    year += 1;
+  }
+
+  return `${year}-${String(month + 1).padStart(2, "0")}-01`;
+}
+
+/**
+ * Convierte una fecha ISO a "Marzo 2026"
+ */
+function getMonthYearLabel(dateStr: string): string {
+  const months = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  const date = new Date(dateStr + "T12:00:00");
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 /**

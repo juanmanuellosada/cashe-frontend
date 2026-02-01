@@ -140,8 +140,17 @@ Para vincularlo:
 
 💰 Monto: {monto}
 📁 Categoría: {categoria}
-🏦 Cuenta: {cuenta}
+💳 Cuenta: {cuenta}
 📅 Fecha: {fecha}
+📝 Nota: {nota}`,
+
+  PREVIEW_GASTO_CUOTAS: `📝 *Voy a registrar esta compra en cuotas:*
+
+💰 Total: {monto}
+📦 Cuotas: {cuotas}x {monto_cuota}
+📁 Categoría: {categoria}
+💳 Tarjeta: {cuenta}
+🗓️ Resumen: {resumen}
 📝 Nota: {nota}`,
 
   PREVIEW_INGRESO: `📝 *Voy a registrar este ingreso:*

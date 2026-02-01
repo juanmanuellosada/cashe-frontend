@@ -42,17 +42,17 @@ export function extractEntities(
     entities.date = date;
   }
 
-  // Extraer nota
-  const note = extractNote(text);
-  if (note) {
-    entities.note = note;
-  }
-
   // Extraer cuotas (para gastos con tarjeta)
   if (intent === "REGISTRAR_GASTO") {
     const installments = extractInstallments(text);
     if (installments) {
       entities.installments = installments;
+
+      // Si hay cuotas, buscar fecha de primera cuota
+      const firstInstallmentDate = extractFirstInstallmentDate(text);
+      if (firstInstallmentDate) {
+        entities.firstInstallmentDate = firstInstallmentDate;
+      }
     }
   }
 
@@ -73,6 +73,25 @@ export function extractEntities(
   const categoryRef = extractCategoryReference(text, intent);
   if (categoryRef) {
     entities.category = categoryRef;
+  }
+
+  // Extraer nota explícita primero (entre comillas o con "nota:")
+  const explicitNote = extractNote(text);
+  if (explicitNote) {
+    entities.note = explicitNote;
+  } else {
+    // Si no hay nota explícita, extraer lo que sobra como nota
+    const remainingNote = extractRemainingAsNote(text, {
+      amount: entities.amount,
+      account: entities.account,
+      category: entities.category,
+      installments: entities.installments,
+      firstInstallmentDate: entities.firstInstallmentDate,
+      date: entities.date,
+    });
+    if (remainingNote) {
+      entities.note = remainingNote;
+    }
   }
 
   // Para consultas, extraer límite
@@ -295,6 +314,80 @@ export function extractNote(text: string): string | null {
 }
 
 /**
+ * Extrae como nota todo lo que no matchea con entidades conocidas
+ * Se llama después de extraer todas las otras entidades
+ */
+export function extractRemainingAsNote(
+  originalText: string,
+  extractedEntities: {
+    amount?: number;
+    account?: string;
+    category?: string;
+    installments?: number;
+    firstInstallmentDate?: string;
+    date?: string;
+  }
+): string | null {
+  let text = originalText.toLowerCase();
+
+  // Palabras/patrones a remover (verbos, preposiciones, etc.)
+  const wordsToRemove = [
+    // Verbos de acción
+    /\b(compr[eéo]|gast[eéo]|pagu[eé]|cobr[eé]|recib[ií]|transfer[ií]|pas[eé])\b/gi,
+    // Preposiciones y artículos
+    /\b(con|en|de|del|la|el|los|las|un|una|unos|unas|a|al|para|por)\b/gi,
+    // Palabras de cuotas
+    /\b(cuotas?|primera\s+cuota|resumen|cierra|entra)\b/gi,
+    // Meses
+    /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi,
+    // Años
+    /\b(20\d{2})\b/g,
+    // Números (montos, cuotas)
+    /[\$]?\s*[\d.,]+\s*(k|lucas?|mil|palos?)?\b/gi,
+    // Palabras de moneda
+    /\b(pesos|dolares|usd|ars)\b/gi,
+  ];
+
+  // Remover patterns conocidos
+  for (const pattern of wordsToRemove) {
+    text = text.replace(pattern, ' ');
+  }
+
+  // Remover nombre de cuenta si se extrajo
+  if (extractedEntities.account) {
+    const accountLower = extractedEntities.account.toLowerCase();
+    text = text.replace(new RegExp(`\\b${escapeRegex(accountLower)}\\b`, 'gi'), ' ');
+  }
+
+  // Remover nombre de categoría si se extrajo
+  if (extractedEntities.category) {
+    const categoryLower = extractedEntities.category.toLowerCase();
+    text = text.replace(new RegExp(`\\b${escapeRegex(categoryLower)}\\b`, 'gi'), ' ');
+  }
+
+  // Limpiar puntuación y espacios múltiples
+  text = text
+    .replace(/[,.:;!?¿¡()\[\]{}]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Si queda algo significativo (más de 2 caracteres y no es solo números), usarlo como nota
+  if (text.length > 2 && !/^\d+$/.test(text)) {
+    // Capitalizar primera letra
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  return null;
+}
+
+/**
+ * Escapa caracteres especiales de regex
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Extrae el número de cuotas
  */
 export function extractInstallments(text: string): number | null {
@@ -306,6 +399,43 @@ export function extractInstallments(text: string): number | null {
     }
   }
   return null;
+}
+
+/**
+ * Extrae la fecha de primera cuota cuando se especifica "primera cuota en X" o "resumen X"
+ * Retorna la fecha en formato ISO (YYYY-MM-DD) del día 1 del mes especificado
+ */
+export function extractFirstInstallmentDate(text: string): string | null {
+  const normalized = normalizeText(text);
+  const match = normalized.match(INSTALLMENT_PATTERNS.firstInstallment);
+
+  if (!match) return null;
+
+  const monthName = match[1].toLowerCase();
+  const yearStr = match[2];
+
+  // Buscar el número de mes
+  let monthNum: number | null = null;
+  for (const [name, num] of Object.entries(MONTH_NAMES)) {
+    if (monthName === name || monthName.startsWith(name)) {
+      monthNum = num;
+      break;
+    }
+  }
+
+  if (!monthNum) return null;
+
+  // Determinar el año
+  const today = new Date();
+  let year = yearStr ? parseInt(yearStr) : today.getFullYear();
+
+  // Si el mes ya pasó este año y no se especificó año, usar el próximo año
+  if (!yearStr && monthNum < today.getMonth() + 1) {
+    year = today.getFullYear() + 1;
+  }
+
+  // Retornar el día 1 del mes especificado
+  return `${year}-${String(monthNum).padStart(2, "0")}-01`;
 }
 
 /**
