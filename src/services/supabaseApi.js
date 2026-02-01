@@ -1670,8 +1670,8 @@ export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, 
 
   if (movementsError) throw movementsError;
 
-  invalidateCache('');
-  return { success: true, purchase };
+  invalidateCache('expense');
+  return { success: true, purchase, filasCreadas: cuotas };
 };
 
 export const getInstallmentsByPurchase = async (purchaseId) => {

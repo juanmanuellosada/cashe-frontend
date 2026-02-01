@@ -63,7 +63,7 @@ function CreditCards() {
     fetchData(true, false);
   }, []);
 
-  useDataEvent([DataEvents.EXPENSES_CHANGED, DataEvents.ACCOUNTS_CHANGED], handleDataChange);
+  useDataEvent([DataEvents.EXPENSES_CHANGED, DataEvents.ACCOUNTS_CHANGED, DataEvents.ALL_DATA_CHANGED], handleDataChange);
 
   const fetchData = async (forceRefresh = false, showLoading = true) => {
     try {
