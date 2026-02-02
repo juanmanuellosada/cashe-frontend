@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns';
 import { getDashboardFiltered, getMovementsFiltered, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/supabaseApi';
 import BalanceCard from '../components/dashboard/BalanceCard';
+import PeriodFlowCard from '../components/dashboard/PeriodFlowCard';
 import QuickStats from '../components/dashboard/QuickStats';
 import AccountBalances from '../components/dashboard/AccountBalances';
 import WeeklySummary from '../components/dashboard/WeeklySummary';
 import RecentMovements from '../components/dashboard/RecentMovements';
-import DateRangePicker from '../components/DateRangePicker';
 import EditMovementModal from '../components/EditMovementModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PullToRefresh from '../components/PullToRefresh';
@@ -18,10 +18,30 @@ function Home() {
   const navigate = useNavigate();
   const { showError } = useError();
 
-  // Currency selector for balance section
+  // Currency selector (shared between cards)
   const [currency, setCurrency] = useState('ARS');
 
-  // Balance date range (default: current month)
+  // Shared account filters (used by both BalanceCard and PeriodFlowCard)
+  const [accountFilters, setAccountFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cashe_balance_account_filters');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Error loading balance account filters:', e);
+    }
+    return [];
+  });
+
+  // Save account filters to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashe_balance_account_filters', JSON.stringify(accountFilters));
+    } catch (e) {
+      console.warn('Error saving balance account filters:', e);
+    }
+  }, [accountFilters]);
+
+  // Balance date range (default: current month) - for PeriodFlowCard
   const [balanceDateRange, setBalanceDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -292,84 +312,52 @@ function Home() {
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={loadingDashboard && loadingMovements}>
     <div className="space-y-4 sm:space-y-6">
-      {/* Header with filters */}
-      <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3">
-        <h1 className="text-base sm:text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-          Dashboard
-        </h1>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Currency Selector */}
-          <div
-            className="inline-flex p-0.5 sm:p-1 rounded-md sm:rounded-lg"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
-            <button
-              onClick={() => setCurrency('ARS')}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[11px] sm:text-xs font-medium transition-colors duration-150 flex items-center gap-1 sm:gap-1.5"
-              style={{
-                backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
-                color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
-              ARS
-            </button>
-            <button
-              onClick={() => setCurrency('USD')}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[11px] sm:text-xs font-medium transition-colors duration-150 flex items-center gap-1 sm:gap-1.5"
-              style={{
-                backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
-                color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
-              USD
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            <DateRangePicker
-              value={balanceDateRange}
-              onChange={setBalanceDateRange}
-              defaultPreset="Este mes"
-            />
-            {(balanceDateRange.from || balanceDateRange.to) && (
-              <button
-                onClick={() => setBalanceDateRange({ from: null, to: null })}
-                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-                title="Limpiar fechas"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Header - simplified */}
+      <h1 className="text-base sm:text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
+        Dashboard
+      </h1>
 
-      {/* Balance Card - Full width */}
-      {loadingDashboard ? (
-        <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-          <LoadingSpinner />
-        </div>
-      ) : (
-        <BalanceCard
-          accounts={accounts}
-          dashboard={dashboard}
-          currency={currency}
-        />
-      )}
+      {/* Balance and Flow Cards - side by side on desktop, stacked on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Balance Card - Saldo actual */}
+        {loadingDashboard ? (
+          <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <BalanceCard
+            accounts={accounts}
+            dashboard={dashboard}
+            currency={currency}
+            onCurrencyChange={setCurrency}
+            accountFilters={accountFilters}
+            onAccountFiltersChange={setAccountFilters}
+          />
+        )}
+
+        {/* Period Flow Card - Flujo del período */}
+        {loadingDashboard ? (
+          <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <PeriodFlowCard
+            accounts={accounts}
+            dashboard={dashboard}
+            currency={currency}
+            dateRange={balanceDateRange}
+            onDateRangeChange={setBalanceDateRange}
+            accountFilters={accountFilters}
+          />
+        )}
+      </div>
 
       {/* Account Balances - Full width */}
       <AccountBalances
         accounts={accounts}
         loading={loadingInitial}
         onAccountClick={(account) => {
-          setMovementFilters(prev => ({
-            ...prev,
-            cuentas: [account.nombre]
-          }));
+          setAccountFilters([account.nombre]);
         }}
       />
 
