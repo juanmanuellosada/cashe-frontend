@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/format';
 
@@ -42,16 +42,9 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       return null;
     }
 
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
-    // Filter expenses from current week
-    let weekExpenses = movements.filter(m => {
-      if (m.tipo !== 'gasto') return false;
-      const fecha = new Date(m.fecha);
-      return isWithinInterval(fecha, { start: weekStart, end: weekEnd });
-    });
+    // Filter expenses only (movements already come filtered for current week from Home.jsx)
+    // No need to re-filter by date since fetchWeeklyMovements already does that
+    let weekExpenses = movements.filter(m => m.tipo === 'gasto');
 
     // Apply account filter
     if (filters.cuentas?.length > 0) {
