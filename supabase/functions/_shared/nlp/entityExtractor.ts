@@ -15,9 +15,12 @@ import {
   NOTE_PATTERNS,
   INSTALLMENT_PATTERNS,
   TRANSFER_DIRECTION_PATTERNS,
+  PERIOD_PATTERNS,
+  MONTH_NAMES as MONTH_NAMES_PATTERN,
+  CREDIT_CARD_PATTERNS,
   normalizeText,
 } from "../constants/patterns.ts";
-import type { ParsedEntities, Intent } from "./types.ts";
+import type { ParsedEntities, Intent, QueryPeriod } from "./types.ts";
 
 /**
  * Extrae todas las entidades de un mensaje
@@ -99,6 +102,61 @@ export function extractEntities(
   if (intent === "ULTIMOS_MOVIMIENTOS") {
     const limit = extractLimit(text);
     entities.limit = limit;
+  }
+
+  // Para consultas por período (gastos/ingresos)
+  if (intent === "CONSULTAR_GASTOS" || intent === "CONSULTAR_INGRESOS") {
+    const period = extractPeriod(text);
+    if (period) {
+      entities.period = period;
+    }
+    // También extraer categoría si se especifica
+    const categoryRef = extractCategoryReference(text, intent);
+    if (categoryRef) {
+      entities.category = categoryRef;
+    }
+  }
+
+  // Para pagar tarjeta
+  if (intent === "PAGAR_TARJETA") {
+    const cardPayment = extractCreditCardPayment(text);
+    if (cardPayment.targetCard) {
+      entities.targetCard = cardPayment.targetCard;
+    }
+    if (cardPayment.statementMonth) {
+      entities.statementMonth = cardPayment.statementMonth;
+    }
+    if (cardPayment.sourceAccount) {
+      entities.sourceAccount = cardPayment.sourceAccount;
+    }
+  }
+
+  // Para agregar sellos (impuesto)
+  if (intent === "AGREGAR_SELLOS") {
+    const stampTax = extractStampTax(text);
+    if (stampTax.amount) {
+      entities.stampTaxAmount = stampTax.amount;
+    }
+    if (stampTax.targetCard) {
+      entities.targetCard = stampTax.targetCard;
+    }
+    if (stampTax.statementMonth) {
+      entities.statementMonth = stampTax.statementMonth;
+    }
+  }
+
+  // Para consultar resumen de tarjeta
+  if (intent === "CONSULTAR_RESUMEN_TARJETA") {
+    // Buscar tarjeta en el mensaje
+    const cardMatch = normalizeText(text).match(/\b(visa|mastercard|master|amex|cabal|naranja|nativa|[\w]+)\b.*$/i);
+    if (cardMatch) {
+      // Extraer la primera palabra que parece ser tarjeta
+      const possibleCard = text.match(/resumen\s+(?:de\s+)?(?:tarjeta\s+)?(\w+)/i);
+      if (possibleCard) {
+        entities.targetCard = possibleCard[1];
+      }
+    }
+    entities.statementMonth = extractStatementMonth(text) || "actual";
   }
 
   return entities;
@@ -638,4 +696,335 @@ function isCommonWord(word: string): boolean {
     "ahora",
   ];
   return commonWords.includes(word.toLowerCase());
+}
+
+/**
+ * Extrae período de tiempo para consultas
+ * Soporta: hoy, ayer, esta semana, este mes, rangos de fecha, meses específicos
+ */
+export function extractPeriod(text: string): QueryPeriod | null {
+  const normalized = normalizeText(text);
+  const today = new Date();
+
+  // Períodos relativos
+  if (PERIOD_PATTERNS.relative.today.test(normalized)) {
+    return { type: "relative", value: "today" };
+  }
+  if (PERIOD_PATTERNS.relative.yesterday.test(normalized)) {
+    return { type: "relative", value: "yesterday" };
+  }
+  if (PERIOD_PATTERNS.relative.thisWeek.test(normalized)) {
+    return { type: "relative", value: "this_week" };
+  }
+  if (PERIOD_PATTERNS.relative.lastWeek.test(normalized)) {
+    return { type: "relative", value: "last_week" };
+  }
+  if (PERIOD_PATTERNS.relative.thisMonth.test(normalized)) {
+    return { type: "relative", value: "this_month" };
+  }
+  if (PERIOD_PATTERNS.relative.lastMonth.test(normalized)) {
+    return { type: "relative", value: "last_month" };
+  }
+  if (PERIOD_PATTERNS.relative.thisYear.test(normalized)) {
+    return { type: "relative", value: "this_year" };
+  }
+  if (PERIOD_PATTERNS.relative.last7Days.test(normalized)) {
+    return { type: "relative", value: "last_7_days" };
+  }
+  if (PERIOD_PATTERNS.relative.last30Days.test(normalized)) {
+    return { type: "relative", value: "last_30_days" };
+  }
+
+  // Últimos N días
+  const lastNDaysMatch = normalized.match(PERIOD_PATTERNS.relative.lastNDays);
+  if (lastNDaysMatch) {
+    const days = parseInt(lastNDaysMatch[1]);
+    return { type: "relative", value: `last_${days}_days` };
+  }
+
+  // Hace N días/semanas/meses
+  const agoMatch = normalized.match(PERIOD_PATTERNS.ago);
+  if (agoMatch) {
+    const amount = parseInt(agoMatch[1]);
+    const unit = agoMatch[2].toLowerCase();
+    if (unit.startsWith("dia") || unit.startsWith("día")) {
+      return { type: "relative", value: `ago_${amount}_days` };
+    } else if (unit.startsWith("semana")) {
+      return { type: "relative", value: `ago_${amount}_weeks` };
+    } else if (unit.startsWith("mes")) {
+      return { type: "relative", value: `ago_${amount}_months` };
+    }
+  }
+
+  // Rango de fechas: "del 5/1 al 10/1"
+  const rangeMatch = normalized.match(PERIOD_PATTERNS.range);
+  if (rangeMatch) {
+    const startDate = parseDateString(rangeMatch[1]);
+    const endDate = parseDateString(rangeMatch[2]);
+    if (startDate && endDate) {
+      return {
+        type: "range",
+        value: `${rangeMatch[1]} al ${rangeMatch[2]}`,
+        startDate,
+        endDate,
+      };
+    }
+  }
+
+  // Mes específico: "enero", "de febrero"
+  const monthMatch = normalized.match(PERIOD_PATTERNS.month);
+  if (monthMatch) {
+    const monthName = monthMatch[1].toLowerCase();
+    const yearStr = monthMatch[2];
+    const monthNum = MONTH_NAMES_PATTERN[monthName];
+    if (monthNum) {
+      const year = yearStr ? parseInt(yearStr) : today.getFullYear();
+      const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      const endDate = `${year}-${String(monthNum).padStart(2, "0")}-${lastDay}`;
+      return {
+        type: "month",
+        value: monthName,
+        startDate,
+        endDate,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parsea una cadena de fecha y devuelve formato ISO
+ */
+function parseDateString(dateStr: string): string | null {
+  const today = new Date();
+
+  // Formato: dd/mm o dd-mm o dd/mm/yyyy
+  const explicitMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (explicitMatch) {
+    const day = parseInt(explicitMatch[1]);
+    const month = parseInt(explicitMatch[2]);
+    let year = explicitMatch[3] ? parseInt(explicitMatch[3]) : today.getFullYear();
+    if (year < 100) year += 2000;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  // Formato: "1 de enero"
+  const textMatch = dateStr.match(/(\d{1,2})\s+de\s+(\w+)/);
+  if (textMatch) {
+    const day = parseInt(textMatch[1]);
+    const monthName = textMatch[2].toLowerCase();
+    const monthNum = MONTH_NAMES_PATTERN[monthName];
+    if (monthNum) {
+      return `${today.getFullYear()}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extrae mes de resumen de tarjeta
+ * Devuelve: nombre del mes, "actual", o null
+ */
+export function extractStatementMonth(text: string): string | null {
+  const normalized = normalizeText(text);
+
+  // Buscar "resumen actual", "actual"
+  if (/\bactual\b/i.test(normalized)) {
+    return "actual";
+  }
+
+  // Buscar mes específico después de "resumen"
+  const statementMatch = normalized.match(/resumen\s+(?:de\s+)?(?:\w+\s+)?(\w+)/i);
+  if (statementMatch) {
+    const possibleMonth = statementMatch[1].toLowerCase();
+    if (MONTH_NAMES_PATTERN[possibleMonth]) {
+      return possibleMonth;
+    }
+  }
+
+  // Buscar mes suelto
+  for (const [monthName] of Object.entries(MONTH_NAMES_PATTERN)) {
+    if (normalized.includes(monthName)) {
+      return monthName;
+    }
+  }
+
+  // Si no hay mes específico, asumir "actual"
+  return "actual";
+}
+
+/**
+ * Extrae información de pago de tarjeta del mensaje
+ */
+export function extractCreditCardPayment(
+  text: string
+): { targetCard?: string; statementMonth?: string; sourceAccount?: string } {
+  const normalized = normalizeText(text);
+  const result: { targetCard?: string; statementMonth?: string; sourceAccount?: string } = {};
+
+  // Patrón completo: "pagar visa resumen enero desde brubank"
+  const fullMatch = normalized.match(CREDIT_CARD_PATTERNS.payCard);
+  if (fullMatch) {
+    result.targetCard = fullMatch[1];
+    result.statementMonth = fullMatch[2] || "actual";
+    result.sourceAccount = fullMatch[3];
+    return result;
+  }
+
+  // Patrón simple: "pagar visa"
+  const simpleMatch = normalized.match(CREDIT_CARD_PATTERNS.payCardSimple);
+  if (simpleMatch) {
+    result.targetCard = simpleMatch[1];
+    result.statementMonth = extractStatementMonth(text) || "actual";
+    return result;
+  }
+
+  return result;
+}
+
+/**
+ * Extrae información de impuesto de sellos del mensaje
+ */
+export function extractStampTax(
+  text: string
+): { amount?: number; targetCard?: string; statementMonth?: string } {
+  const normalized = normalizeText(text);
+  const result: { amount?: number; targetCard?: string; statementMonth?: string } = {};
+
+  // Patrón: "agregar sellos de 1500 a visa"
+  const match = normalized.match(CREDIT_CARD_PATTERNS.addStampTax);
+  if (match) {
+    const amountResult = extractAmount(match[1]);
+    if (amountResult) {
+      result.amount = amountResult.value;
+    }
+    result.targetCard = match[2];
+    result.statementMonth = extractStatementMonth(text) || "actual";
+    return result;
+  }
+
+  // Patrón alternativo: "sellos 1500 a visa"
+  const altMatch = normalized.match(CREDIT_CARD_PATTERNS.addStampTaxAlt);
+  if (altMatch) {
+    const amountResult = extractAmount(altMatch[1]);
+    if (amountResult) {
+      result.amount = amountResult.value;
+    }
+    result.targetCard = altMatch[2];
+    result.statementMonth = extractStatementMonth(text) || "actual";
+    return result;
+  }
+
+  // Si no matchea el patrón completo, intentar extraer por partes
+  const amountResult = extractAmount(text);
+  if (amountResult) {
+    result.amount = amountResult.value;
+  }
+
+  // Buscar nombre de tarjeta
+  const cardMatch = normalized.match(/\b(visa|mastercard|master|amex|cabal|naranja|nativa)\b/i);
+  if (cardMatch) {
+    result.targetCard = cardMatch[1];
+  }
+
+  result.statementMonth = extractStatementMonth(text) || "actual";
+
+  return result;
+}
+
+/**
+ * Convierte un QueryPeriod a fechas de inicio y fin
+ */
+export function periodToDateRange(period: QueryPeriod): { startDate: string; endDate: string } {
+  const today = new Date();
+  let startDate: Date;
+  let endDate: Date = today;
+
+  switch (period.value) {
+    case "today":
+      startDate = today;
+      endDate = today;
+      break;
+    case "yesterday":
+      startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 1);
+      endDate = startDate;
+      break;
+    case "this_week":
+      // Semana empieza el lunes
+      startDate = new Date(today);
+      const dayOfWeek = today.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      startDate.setDate(today.getDate() - diff);
+      endDate = today;
+      break;
+    case "last_week":
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 7 - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      break;
+    case "this_month":
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = today;
+      break;
+    case "last_month":
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      break;
+    case "this_year":
+      startDate = new Date(today.getFullYear(), 0, 1);
+      endDate = today;
+      break;
+    case "last_7_days":
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 7);
+      break;
+    case "last_30_days":
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30);
+      break;
+    default:
+      // Para rangos personalizados y meses, usar las fechas del período
+      if (period.startDate && period.endDate) {
+        return { startDate: period.startDate, endDate: period.endDate };
+      }
+      // Parsear "last_N_days", "ago_N_days/weeks/months"
+      const lastNMatch = period.value.match(/last_(\d+)_days/);
+      if (lastNMatch) {
+        const days = parseInt(lastNMatch[1]);
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - days);
+        break;
+      }
+      const agoMatch = period.value.match(/ago_(\d+)_(days|weeks|months)/);
+      if (agoMatch) {
+        const amount = parseInt(agoMatch[1]);
+        const unit = agoMatch[2];
+        startDate = new Date(today);
+        endDate = new Date(today);
+        if (unit === "days") {
+          startDate.setDate(today.getDate() - amount);
+          endDate = startDate;
+        } else if (unit === "weeks") {
+          startDate.setDate(today.getDate() - (amount * 7));
+          endDate.setDate(startDate.getDate() + 6);
+        } else if (unit === "months") {
+          startDate.setMonth(today.getMonth() - amount);
+          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        }
+        break;
+      }
+      // Default: hoy
+      startDate = today;
+      endDate = today;
+  }
+
+  const formatDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  return { startDate: formatDate(startDate), endDate: formatDate(endDate) };
 }

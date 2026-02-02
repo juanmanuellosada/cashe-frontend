@@ -12,7 +12,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useDataEvent, DataEvents, emit } from '../services/dataEvents';
 
 function Home() {
   const navigate = useNavigate();
@@ -136,6 +136,12 @@ function Home() {
       setSavingMovement(true);
       await updateMovement(updatedMovement);
       setEditingMovement(null);
+      // Emitir eventos para propagar cambios a otros componentes
+      const eventType = updatedMovement.tipo === 'ingreso' ? DataEvents.INCOMES_CHANGED :
+                        updatedMovement.tipo === 'gasto' ? DataEvents.EXPENSES_CHANGED :
+                        DataEvents.TRANSFERS_CHANGED;
+      emit(eventType);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       // Refresh data
       await Promise.all([fetchDashboard(), fetchMovements()]);
     } catch (err) {
@@ -159,6 +165,12 @@ function Home() {
     // Borrar en background
     try {
       await deleteMovement(movement);
+      // Emitir eventos para propagar cambios a otros componentes
+      const eventType = movement.tipo === 'ingreso' ? DataEvents.INCOMES_CHANGED :
+                        movement.tipo === 'gasto' ? DataEvents.EXPENSES_CHANGED :
+                        DataEvents.TRANSFERS_CHANGED;
+      emit(eventType);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       // Refrescar todos los datos para sincronizar (dashboard + movements)
       await Promise.all([fetchDashboard(), fetchMovements()]);
     } catch (err) {

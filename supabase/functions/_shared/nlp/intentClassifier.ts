@@ -32,11 +32,17 @@ export function classifyIntent(text: string): IntentClassification {
     REGISTRAR_GASTO: { score: 0 },
     REGISTRAR_INGRESO: { score: 0 },
     REGISTRAR_TRANSFERENCIA: { score: 0 },
+    PAGAR_TARJETA: { score: 0 },
+    AGREGAR_SELLOS: { score: 0 },
     CONSULTAR_SALDO: { score: 0 },
     CONSULTAR_GASTOS: { score: 0 },
+    CONSULTAR_INGRESOS: { score: 0 },
     ULTIMOS_MOVIMIENTOS: { score: 0 },
     RESUMEN_MES: { score: 0 },
+    CONSULTAR_RESUMEN_TARJETA: { score: 0 },
     CONSULTAR_PRESUPUESTOS: { score: 0 },
+    MENU: { score: 0 },
+    CANCELAR: { score: 0 },
     AYUDA: { score: 0 },
     DESCONOCIDO: { score: 0 },
   };
@@ -82,12 +88,47 @@ export function classifyIntent(text: string): IntentClassification {
     scores.REGISTRAR_GASTO.score -= 0.3;
   }
 
+  // Si pregunta "cuánto" + cobré/ingresé, priorizar consulta de ingresos
+  if (/cu[aá]nto\s+(cobr[eé]|ingres[eé]|entr[oó])/i.test(normalized)) {
+    scores.CONSULTAR_INGRESOS.score += 0.2;
+    scores.REGISTRAR_INGRESO.score -= 0.3;
+  }
+
   // Si tiene "?" es más probable que sea consulta
   if (text.includes("?")) {
     scores.CONSULTAR_SALDO.score += 0.1;
     scores.CONSULTAR_GASTOS.score += 0.1;
+    scores.CONSULTAR_INGRESOS.score += 0.1;
     scores.ULTIMOS_MOVIMIENTOS.score += 0.1;
     scores.RESUMEN_MES.score += 0.1;
+    scores.CONSULTAR_RESUMEN_TARJETA.score += 0.1;
+  }
+
+  // Priorizar PAGAR_TARJETA si tiene "pagar" + nombre de tarjeta
+  if (/\bpagar\b.*\b(visa|master|amex|cabal|naranja|nativa|tarjeta)\b/i.test(normalized) ||
+      /\b(visa|master|amex|cabal|naranja|nativa|tarjeta)\b.*\bpagar\b/i.test(normalized)) {
+    scores.PAGAR_TARJETA.score += 0.3;
+  }
+
+  // Priorizar AGREGAR_SELLOS si tiene "sellos" o "impuesto de sellos"
+  if (/\b(sellos?|impuesto\s+de\s+sellos?)\b/i.test(normalized)) {
+    scores.AGREGAR_SELLOS.score += 0.3;
+  }
+
+  // Priorizar CONSULTAR_RESUMEN_TARJETA si pide "resumen" + tarjeta pero no "pagar"
+  if (/\bresumen\b.*\b(visa|master|amex|cabal|naranja|nativa|tarjeta)\b/i.test(normalized) &&
+      !/\bpagar\b/i.test(normalized)) {
+    scores.CONSULTAR_RESUMEN_TARJETA.score += 0.3;
+  }
+
+  // Priorizar MENU si es exactamente "menu" o "menú"
+  if (/^men[uú]$/i.test(text.trim())) {
+    scores.MENU.score = 1.0;
+  }
+
+  // Priorizar CANCELAR si es exactamente "cancelar"
+  if (/^cancelar$/i.test(text.trim())) {
+    scores.CANCELAR.score = 1.0;
   }
 
   // Encontrar el intent con mayor score
@@ -127,6 +168,8 @@ export function isWriteIntent(intent: Intent): boolean {
     "REGISTRAR_GASTO",
     "REGISTRAR_INGRESO",
     "REGISTRAR_TRANSFERENCIA",
+    "PAGAR_TARJETA",
+    "AGREGAR_SELLOS",
   ].includes(intent);
 }
 
@@ -137,11 +180,21 @@ export function isReadIntent(intent: Intent): boolean {
   return [
     "CONSULTAR_SALDO",
     "CONSULTAR_GASTOS",
+    "CONSULTAR_INGRESOS",
     "ULTIMOS_MOVIMIENTOS",
     "RESUMEN_MES",
+    "CONSULTAR_RESUMEN_TARJETA",
     "CONSULTAR_PRESUPUESTOS",
+    "MENU",
     "AYUDA",
   ].includes(intent);
+}
+
+/**
+ * Verifica si un intent es de navegación (menú, cancelar)
+ */
+export function isNavigationIntent(intent: Intent): boolean {
+  return ["MENU", "CANCELAR"].includes(intent);
 }
 
 /**

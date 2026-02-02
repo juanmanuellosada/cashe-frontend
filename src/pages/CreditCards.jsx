@@ -11,7 +11,7 @@ import { downloadAttachment } from '../services/attachmentStorage';
 import StatementAttachmentsModal from '../components/StatementAttachmentsModal';
 import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useDataEvent, DataEvents, emit } from '../services/dataEvents';
 
 function CreditCards() {
   const { showError } = useError();
@@ -273,7 +273,11 @@ function CreditCards() {
         categoria: '⬇️ Impuesto de sellos',
         nota: `Impuesto de sellos - Resumen ${selectedStatement.monthName}`,
       });
-      
+
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.EXPENSES_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
+
       setShowTaxModal(false);
       setTaxAmount('');
       setSelectedStatement(null);
@@ -315,7 +319,11 @@ function CreditCards() {
         montoEntrante: total,
         nota: `Pago resumen ${selectedStatement.monthName} ${notaMoneda}`,
       });
-      
+
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.TRANSFERS_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
+
       setShowPayModal(false);
       setPaymentAccount('');
       setSelectedStatement(null);
@@ -439,6 +447,10 @@ function CreditCards() {
         await updateSubsequentInstallments(updatedMovement);
       }
 
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.EXPENSES_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
+
       setEditingMovement(null);
 
       // Actualización optimista: actualizar viewingStatement inmediatamente
@@ -474,6 +486,11 @@ function CreditCards() {
   const handleDeleteMovement = async (movement) => {
     try {
       await deleteMovement(movement);
+
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.EXPENSES_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
+
       setEditingMovement(null);
 
       // Actualización optimista: remover el item del viewingStatement

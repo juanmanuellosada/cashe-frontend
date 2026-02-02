@@ -3,37 +3,80 @@
  */
 
 export const RESPONSES = {
-  // Ayuda
+  // Mensaje de bienvenida completo con todas las firmas
+  WELCOME: `👋 *¡Hola! Soy tu asistente de Cashé*
+
+📝 *REGISTRAR MOVIMIENTOS*
+Usá estas firmas:
+
+• *Gasto:* gasté {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: gasté 5000 en visa de supermercado_
+
+• *Ingreso:* cobré {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: cobré 150k en brubank de sueldo el 5/1_
+
+• *Transferencia:* transferí {monto} de {origen} a {destino} [el {fecha}]
+  _Ej: transferí 10000 de brubank a mercadopago_
+
+💳 *TARJETAS DE CRÉDITO*
+• *Pagar tarjeta:* pagar {tarjeta} [resumen {mes}] desde {cuenta}
+  _Ej: pagar visa resumen enero desde brubank_
+
+• *Agregar sellos:* agregar sellos de {monto} a {tarjeta}
+  _Ej: agregar sellos de 1500 a visa_
+
+📊 *CONSULTAS*
+• saldo [de {cuenta}]
+• gastos [de {categoría}] {período}
+• ingresos [de {categoría}] {período}
+• resumen [de {tarjeta}] [{mes}]
+
+📅 *Períodos válidos:* hoy, ayer, esta semana, este mes, del dd/mm al dd/mm
+
+💡 *MODO GUIADO*
+Escribí "menú" para usar botones paso a paso.
+
+¿Qué querés hacer?`,
+
+  // Ayuda (alias de welcome)
   HELP: `🤖 *¡Hola! Soy tu asistente de Cashé*
 
-Podés decirme cosas como:
+📝 *REGISTRAR MOVIMIENTOS*
+Usá estas firmas:
 
-💸 *Gastos*
-"gasté 500 en comida con galicia"
-"pagué 1500 de luz"
-"compré nafta 8000 con mp"
+• *Gasto:* gasté {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: gasté 5000 en visa de supermercado_
 
-💰 *Ingresos*
-"cobré 50000 en santander"
-"me pagaron el sueldo"
-"recibí 10000 de freelance"
+• *Ingreso:* cobré {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: cobré 150k en brubank de sueldo el 5/1_
 
-🔄 *Transferencias*
-"transferí 10000 de galicia a mp"
-"pasé 5000 de brubank a efectivo"
+• *Transferencia:* transferí {monto} de {origen} a {destino} [el {fecha}]
+  _Ej: transferí 10000 de brubank a mercadopago_
 
-📊 *Consultas*
-"saldo mercadopago"
-"cuánto gasté en comida este mes"
-"últimos 5 movimientos"
-"resumen del mes"
+💳 *TARJETAS DE CRÉDITO*
+• *Pagar tarjeta:* pagar {tarjeta} [resumen {mes}] desde {cuenta}
+  _Ej: pagar visa resumen enero desde brubank_
 
-¡Escribime en lenguaje natural! 😊`,
+• *Agregar sellos:* agregar sellos de {monto} a {tarjeta}
+  _Ej: agregar sellos de 1500 a visa_
 
-  HELP_SHORT: `💡 *Tip:* Escribime en lenguaje natural
-Ej: "gasté 500 en comida con galicia"
+📊 *CONSULTAS*
+• saldo [de {cuenta}]
+• gastos [de {categoría}] {período}
+• ingresos [de {categoría}] {período}
+• resumen [de {tarjeta}] [{mes}]
 
-Para ver todos los comandos, escribí "ayuda"`,
+📅 *Períodos válidos:* hoy, ayer, esta semana, este mes, del dd/mm al dd/mm
+
+💡 *MODO GUIADO*
+Escribí "menú" para usar botones paso a paso.`,
+
+  HELP_SHORT: `💡 *Tip:* Escribime con estas firmas:
+• "gasté 5000 en visa de comida"
+• "cobré 50k en brubank de sueldo"
+• "saldo mercadopago"
+
+Escribí "menú" para ver todas las opciones.`,
 
   // Errores de comprensión
   NO_ENTENDI: `🤔 No entendí bien. Probá decirme algo como:
@@ -84,6 +127,8 @@ Para vincularlo:
   GASTO_REGISTRADO: `✅ *¡Gasto registrado!*`,
   INGRESO_REGISTRADO: `✅ *¡Ingreso registrado!*`,
   TRANSFERENCIA_REGISTRADA: `✅ *¡Transferencia registrada!*`,
+  PAGO_TARJETA_REGISTRADO: `✅ *¡Pago de tarjeta registrado!*`,
+  SELLOS_AGREGADOS: `✅ *¡Impuesto de sellos agregado!*`,
 
   // Edición
   EDITAR_PREGUNTA: `✏️ *¿Qué querés cambiar?*`,
@@ -129,11 +174,32 @@ Para vincularlo:
   GASTOS_PERIODO: `📊 *Gastos {periodo}:*`,
   GASTOS_CATEGORIA: `📊 *Gastos en {categoria} {periodo}:*`,
 
+  // Consultas - Ingresos
+  INGRESOS_PERIODO: `💰 *Ingresos {periodo}:*`,
+  INGRESOS_CATEGORIA: `💰 *Ingresos de {categoria} {periodo}:*`,
+
+  // Consultas - Resumen de tarjeta
+  RESUMEN_TARJETA: `💳 *Resumen de {tarjeta} ({mes}):*`,
+
   // Consultas - Últimos movimientos
   ULTIMOS_MOVIMIENTOS: `📋 *Últimos {n} movimientos:*`,
 
   // Consultas - Resumen
   RESUMEN_MES: `📈 *Resumen de {mes}:*`,
+
+  // Plantillas de preview para tarjetas de crédito
+  PREVIEW_PAGAR_TARJETA: `💳 *Confirmar pago de tarjeta:*
+
+💳 Tarjeta: {tarjeta}
+📅 Resumen: {mes}
+💰 Monto: {monto}
+🏦 Desde: {cuenta_origen}`,
+
+  PREVIEW_AGREGAR_SELLOS: `🏛️ *Confirmar impuesto de sellos:*
+
+💳 Tarjeta: {tarjeta}
+📅 Resumen: {mes}
+🏛️ Monto sellos: {monto}`,
 
   // Plantillas de preview
   PREVIEW_GASTO: `📝 *Voy a registrar este gasto:*
@@ -222,6 +288,16 @@ export const EDIT_FIELDS = {
     { key: "to_account", label: "Cuenta destino", icon: "🏦" },
     { key: "date", label: "Fecha", icon: "📅" },
     { key: "note", label: "Nota", icon: "📝" },
+  ],
+  PAGAR_TARJETA: [
+    { key: "target_card", label: "Tarjeta", icon: "💳" },
+    { key: "statement_month", label: "Resumen", icon: "📅" },
+    { key: "source_account", label: "Cuenta origen", icon: "🏦" },
+  ],
+  AGREGAR_SELLOS: [
+    { key: "stamp_tax", label: "Monto sellos", icon: "🏛️" },
+    { key: "target_card", label: "Tarjeta", icon: "💳" },
+    { key: "statement_month", label: "Resumen", icon: "📅" },
   ],
 };
 

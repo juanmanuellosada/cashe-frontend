@@ -5,6 +5,7 @@ import { useCategories } from '../hooks/useCategories';
 import { useBudgets } from '../hooks/useBudgets';
 import { useGoals } from '../hooks/useGoals';
 import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
+import { emit, DataEvents } from '../services/dataEvents';
 import MovementForm from './forms/MovementForm';
 import LoadingSpinner from './LoadingSpinner';
 import Toast from './Toast';
@@ -122,6 +123,21 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
         message: successMessage,
         type: 'success',
       });
+
+      // Emitir eventos para que otros componentes se actualicen
+      emit(DataEvents.ACCOUNTS_CHANGED);
+      switch (type) {
+        case 'income':
+          emit(DataEvents.INCOMES_CHANGED);
+          break;
+        case 'expense':
+        case 'expense_installments':
+          emit(DataEvents.EXPENSES_CHANGED);
+          break;
+        case 'transfer':
+          emit(DataEvents.TRANSFERS_CHANGED);
+          break;
+      }
 
       // Refrescar cuentas para actualizar balances
       refetchAccounts();

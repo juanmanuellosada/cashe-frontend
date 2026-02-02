@@ -17,7 +17,9 @@ import type {
   ActionResult,
   UserContext,
   UserAccount,
+  QueryPeriod,
 } from "./types.ts";
+import { periodToDateRange } from "./entityExtractor.ts";
 
 /**
  * Ejecuta una acción de registro (gasto/ingreso/transferencia)
@@ -39,6 +41,12 @@ export async function executeWriteAction(
 
       case "REGISTRAR_TRANSFERENCIA":
         return await createTransfer(supabase, userId, entities, context);
+
+      case "PAGAR_TARJETA":
+        return await pagarTarjeta(supabase, userId, entities, context);
+
+      case "AGREGAR_SELLOS":
+        return await agregarSellos(supabase, userId, entities, context);
 
       default:
         return {
@@ -390,11 +398,23 @@ export async function executeReadAction(
       case "CONSULTAR_GASTOS":
         return await queryExpenses(supabase, userId, entities, context);
 
+      case "CONSULTAR_INGRESOS":
+        return await queryIngresos(supabase, userId, entities, context);
+
       case "ULTIMOS_MOVIMIENTOS":
         return await queryRecentMovements(supabase, userId, entities, context);
 
       case "RESUMEN_MES":
         return await queryMonthlySummary(supabase, userId, context);
+
+      case "CONSULTAR_RESUMEN_TARJETA":
+        return await queryResumenTarjeta(supabase, userId, entities, context);
+
+      case "MENU":
+        return {
+          success: true,
+          message: RESPONSES.WELCOME,
+        };
 
       case "AYUDA":
         return {
@@ -819,9 +839,17 @@ function getDateRange(entities: ParsedEntities): {
   endDate: string;
   periodLabel: string;
 } {
-  const now = new Date();
+  // Si hay período especificado, usarlo
+  if (entities.period) {
+    const range = periodToDateRange(entities.period);
+    return {
+      ...range,
+      periodLabel: getPeriodLabel(entities.period),
+    };
+  }
 
   // Por defecto, mes actual
+  const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -830,4 +858,447 @@ function getDateRange(entities: ParsedEntities): {
     endDate: formatDateISO(endOfMonth),
     periodLabel: `de ${now.toLocaleDateString("es-AR", { month: "long" })}`,
   };
+}
+
+/**
+ * Obtiene etiqueta descriptiva para un período
+ */
+function getPeriodLabel(period: QueryPeriod): string {
+  switch (period.value) {
+    case "today": return "de hoy";
+    case "yesterday": return "de ayer";
+    case "this_week": return "de esta semana";
+    case "last_week": return "de la semana pasada";
+    case "this_month": return "de este mes";
+    case "last_month": return "del mes pasado";
+    case "this_year": return "de este año";
+    case "last_7_days": return "de los últimos 7 días";
+    case "last_30_days": return "de los últimos 30 días";
+    default:
+      if (period.type === "month") {
+        return `de ${period.value}`;
+      }
+      if (period.type === "range") {
+        return `del ${period.value}`;
+      }
+      return "";
+  }
+}
+
+/**
+ * Paga el resumen de una tarjeta de crédito
+ */
+async function pagarTarjeta(
+  supabase: SupabaseClient,
+  userId: string,
+  entities: ParsedEntities,
+  context: UserContext
+): Promise<ActionResult> {
+  // Buscar la tarjeta
+  const targetCard = context.accounts.find(
+    a => a.is_credit_card &&
+    (a.id === entities.targetCardId ||
+     a.name.toLowerCase().includes(entities.targetCard?.toLowerCase() || ""))
+  );
+
+  if (!targetCard) {
+    return {
+      success: false,
+      message: "❌ No encontré esa tarjeta de crédito. Revisá el nombre.",
+    };
+  }
+
+  // Buscar la cuenta origen
+  const sourceAccount = context.accounts.find(
+    a => !a.is_credit_card &&
+    (a.id === entities.sourceAccountId ||
+     a.name.toLowerCase().includes(entities.sourceAccount?.toLowerCase() || ""))
+  );
+
+  if (!sourceAccount) {
+    return {
+      success: false,
+      message: "❌ No encontré la cuenta desde donde pagar. Revisá el nombre.",
+    };
+  }
+
+  // Obtener el resumen (calculando gastos del período)
+  const statementMonth = entities.statementMonth || "actual";
+  const { startDate, endDate, monthLabel } = getStatementPeriod(targetCard, statementMonth);
+
+  // Obtener gastos de la tarjeta en el período
+  const { data: expenses, error: expError } = await supabase
+    .from("movements")
+    .select("amount")
+    .eq("user_id", userId)
+    .eq("account_id", targetCard.id)
+    .eq("type", "expense")
+    .gte("date", startDate)
+    .lte("date", endDate);
+
+  if (expError) {
+    console.error("Error getting card expenses:", expError);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  // Calcular total
+  const totalAmount = (expenses || []).reduce((sum, e) => sum + Number(e.amount), 0);
+
+  if (totalAmount <= 0) {
+    return {
+      success: false,
+      message: `ℹ️ No hay gastos pendientes en ${targetCard.name} para ${monthLabel}.`,
+    };
+  }
+
+  // Crear la transferencia de pago
+  const transferData = {
+    user_id: userId,
+    date: getTodayISO(),
+    from_account_id: sourceAccount.id,
+    to_account_id: targetCard.id,
+    from_amount: totalAmount,
+    to_amount: totalAmount,
+    note: `Pago resumen ${monthLabel} - ${targetCard.name}`,
+  };
+
+  const { error: transError } = await supabase
+    .from("transfers")
+    .insert(transferData);
+
+  if (transError) {
+    console.error("Error creating payment transfer:", transError);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  return {
+    success: true,
+    message: `✅ *Pago de tarjeta registrado*
+
+💳 *Tarjeta:* ${targetCard.name}
+📅 *Resumen:* ${monthLabel}
+💰 *Monto:* ${formatCurrency(totalAmount, targetCard.currency)}
+🏦 *Desde:* ${sourceAccount.name}`,
+    data: {
+      amount: totalAmount,
+      account: targetCard.name,
+      date: getTodayISO(),
+    },
+  };
+}
+
+/**
+ * Agrega impuesto de sellos a una tarjeta
+ */
+async function agregarSellos(
+  supabase: SupabaseClient,
+  userId: string,
+  entities: ParsedEntities,
+  context: UserContext
+): Promise<ActionResult> {
+  // Buscar la tarjeta
+  const targetCard = context.accounts.find(
+    a => a.is_credit_card &&
+    (a.id === entities.targetCardId ||
+     a.name.toLowerCase().includes(entities.targetCard?.toLowerCase() || ""))
+  );
+
+  if (!targetCard) {
+    return {
+      success: false,
+      message: "❌ No encontré esa tarjeta de crédito. Revisá el nombre.",
+    };
+  }
+
+  const stampAmount = entities.stampTaxAmount;
+  if (!stampAmount || stampAmount <= 0) {
+    return {
+      success: false,
+      message: "❌ Indicá el monto del impuesto de sellos.",
+    };
+  }
+
+  // Buscar o crear categoría de impuestos
+  let impuestosCategory = context.categories.find(
+    c => c.name.toLowerCase().includes("impuesto") ||
+         c.name.toLowerCase().includes("sellos")
+  );
+
+  // Determinar fecha según el resumen
+  const statementMonth = entities.statementMonth || "actual";
+  const { startDate, monthLabel } = getStatementPeriod(targetCard, statementMonth);
+
+  // Crear el gasto de sellos
+  const movementData = {
+    user_id: userId,
+    type: "expense",
+    date: startDate, // Fecha del resumen
+    amount: stampAmount,
+    account_id: targetCard.id,
+    category_id: impuestosCategory?.id || null,
+    note: `Impuesto de sellos - ${monthLabel}`,
+  };
+
+  const { error } = await supabase
+    .from("movements")
+    .insert(movementData);
+
+  if (error) {
+    console.error("Error creating stamp tax:", error);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  return {
+    success: true,
+    message: `✅ *Impuesto de sellos agregado*
+
+💳 *Tarjeta:* ${targetCard.name}
+📅 *Resumen:* ${monthLabel}
+🏛️ *Monto:* ${formatCurrency(stampAmount, targetCard.currency)}`,
+    data: {
+      amount: stampAmount,
+      account: targetCard.name,
+      date: startDate,
+    },
+  };
+}
+
+/**
+ * Consulta el resumen de una tarjeta de crédito
+ */
+async function queryResumenTarjeta(
+  supabase: SupabaseClient,
+  userId: string,
+  entities: ParsedEntities,
+  context: UserContext
+): Promise<ActionResult> {
+  // Buscar la tarjeta
+  const targetCard = context.accounts.find(
+    a => a.is_credit_card &&
+    (a.id === entities.targetCardId ||
+     a.name.toLowerCase().includes(entities.targetCard?.toLowerCase() || ""))
+  );
+
+  if (!targetCard) {
+    // Si no se especifica tarjeta, mostrar todas las tarjetas
+    const creditCards = context.accounts.filter(a => a.is_credit_card);
+    if (creditCards.length === 0) {
+      return {
+        success: false,
+        message: "ℹ️ No tenés tarjetas de crédito configuradas.",
+      };
+    }
+
+    let message = "💳 *Resumen de tarjetas:*\n";
+
+    for (const card of creditCards) {
+      const { startDate, endDate, monthLabel } = getStatementPeriod(card, "actual");
+      const { data: expenses } = await supabase
+        .from("movements")
+        .select("amount")
+        .eq("user_id", userId)
+        .eq("account_id", card.id)
+        .eq("type", "expense")
+        .gte("date", startDate)
+        .lte("date", endDate);
+
+      const total = (expenses || []).reduce((sum, e) => sum + Number(e.amount), 0);
+      message += `\n${card.icon || "💳"} *${card.name}* (${monthLabel})\n   ${formatCurrency(total, card.currency)}`;
+    }
+
+    return {
+      success: true,
+      message,
+    };
+  }
+
+  // Resumen de una tarjeta específica
+  const statementMonth = entities.statementMonth || "actual";
+  const { startDate, endDate, monthLabel } = getStatementPeriod(targetCard, statementMonth);
+
+  // Obtener gastos
+  const { data: expenses, error } = await supabase
+    .from("movements")
+    .select("amount, category_id, date, note")
+    .eq("user_id", userId)
+    .eq("account_id", targetCard.id)
+    .eq("type", "expense")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: false });
+
+  if (error) {
+    console.error("Error querying card statement:", error);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  const total = (expenses || []).reduce((sum, e) => sum + Number(e.amount), 0);
+
+  let message = `💳 *Resumen ${targetCard.name}*
+📅 *Período:* ${monthLabel}
+💰 *Total:* ${formatCurrency(total, targetCard.currency)}
+📋 *Movimientos:* ${(expenses || []).length}`;
+
+  // Agrupar por categoría
+  const byCategory: Record<string, number> = {};
+  for (const exp of expenses || []) {
+    const catName = getCategoryName(exp.category_id, context) || "Sin categoría";
+    byCategory[catName] = (byCategory[catName] || 0) + Number(exp.amount);
+  }
+
+  if (Object.keys(byCategory).length > 0) {
+    message += "\n\n*Por categoría:*";
+    const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    for (const [cat, amount] of sorted.slice(0, 5)) {
+      const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
+      message += `\n• ${cat}: ${formatCurrency(amount, targetCard.currency)} (${pct}%)`;
+    }
+  }
+
+  // Últimos 5 gastos
+  if ((expenses || []).length > 0) {
+    message += "\n\n*Últimos gastos:*";
+    for (const exp of (expenses || []).slice(0, 5)) {
+      const catName = getCategoryName(exp.category_id, context) || "Sin categoría";
+      message += `\n• ${formatCurrency(Number(exp.amount), targetCard.currency)} - ${catName}`;
+    }
+  }
+
+  return {
+    success: true,
+    message,
+  };
+}
+
+/**
+ * Consulta ingresos por período
+ */
+async function queryIngresos(
+  supabase: SupabaseClient,
+  userId: string,
+  entities: ParsedEntities,
+  context: UserContext
+): Promise<ActionResult> {
+  const { startDate, endDate, periodLabel } = getDateRange(entities);
+
+  let query = supabase
+    .from("movements")
+    .select("amount, category_id, date, note, account_id")
+    .eq("user_id", userId)
+    .eq("type", "income")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: false });
+
+  // Filtrar por categoría si se especifica
+  if (entities.categoryId) {
+    query = query.eq("category_id", entities.categoryId);
+  }
+
+  const { data: movements, error } = await query;
+
+  if (error) {
+    console.error("Error querying income:", error);
+    return {
+      success: false,
+      message: RESPONSES.ERROR_GENERICO,
+    };
+  }
+
+  if (!movements || movements.length === 0) {
+    return {
+      success: true,
+      message: `ℹ️ No hay ingresos registrados ${periodLabel}.`,
+    };
+  }
+
+  const total = movements.reduce((sum, m) => sum + Number(m.amount), 0);
+  const categoryName = entities.categoryId
+    ? getCategoryName(entities.categoryId, context)
+    : null;
+
+  let message: string;
+  if (categoryName) {
+    message = `💰 *Ingresos de ${categoryName}* ${periodLabel}`;
+  } else {
+    message = `💰 *Ingresos* ${periodLabel}`;
+  }
+
+  message += `\n\n📈 *Total: ${formatCurrency(total, "ARS")}*`;
+  message += `\n📋 ${movements.length} movimientos`;
+
+  // Mostrar últimos 5
+  if (movements.length > 0) {
+    message += `\n\n*Últimos ingresos:*`;
+    for (const m of movements.slice(0, 5)) {
+      const catName = getCategoryName(m.category_id, context) || "Sin categoría";
+      message += `\n• +${formatCurrency(Number(m.amount), "ARS")} - ${catName} (${formatDateDisplay(m.date)})`;
+    }
+  }
+
+  return {
+    success: true,
+    message,
+  };
+}
+
+/**
+ * Obtiene el período de un resumen de tarjeta
+ */
+function getStatementPeriod(
+  card: UserAccount,
+  month: string
+): { startDate: string; endDate: string; monthLabel: string } {
+  const now = new Date();
+  const closingDay = card.closing_day || 1;
+
+  let year = now.getFullYear();
+  let monthNum: number;
+
+  if (month === "actual") {
+    // Determinar el mes del resumen actual basado en la fecha y día de cierre
+    if (now.getDate() <= closingDay) {
+      // Estamos antes del cierre, el resumen actual es del mes anterior
+      monthNum = now.getMonth(); // 0-indexed, así que getMonth() da el mes anterior
+      if (monthNum === 0) {
+        monthNum = 12;
+        year--;
+      }
+    } else {
+      // Estamos después del cierre, el resumen actual es de este mes
+      monthNum = now.getMonth() + 1;
+    }
+  } else {
+    // Mes específico
+    const monthNames: Record<string, number> = {
+      enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+      julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
+    };
+    monthNum = monthNames[month.toLowerCase()] || now.getMonth() + 1;
+  }
+
+  // Calcular fechas del período
+  const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const endDate = `${year}-${String(monthNum).padStart(2, "0")}-${lastDay}`;
+
+  const monthLabels = [
+    "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  const monthLabel = `${monthLabels[monthNum]} ${year}`;
+
+  return { startDate, endDate, monthLabel };
 }

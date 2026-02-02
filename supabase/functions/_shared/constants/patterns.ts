@@ -36,7 +36,54 @@ export const INTENT_PATTERNS = {
   CONSULTAR_GASTOS: [
     /\b(cu[aá]nto\s+gast[eé]|gastos?\s+(de|en|del?)|resumen\s+de\s+gastos?)\b/i,
     /\b(cu[aá]nto\s+llevo\s+gastado|qu[eé]\s+gast[eé])\b/i,
-    /\bgastos?\s+(este|mes|semana)/i,
+    /\bgastos?\s+(de\s+)?(hoy|ayer|esta\s+semana|este\s+mes|este\s+a[nñ]o)/i,
+  ],
+
+  // CONSULTAR_INGRESOS
+  CONSULTAR_INGRESOS: [
+    /\b(cu[aá]nto\s+cobr[eé]|ingresos?\s+(de|en|del?))\b/i,
+    /\b(cu[aá]nto\s+entr[oó]|qu[eé]\s+cobr[eé])\b/i,
+    /\bingresos?\s+(de\s+)?(hoy|ayer|esta\s+semana|este\s+mes|este\s+a[nñ]o)/i,
+  ],
+
+  // PAGAR_TARJETA
+  PAGAR_TARJETA: [
+    /\bpagar\s+(?:tarjeta\s+)?(\w+)(?:\s+(?:resumen\s+)?(\w+))?\s+(?:desde|con|de)\s+(\w+)/i,
+    /\bpago\s+(?:de\s+)?(?:tarjeta\s+)?(\w+)/i,
+    /\bpagar\s+(?:la\s+)?tarjeta/i,
+    /\bpagar\s+resumen/i,
+  ],
+
+  // AGREGAR_SELLOS (impuesto de sellos)
+  AGREGAR_SELLOS: [
+    /\b(?:agregar|sumar|cargar)\s+(?:impuesto\s+de\s+)?sellos?\b/i,
+    /\bsellos?\s+(?:de\s+)?(?:\$|u\$s?|usd?)?\s*[\d.,kmKM]+/i,
+    /\bimpuesto\s+de\s+sellos?\b/i,
+  ],
+
+  // CONSULTAR_RESUMEN_TARJETA
+  CONSULTAR_RESUMEN_TARJETA: [
+    /\bresumen\s+(?:de\s+)?(?:tarjeta\s+)?(\w+)(?:\s+(\w+))?/i,
+    /\b(?:ver|mostrar)\s+resumen\s+(?:de\s+)?(\w+)/i,
+    /\bcu[aá]nto\s+debo\s+(?:en|de)\s+(?:la\s+)?(?:tarjeta\s+)?(\w+)/i,
+    /\bdeuda\s+(?:de|en)\s+(?:la\s+)?(?:tarjeta\s+)?(\w+)/i,
+  ],
+
+  // MENU
+  MENU: [
+    /^men[uú]$/i,
+    /^inicio$/i,
+    /^main$/i,
+    /^home$/i,
+    /^\/start$/i,
+  ],
+
+  // CANCELAR
+  CANCELAR: [
+    /^cancelar$/i,
+    /^cancel$/i,
+    /^salir$/i,
+    /^\/cancel$/i,
   ],
 
   // ULTIMOS_MOVIMIENTOS
@@ -79,13 +126,55 @@ export const AMOUNT_PATTERNS = {
 
 // Patrón para extraer fechas
 export const DATE_PATTERNS = {
-  // dd/mm/yyyy o dd-mm-yyyy o dd.mm.yyyy
+  // dd/mm/yyyy o dd-mm-yyyy o dd.mm.yyyy (soporta 2 o 4 dígitos para año)
   explicit: /(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?/,
 
   // "el 15", "día 20", etc.
   dayOfMonth: /(?:el\s+)?(?:d[ií]a\s+)?(\d{1,2})(?:\s+de)?/i,
 
   // Palabras clave (ayer, hoy, etc.) - se manejan en aliases.ts
+};
+
+// Patrones para extraer períodos de tiempo (para consultas)
+export const PERIOD_PATTERNS = {
+  // Períodos relativos
+  relative: {
+    today: /\b(hoy|de\s+hoy)\b/i,
+    yesterday: /\b(ayer|de\s+ayer)\b/i,
+    thisWeek: /\b(esta\s+semana|de\s+esta\s+semana|semana\s+actual)\b/i,
+    lastWeek: /\b(la\s+semana\s+pasada|semana\s+pasada|semana\s+anterior)\b/i,
+    thisMonth: /\b(este\s+mes|de\s+este\s+mes|mes\s+actual)\b/i,
+    lastMonth: /\b(el\s+mes\s+pasado|mes\s+pasado|mes\s+anterior)\b/i,
+    thisYear: /\b(este\s+a[nñ]o|de\s+este\s+a[nñ]o|a[nñ]o\s+actual)\b/i,
+    last7Days: /\b([uú]ltimos?\s+7\s+d[ií]as?)\b/i,
+    last30Days: /\b([uú]ltimos?\s+30\s+d[ií]as?)\b/i,
+    lastNDays: /\b[uú]ltimos?\s+(\d+)\s+d[ií]as?\b/i,
+  },
+
+  // Rango de fechas: "del 5/1 al 10/1", "desde el 1 de enero hasta el 15"
+  range: /\b(?:del?|desde(?:\s+el)?)\s+(\d{1,2}[\/\-]?\d{0,2}(?:[\/\-]\d{2,4})?|\d{1,2}\s+de\s+\w+)\s+(?:al?|hasta(?:\s+el)?)\s+(\d{1,2}[\/\-]?\d{0,2}(?:[\/\-]\d{2,4})?|\d{1,2}\s+de\s+\w+)/i,
+
+  // Mes específico: "enero", "de febrero", "en marzo"
+  month: /\b(?:de\s+|en\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)(?:\s+(?:de\s+)?(\d{4}))?\b/i,
+
+  // "hace N días/semanas/meses"
+  ago: /\bhace\s+(\d+)\s+(d[ií]as?|semanas?|meses?)\b/i,
+};
+
+// Nombres de meses para parsing
+export const MONTH_NAMES: Record<string, number> = {
+  enero: 1,
+  febrero: 2,
+  marzo: 3,
+  abril: 4,
+  mayo: 5,
+  junio: 6,
+  julio: 7,
+  agosto: 8,
+  septiembre: 9,
+  octubre: 10,
+  noviembre: 11,
+  diciembre: 12,
 };
 
 // Patrón para detectar notas/descripción
@@ -135,6 +224,24 @@ export const IGNORE_PATTERNS = [
   /^(chau|adi[oó]s|nos\s+vemos|hasta\s+luego)\s*[!.?]?$/i,
   /^[👍🙏😊🤗]+$/,  // Solo emojis
 ];
+
+// Patrones para extraer información de tarjetas de crédito
+export const CREDIT_CARD_PATTERNS = {
+  // "pagar visa desde brubank", "pagar tarjeta visa con brubank"
+  payCard: /\bpagar\s+(?:(?:la\s+)?tarjeta\s+)?(\w+)(?:\s+(?:resumen\s+)?(?:de\s+)?(\w+))?\s+(?:desde|con|de)\s+(\w+)/i,
+
+  // "pagar visa" (sin especificar cuenta origen)
+  payCardSimple: /\bpagar\s+(?:(?:la\s+)?tarjeta\s+)?(\w+)/i,
+
+  // "agregar sellos de 1500 a visa", "sellos 1500 visa"
+  addStampTax: /\b(?:agregar|sumar|cargar)\s+(?:impuesto\s+de\s+)?sellos?\s+(?:de\s+)?(\$?[\d.,kmKM]+)\s+a\s+(?:(?:la\s+)?tarjeta\s+)?(\w+)/i,
+
+  // "sellos 1500 a visa"
+  addStampTaxAlt: /\bsellos?\s+(?:de\s+)?(\$?[\d.,kmKM]+)\s+(?:a|en)\s+(?:(?:la\s+)?tarjeta\s+)?(\w+)/i,
+
+  // "resumen visa", "resumen de visa enero"
+  cardStatement: /\bresumen\s+(?:de\s+)?(?:(?:la\s+)?tarjeta\s+)?(\w+)(?:\s+(?:de\s+)?(\w+))?/i,
+};
 
 // Expresión para normalizar texto (remover acentos, etc.)
 export const NORMALIZE_PATTERN = /[\u0300-\u036f]/g;

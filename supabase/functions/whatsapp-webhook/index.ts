@@ -217,6 +217,24 @@ async function processMessage(phoneNumber: string, messageText: string, buttonId
       .single()
 
     const flowState: FlowState = pendingAction?.action_data || { step: 'idle' }
+
+    // Check if this is a guided flow pending action
+    if (pendingAction && flowState.guided) {
+      const selection = buttonId || listId
+
+      // Handle guided movement/transfer flow
+      if (pendingAction.action_type === 'guided_movement' || pendingAction.action_type === 'guided_transfer') {
+        const handled = await handleGuidedFlowStep(whatsappUser, pendingAction, flowState, selection, messageText, phoneNumber)
+        if (handled) return
+      }
+
+      // Handle guided query flow
+      if (pendingAction.action_type === 'guided_query') {
+        const handled = await handleGuidedQueryStep(whatsappUser, pendingAction, flowState, selection, phoneNumber)
+        if (handled) return
+      }
+    }
+
     await handleFlowStep(whatsappUser, pendingAction, flowState, messageText, buttonId, listId, phoneNumber)
 
   } catch (error) {
@@ -348,29 +366,778 @@ async function handleFlowStep(
 // SHOW WELCOME MESSAGE
 // ============================================
 async function showWelcomeMessage(phoneNumber: string) {
-  await sendWhatsAppMessage(phoneNumber, `¡Hola! 👋 Soy tu asistente de *Cashé*.
+  await sendWhatsAppMessage(phoneNumber, `👋 *¡Hola! Soy tu asistente de Cashé*
 
-Podés escribirme con lenguaje natural, por ejemplo:
+📝 *REGISTRAR MOVIMIENTOS*
+Usá estas firmas:
 
-💸 *Registrar gastos:*
-• "Gasté 5000 en el super con la visa"
-• "500 en café"
-• "Pagué 1500 de luz"
+• *Gasto:* gasté {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: gasté 5000 en visa de supermercado_
 
-💰 *Registrar ingresos:*
-• "Cobré 50000 de sueldo"
-• "Me transfirieron 10000"
+• *Ingreso:* cobré {monto} en {cuenta} de {categoría} [el {fecha}]
+  _Ej: cobré 150k en brubank de sueldo el 5/1_
 
-🔄 *Transferencias:*
-• "Pasé 20000 de Galicia a MP"
+• *Transferencia:* transferí {monto} de {origen} a {destino} [el {fecha}]
+  _Ej: transferí 10000 de brubank a mercadopago_
 
-📊 *Consultas:*
-• "Cuánto tengo en Galicia?"
-• "Saldo"
-• "Resumen del mes"
-• "Últimos movimientos"
+💳 *TARJETAS DE CRÉDITO*
+• *Pagar tarjeta:* pagar {tarjeta} [resumen {mes}] desde {cuenta}
+  _Ej: pagar visa resumen enero desde brubank_
 
-_Escribime lo que necesites y yo lo entiendo_ 🤖`)
+• *Agregar sellos:* agregar sellos de {monto} a {tarjeta}
+  _Ej: agregar sellos de 1500 a visa_
+
+📊 *CONSULTAS*
+• saldo [de {cuenta}]
+• gastos [de {categoría}] {período}
+• ingresos [de {categoría}] {período}
+• resumen [de {tarjeta}] [{mes}]
+
+📅 *Períodos válidos:* hoy, ayer, esta semana, este mes, del dd/mm al dd/mm`)
+
+  // Enviar botones del menú guiado
+  await sendWhatsAppButtons(
+    phoneNumber,
+    '💡 *Escribí un mensaje* o usá el menú guiado:',
+    [
+      { id: 'guided_menu', title: '📋 Menú guiado' }
+    ]
+  )
+}
+
+// ============================================
+// GUIDED MENU FLOW
+// ============================================
+async function showGuidedMainMenu(phoneNumber: string) {
+  await sendWhatsAppList(
+    phoneNumber,
+    '📋 *Menú principal*\n\n¿Qué querés hacer?',
+    'Seleccionar',
+    [{
+      title: 'Opciones',
+      rows: [
+        { id: 'guided_expense', title: '💸 Registrar gasto' },
+        { id: 'guided_income', title: '💰 Registrar ingreso' },
+        { id: 'guided_transfer', title: '🔄 Transferir' },
+        { id: 'guided_cards', title: '💳 Tarjetas' },
+        { id: 'guided_queries', title: '📊 Consultas' },
+        { id: 'guided_back_welcome', title: '⬅️ Volver' }
+      ]
+    }]
+  )
+}
+
+async function showGuidedCardsMenu(phoneNumber: string) {
+  await sendWhatsAppList(
+    phoneNumber,
+    '💳 *Tarjetas de crédito*\n\n¿Qué querés hacer?',
+    'Seleccionar',
+    [{
+      title: 'Opciones',
+      rows: [
+        { id: 'guided_pay_card', title: '💵 Pagar tarjeta' },
+        { id: 'guided_add_stamps', title: '🏛️ Agregar sellos' },
+        { id: 'guided_card_summary', title: '📋 Ver resumen' },
+        { id: 'guided_back_main', title: '⬅️ Volver' }
+      ]
+    }]
+  )
+}
+
+async function showGuidedQueriesMenu(phoneNumber: string) {
+  await sendWhatsAppList(
+    phoneNumber,
+    '📊 *Consultas*\n\n¿Qué querés ver?',
+    'Seleccionar',
+    [{
+      title: 'Opciones',
+      rows: [
+        { id: 'guided_balances', title: '💰 Ver saldos' },
+        { id: 'guided_expenses_period', title: '📉 Gastos del período' },
+        { id: 'guided_income_period', title: '📈 Ingresos del período' },
+        { id: 'guided_summary', title: '📊 Resumen del mes' },
+        { id: 'guided_recent', title: '🕐 Últimos movimientos' },
+        { id: 'guided_back_main', title: '⬅️ Volver' }
+      ]
+    }]
+  )
+}
+
+async function handleGuidedFlow(whatsappUser: any, selection: string, phoneNumber: string) {
+  switch (selection) {
+    // Main menu navigation
+    case 'guided_menu':
+      await showGuidedMainMenu(phoneNumber)
+      return true
+
+    case 'guided_back_welcome':
+      await showWelcomeMessage(phoneNumber)
+      return true
+
+    case 'guided_back_main':
+      await showGuidedMainMenu(phoneNumber)
+      return true
+
+    // Movement registration - trigger guided flow
+    case 'guided_expense':
+      await startGuidedMovement(whatsappUser, 'expense', phoneNumber)
+      return true
+
+    case 'guided_income':
+      await startGuidedMovement(whatsappUser, 'income', phoneNumber)
+      return true
+
+    case 'guided_transfer':
+      await startGuidedTransfer(whatsappUser, phoneNumber)
+      return true
+
+    // Cards submenu
+    case 'guided_cards':
+      await showGuidedCardsMenu(phoneNumber)
+      return true
+
+    case 'guided_pay_card':
+      await sendWhatsAppMessage(phoneNumber, '💳 *Pagar tarjeta*\n\nEscribí algo como:\n_"pagar visa resumen enero desde brubank"_')
+      await sendWhatsAppButtons(phoneNumber, '¿Querés volver al menú?', [
+        { id: 'guided_back_cards', title: '⬅️ Volver' }
+      ])
+      return true
+
+    case 'guided_add_stamps':
+      await sendWhatsAppMessage(phoneNumber, '🏛️ *Agregar sellos*\n\nEscribí algo como:\n_"agregar sellos de 1500 a visa"_')
+      await sendWhatsAppButtons(phoneNumber, '¿Querés volver al menú?', [
+        { id: 'guided_back_cards', title: '⬅️ Volver' }
+      ])
+      return true
+
+    case 'guided_card_summary':
+      await sendWhatsAppMessage(phoneNumber, '📋 *Ver resumen*\n\nEscribí algo como:\n_"resumen de visa enero"_')
+      await sendWhatsAppButtons(phoneNumber, '¿Querés volver al menú?', [
+        { id: 'guided_back_cards', title: '⬅️ Volver' }
+      ])
+      return true
+
+    case 'guided_back_cards':
+      await showGuidedCardsMenu(phoneNumber)
+      return true
+
+    // Queries submenu
+    case 'guided_queries':
+      await showGuidedQueriesMenu(phoneNumber)
+      return true
+
+    case 'guided_balances':
+      await showBalances(whatsappUser.user_id, phoneNumber)
+      return true
+
+    case 'guided_expenses_period':
+      await startGuidedExpenseQuery(whatsappUser, phoneNumber)
+      return true
+
+    case 'guided_income_period':
+      await startGuidedIncomeQuery(whatsappUser, phoneNumber)
+      return true
+
+    case 'guided_summary':
+      await showMonthlySummary(whatsappUser.user_id, phoneNumber)
+      return true
+
+    case 'guided_recent':
+      await showRecentMovements(whatsappUser.user_id, phoneNumber)
+      return true
+
+    case 'guided_back_queries':
+      await showGuidedQueriesMenu(phoneNumber)
+      return true
+
+    default:
+      return false
+  }
+}
+
+// Start guided movement flow (expense/income)
+async function startGuidedMovement(whatsappUser: any, type: 'expense' | 'income', phoneNumber: string) {
+  // Create pending action for guided flow
+  await supabase.from('whatsapp_pending_actions').insert({
+    whatsapp_user_id: whatsappUser.id,
+    action_type: 'guided_movement',
+    action_data: {
+      step: 'guided_select_account',
+      type,
+      guided: true
+    },
+    status: 'pending',
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+  })
+
+  const label = type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+  await sendWhatsAppMessage(phoneNumber, `${label}\n\n*Paso 1/4:* Elegí la cuenta`)
+  await showGuidedAccountList(whatsappUser.user_id, phoneNumber, type)
+}
+
+// Start guided transfer flow
+async function startGuidedTransfer(whatsappUser: any, phoneNumber: string) {
+  await supabase.from('whatsapp_pending_actions').insert({
+    whatsapp_user_id: whatsappUser.id,
+    action_type: 'guided_transfer',
+    action_data: {
+      step: 'guided_select_from_account',
+      type: 'transfer',
+      guided: true
+    },
+    status: 'pending',
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+  })
+
+  await sendWhatsAppMessage(phoneNumber, '🔄 *Transferir*\n\n*Paso 1/4:* ¿De qué cuenta transferís?')
+  await showGuidedAccountList(whatsappUser.user_id, phoneNumber, 'transfer_from')
+}
+
+// Show account list for guided flow
+async function showGuidedAccountList(userId: string, phoneNumber: string, flowType: string, excludeId?: string) {
+  const { data: accounts } = await supabase
+    .from('accounts')
+    .select('id, name, currency')
+    .eq('user_id', userId)
+    .order('name')
+
+  if (!accounts || accounts.length === 0) {
+    await sendWhatsAppMessage(phoneNumber, '❌ No tenés cuentas.\n\nAgregá una en cashe.ar')
+    await showGuidedMainMenu(phoneNumber)
+    return
+  }
+
+  const filtered = excludeId ? accounts.filter(a => a.id !== excludeId) : accounts
+  const prefix = flowType === 'transfer_from' ? 'gf_from_' : flowType === 'transfer_to' ? 'gf_to_' : 'gf_acc_'
+
+  const rows = filtered.slice(0, 9).map(acc => ({
+    id: `${prefix}${acc.id}`,
+    title: createShortAccountName(acc.name, acc.currency, 24)
+  }))
+
+  // Add back button
+  rows.push({ id: 'gf_back_main', title: '⬅️ Volver al menú' })
+
+  await sendWhatsAppList(
+    phoneNumber,
+    'Seleccioná una cuenta:',
+    'Ver cuentas',
+    [{ title: 'Cuentas', rows }]
+  )
+}
+
+// Show category list for guided flow
+async function showGuidedCategoryList(userId: string, phoneNumber: string, type: 'expense' | 'income') {
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name, icon')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .order('name')
+
+  if (!categories || categories.length === 0) {
+    await sendWhatsAppMessage(phoneNumber, '❌ No tenés categorías.\n\nAgregá una en cashe.ar')
+    await showGuidedMainMenu(phoneNumber)
+    return
+  }
+
+  const rows = categories.slice(0, 9).map(cat => ({
+    id: `gf_cat_${cat.id}`,
+    title: `${cat.icon || ''} ${cat.name}`.trim().slice(0, 24)
+  }))
+
+  // Add back button (go back to account selection)
+  rows.push({ id: 'gf_back_account', title: '⬅️ Volver' })
+
+  await sendWhatsAppList(
+    phoneNumber,
+    'Seleccioná una categoría:',
+    'Ver categorías',
+    [{ title: 'Categorías', rows }]
+  )
+}
+
+// Handle guided flow selections
+async function handleGuidedFlowStep(
+  whatsappUser: any,
+  pendingAction: any,
+  flowState: any,
+  selection: string,
+  messageText: string,
+  phoneNumber: string
+): Promise<boolean> {
+  if (!flowState.guided) return false
+
+  // Back buttons
+  if (selection === 'gf_back_main') {
+    await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
+    await showGuidedMainMenu(phoneNumber)
+    return true
+  }
+
+  if (selection === 'gf_back_account') {
+    // Go back to account selection
+    if (flowState.type === 'transfer') {
+      const newState = { ...flowState, step: 'guided_select_from_account' }
+      await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+      await sendWhatsAppMessage(phoneNumber, '🔄 *Transferir*\n\n*Paso 1/4:* ¿De qué cuenta transferís?')
+      await showGuidedAccountList(whatsappUser.user_id, phoneNumber, 'transfer_from')
+    } else {
+      const newState = { ...flowState, step: 'guided_select_account' }
+      await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+      const label = flowState.type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+      await sendWhatsAppMessage(phoneNumber, `${label}\n\n*Paso 1/4:* Elegí la cuenta`)
+      await showGuidedAccountList(whatsappUser.user_id, phoneNumber, flowState.type)
+    }
+    return true
+  }
+
+  if (selection === 'gf_back_category') {
+    // Go back to category selection
+    const newState = { ...flowState, step: 'guided_select_category' }
+    await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+    const label = flowState.type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+    await sendWhatsAppMessage(phoneNumber, `${label}\n\n*Paso 2/4:* Elegí la categoría`)
+    await showGuidedCategoryList(whatsappUser.user_id, phoneNumber, flowState.type)
+    return true
+  }
+
+  if (selection === 'gf_back_to_account') {
+    // For transfers, go back to destination account
+    const newState = { ...flowState, step: 'guided_select_to_account' }
+    await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+    await sendWhatsAppMessage(phoneNumber, '🔄 *Transferir*\n\n*Paso 2/4:* ¿A qué cuenta transferís?')
+    await showGuidedAccountList(whatsappUser.user_id, phoneNumber, 'transfer_to', flowState.from_account_id)
+    return true
+  }
+
+  // Handle step-specific logic
+  switch (flowState.step) {
+    case 'guided_select_account':
+      if (selection.startsWith('gf_acc_')) {
+        const accountId = selection.replace('gf_acc_', '')
+        const { data: account } = await supabase.from('accounts').select('id, name, currency').eq('id', accountId).single()
+        if (!account) return true
+
+        const newState = {
+          ...flowState,
+          step: 'guided_select_category',
+          account_id: account.id,
+          account_name: account.name,
+          currency: account.currency
+        }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+
+        const label = flowState.type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+        await sendWhatsAppMessage(phoneNumber, `${label}\n\n✓ Cuenta: ${account.name}\n\n*Paso 2/4:* Elegí la categoría`)
+        await showGuidedCategoryList(whatsappUser.user_id, phoneNumber, flowState.type)
+        return true
+      }
+      break
+
+    case 'guided_select_category':
+      if (selection.startsWith('gf_cat_')) {
+        const categoryId = selection.replace('gf_cat_', '')
+        const { data: category } = await supabase.from('categories').select('id, name').eq('id', categoryId).single()
+        if (!category) return true
+
+        const newState = {
+          ...flowState,
+          step: 'guided_enter_amount',
+          category_id: category.id,
+          category_name: category.name
+        }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+
+        const label = flowState.type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+        await sendWhatsAppMessage(phoneNumber, `${label}\n\n✓ Cuenta: ${flowState.account_name}\n✓ Categoría: ${category.name}\n\n*Paso 3/4:* Escribí el monto`)
+        await sendWhatsAppButtons(phoneNumber, '_Ej: 5000, 50k, 2.5k_', [
+          { id: 'gf_back_category', title: '⬅️ Volver' }
+        ])
+        return true
+      }
+      break
+
+    case 'guided_enter_amount':
+      // Parse amount from message
+      const amount = parseAmountWithK(messageText)
+      if (!amount || amount <= 0) {
+        await sendWhatsAppMessage(phoneNumber, '⚠️ Monto inválido. Escribí un número válido.\n_Ej: 5000, 50k, 2.5k_')
+        return true
+      }
+
+      const confirmState = {
+        ...flowState,
+        step: 'guided_confirm',
+        amount
+      }
+      await supabase.from('whatsapp_pending_actions').update({ action_data: confirmState }).eq('id', pendingAction.id)
+
+      const label = flowState.type === 'expense' ? '💸 Registrar gasto' : '💰 Registrar ingreso'
+      const formatted = formatCurrency(amount, flowState.currency || 'ARS')
+      await sendWhatsAppButtons(
+        phoneNumber,
+        `${label}\n\n✓ Cuenta: ${flowState.account_name}\n✓ Categoría: ${flowState.category_name}\n✓ Monto: ${formatted}\n📅 Fecha: Hoy\n\n*Paso 4/4:* ¿Confirmás?`,
+        [
+          { id: 'gf_confirm_yes', title: '✅ Confirmar' },
+          { id: 'gf_confirm_edit', title: '✏️ Editar' },
+          { id: 'gf_confirm_no', title: '❌ Cancelar' }
+        ]
+      )
+      return true
+
+    case 'guided_confirm':
+      if (selection === 'gf_confirm_yes') {
+        // Execute the action
+        const today = new Date().toISOString().split('T')[0]
+        await supabase.from('movements').insert({
+          user_id: whatsappUser.user_id,
+          type: flowState.type,
+          amount: flowState.amount,
+          account_id: flowState.account_id,
+          category_id: flowState.category_id,
+          date: today,
+          note: null
+        })
+
+        const successLabel = flowState.type === 'expense' ? '✅ *¡Gasto registrado!*' : '✅ *¡Ingreso registrado!*'
+        await sendWhatsAppMessage(phoneNumber, successLabel)
+        await supabase.from('whatsapp_pending_actions').update({ status: 'confirmed' }).eq('id', pendingAction.id)
+        await showGuidedMainMenu(phoneNumber)
+        return true
+      }
+      if (selection === 'gf_confirm_edit') {
+        // Go back to amount
+        const editState = { ...flowState, step: 'guided_enter_amount' }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: editState }).eq('id', pendingAction.id)
+        await sendWhatsAppMessage(phoneNumber, '✏️ Escribí el nuevo monto:')
+        await sendWhatsAppButtons(phoneNumber, '_Ej: 5000, 50k, 2.5k_', [
+          { id: 'gf_back_category', title: '⬅️ Volver' }
+        ])
+        return true
+      }
+      if (selection === 'gf_confirm_no') {
+        await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
+        await sendWhatsAppMessage(phoneNumber, '❌ Cancelado')
+        await showGuidedMainMenu(phoneNumber)
+        return true
+      }
+      break
+
+    // Transfer flow
+    case 'guided_select_from_account':
+      if (selection.startsWith('gf_from_')) {
+        const accountId = selection.replace('gf_from_', '')
+        const { data: account } = await supabase.from('accounts').select('id, name, currency').eq('id', accountId).single()
+        if (!account) return true
+
+        const newState = {
+          ...flowState,
+          step: 'guided_select_to_account',
+          from_account_id: account.id,
+          from_account_name: account.name,
+          from_currency: account.currency
+        }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+
+        await sendWhatsAppMessage(phoneNumber, `🔄 *Transferir*\n\n✓ Desde: ${account.name}\n\n*Paso 2/4:* ¿A qué cuenta transferís?`)
+        await showGuidedAccountList(whatsappUser.user_id, phoneNumber, 'transfer_to', account.id)
+        return true
+      }
+      break
+
+    case 'guided_select_to_account':
+      if (selection.startsWith('gf_to_')) {
+        const accountId = selection.replace('gf_to_', '')
+        const { data: account } = await supabase.from('accounts').select('id, name, currency').eq('id', accountId).single()
+        if (!account) return true
+
+        const newState = {
+          ...flowState,
+          step: 'guided_enter_transfer_amount',
+          to_account_id: account.id,
+          to_account_name: account.name,
+          to_currency: account.currency
+        }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: newState }).eq('id', pendingAction.id)
+
+        await sendWhatsAppMessage(phoneNumber, `🔄 *Transferir*\n\n✓ Desde: ${flowState.from_account_name}\n✓ Hacia: ${account.name}\n\n*Paso 3/4:* ¿Cuánto transferís?`)
+        await sendWhatsAppButtons(phoneNumber, `_Monto en ${flowState.from_currency || 'pesos'}_`, [
+          { id: 'gf_back_to_account', title: '⬅️ Volver' }
+        ])
+        return true
+      }
+      break
+
+    case 'guided_enter_transfer_amount':
+      const transferAmount = parseAmountWithK(messageText)
+      if (!transferAmount || transferAmount <= 0) {
+        await sendWhatsAppMessage(phoneNumber, '⚠️ Monto inválido. Escribí un número válido.')
+        return true
+      }
+
+      // If different currencies, ask for destination amount
+      if (flowState.from_currency !== flowState.to_currency) {
+        const diffCurrencyState = {
+          ...flowState,
+          step: 'guided_enter_transfer_to_amount',
+          from_amount: transferAmount
+        }
+        await supabase.from('whatsapp_pending_actions').update({ action_data: diffCurrencyState }).eq('id', pendingAction.id)
+        await sendWhatsAppMessage(phoneNumber, `💱 *Conversión de moneda*\n\nEnviás: ${formatCurrency(transferAmount, flowState.from_currency)}\n\n¿Cuánto recibís en ${flowState.to_currency}?`)
+        return true
+      }
+
+      const transferConfirmState = {
+        ...flowState,
+        step: 'guided_confirm_transfer',
+        from_amount: transferAmount,
+        to_amount: transferAmount
+      }
+      await supabase.from('whatsapp_pending_actions').update({ action_data: transferConfirmState }).eq('id', pendingAction.id)
+
+      const fromFormatted = formatCurrency(transferAmount, flowState.from_currency || 'ARS')
+      await sendWhatsAppButtons(
+        phoneNumber,
+        `🔄 *Transferir*\n\n✓ Desde: ${flowState.from_account_name}\n✓ Hacia: ${flowState.to_account_name}\n✓ Monto: ${fromFormatted}\n📅 Fecha: Hoy\n\n*Paso 4/4:* ¿Confirmás?`,
+        [
+          { id: 'gf_confirm_transfer_yes', title: '✅ Confirmar' },
+          { id: 'gf_confirm_transfer_no', title: '❌ Cancelar' }
+        ]
+      )
+      return true
+
+    case 'guided_enter_transfer_to_amount':
+      const toAmount = parseAmountWithK(messageText)
+      if (!toAmount || toAmount <= 0) {
+        await sendWhatsAppMessage(phoneNumber, '⚠️ Monto inválido.')
+        return true
+      }
+
+      const multiCurrencyConfirmState = {
+        ...flowState,
+        step: 'guided_confirm_transfer',
+        to_amount: toAmount
+      }
+      await supabase.from('whatsapp_pending_actions').update({ action_data: multiCurrencyConfirmState }).eq('id', pendingAction.id)
+
+      await sendWhatsAppButtons(
+        phoneNumber,
+        `🔄 *Transferir*\n\n✓ Desde: ${flowState.from_account_name}\n✓ Enviás: ${formatCurrency(flowState.from_amount, flowState.from_currency)}\n✓ Hacia: ${flowState.to_account_name}\n✓ Recibís: ${formatCurrency(toAmount, flowState.to_currency)}\n📅 Fecha: Hoy\n\n*Paso 4/4:* ¿Confirmás?`,
+        [
+          { id: 'gf_confirm_transfer_yes', title: '✅ Confirmar' },
+          { id: 'gf_confirm_transfer_no', title: '❌ Cancelar' }
+        ]
+      )
+      return true
+
+    case 'guided_confirm_transfer':
+      if (selection === 'gf_confirm_transfer_yes') {
+        const today = new Date().toISOString().split('T')[0]
+        await supabase.from('transfers').insert({
+          user_id: whatsappUser.user_id,
+          from_account_id: flowState.from_account_id,
+          to_account_id: flowState.to_account_id,
+          from_amount: flowState.from_amount,
+          to_amount: flowState.to_amount,
+          date: today,
+          note: null
+        })
+
+        await sendWhatsAppMessage(phoneNumber, '✅ *¡Transferencia registrada!*')
+        await supabase.from('whatsapp_pending_actions').update({ status: 'confirmed' }).eq('id', pendingAction.id)
+        await showGuidedMainMenu(phoneNumber)
+        return true
+      }
+      if (selection === 'gf_confirm_transfer_no') {
+        await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
+        await sendWhatsAppMessage(phoneNumber, '❌ Cancelado')
+        await showGuidedMainMenu(phoneNumber)
+        return true
+      }
+      break
+  }
+
+  return false
+}
+
+// Helper to parse amounts with K notation
+function parseAmountWithK(text: string): number | null {
+  const cleaned = text.toLowerCase().trim()
+
+  // Handle K notation: 50k = 50000, 2.5k = 2500
+  const kMatch = cleaned.match(/^(\d+(?:[.,]\d+)?)\s*k$/i)
+  if (kMatch) {
+    const num = parseFloat(kMatch[1].replace(',', '.'))
+    return Math.round(num * 1000)
+  }
+
+  // Handle regular numbers
+  const numMatch = cleaned.match(/^[\$]?\s*(\d+(?:[.,]\d+)?)$/)
+  if (numMatch) {
+    return Math.round(parseFloat(numMatch[1].replace(',', '.')))
+  }
+
+  // Handle numbers with thousand separators
+  const separatedMatch = cleaned.match(/^[\$]?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)$/)
+  if (separatedMatch) {
+    const numStr = separatedMatch[1].replace(/\./g, '').replace(',', '.')
+    return Math.round(parseFloat(numStr))
+  }
+
+  return null
+}
+
+// Start guided expense query
+async function startGuidedExpenseQuery(whatsappUser: any, phoneNumber: string) {
+  await supabase.from('whatsapp_pending_actions').insert({
+    whatsapp_user_id: whatsappUser.id,
+    action_type: 'guided_query',
+    action_data: {
+      step: 'guided_query_period',
+      query_type: 'expenses',
+      guided: true
+    },
+    status: 'pending',
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+  })
+
+  await showGuidedPeriodList(phoneNumber, 'expenses')
+}
+
+// Start guided income query
+async function startGuidedIncomeQuery(whatsappUser: any, phoneNumber: string) {
+  await supabase.from('whatsapp_pending_actions').insert({
+    whatsapp_user_id: whatsappUser.id,
+    action_type: 'guided_query',
+    action_data: {
+      step: 'guided_query_period',
+      query_type: 'income',
+      guided: true
+    },
+    status: 'pending',
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+  })
+
+  await showGuidedPeriodList(phoneNumber, 'income')
+}
+
+// Show period selection for queries
+async function showGuidedPeriodList(phoneNumber: string, queryType: string) {
+  const label = queryType === 'expenses' ? '📉 Gastos' : '📈 Ingresos'
+  await sendWhatsAppList(
+    phoneNumber,
+    `${label}\n\n¿De qué período?`,
+    'Seleccionar',
+    [{
+      title: 'Períodos',
+      rows: [
+        { id: 'gq_period_today', title: '📅 Hoy' },
+        { id: 'gq_period_week', title: '📅 Esta semana' },
+        { id: 'gq_period_month', title: '📅 Este mes' },
+        { id: 'gq_period_last_month', title: '📅 Mes pasado' },
+        { id: 'gq_back_queries', title: '⬅️ Volver' }
+      ]
+    }]
+  )
+}
+
+// Handle guided query flow
+async function handleGuidedQueryStep(
+  whatsappUser: any,
+  pendingAction: any,
+  flowState: any,
+  selection: string,
+  phoneNumber: string
+): Promise<boolean> {
+  if (!flowState.guided || flowState.step !== 'guided_query_period') return false
+
+  if (selection === 'gq_back_queries') {
+    await supabase.from('whatsapp_pending_actions').update({ status: 'cancelled' }).eq('id', pendingAction.id)
+    await showGuidedQueriesMenu(phoneNumber)
+    return true
+  }
+
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  let startDate: string
+  let endDate: string
+  let periodLabel: string
+
+  switch (selection) {
+    case 'gq_period_today':
+      startDate = endDate = now.toISOString().split('T')[0]
+      periodLabel = 'hoy'
+      break
+    case 'gq_period_week':
+      const dayOfWeek = now.getDay()
+      const startOfWeek = new Date(now)
+      startOfWeek.setDate(now.getDate() - dayOfWeek)
+      startDate = startOfWeek.toISOString().split('T')[0]
+      endDate = now.toISOString().split('T')[0]
+      periodLabel = 'esta semana'
+      break
+    case 'gq_period_month':
+      startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      endDate = now.toISOString().split('T')[0]
+      periodLabel = 'este mes'
+      break
+    case 'gq_period_last_month':
+      const lastMonth = month === 0 ? 11 : month - 1
+      const lastMonthYear = month === 0 ? year - 1 : year
+      const lastDay = new Date(lastMonthYear, lastMonth + 1, 0).getDate()
+      startDate = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-01`
+      endDate = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-${lastDay}`
+      periodLabel = 'el mes pasado'
+      break
+    default:
+      return false
+  }
+
+  const movementType = flowState.query_type === 'expenses' ? 'expense' : 'income'
+  const { data: movements } = await supabase
+    .from('movements')
+    .select('amount, category:categories(name), date')
+    .eq('user_id', whatsappUser.user_id)
+    .eq('type', movementType)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false })
+
+  if (!movements || movements.length === 0) {
+    const label = flowState.query_type === 'expenses' ? 'gastos' : 'ingresos'
+    await sendWhatsAppMessage(phoneNumber, `📊 No hay ${label} para ${periodLabel}.`)
+  } else {
+    const total = movements.reduce((sum, m) => sum + Number(m.amount), 0)
+    const emoji = flowState.query_type === 'expenses' ? '📉' : '📈'
+    const label = flowState.query_type === 'expenses' ? 'Gastos' : 'Ingresos'
+
+    // Group by category
+    const byCategory: Record<string, number> = {}
+    for (const m of movements) {
+      const cat = (m.category as any)?.name || 'Sin categoría'
+      byCategory[cat] = (byCategory[cat] || 0) + Number(m.amount)
+    }
+
+    let message = `${emoji} *${label} de ${periodLabel}:*\n\n`
+    message += `💰 Total: ${formatCurrency(total, 'ARS')}\n`
+    message += `📊 Movimientos: ${movements.length}\n\n`
+
+    const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 8)
+    for (const [cat, amount] of sorted) {
+      message += `• ${truncateName(cat, 15)}: ${formatCurrency(amount, 'ARS')}\n`
+    }
+
+    await sendWhatsAppMessage(phoneNumber, message)
+  }
+
+  await supabase.from('whatsapp_pending_actions').update({ status: 'confirmed' }).eq('id', pendingAction.id)
+  await sendWhatsAppButtons(phoneNumber, '¿Qué más necesitás?', [
+    { id: 'guided_back_queries', title: '📊 Consultas' },
+    { id: 'guided_back_main', title: '📋 Menú' }
+  ])
+  return true
 }
 
 // ============================================
@@ -380,6 +1147,12 @@ _Escribime lo que necesites y yo lo entiendo_ 🤖`)
 async function handleIdleStep(whatsappUser: any, buttonId: string, listId: string, phoneNumber: string, messageText: string = '') {
   const selection = buttonId || listId
   const lowerText = messageText.toLowerCase().trim()
+
+  // Handle guided flow navigation (no pending action needed)
+  if (selection && (selection.startsWith('guided_') || selection === 'gf_back_main')) {
+    const handled = await handleGuidedFlow(whatsappUser, selection, phoneNumber)
+    if (handled) return
+  }
 
   // Handle NLP confirmation/edit callbacks (buttons from confirmation flow)
   if (selection && (selection.startsWith('confirm_') || selection.startsWith('edit_') || selection.startsWith('sel_') || selection.startsWith('acc_') || selection.startsWith('cat_'))) {
@@ -870,7 +1643,10 @@ async function showBalances(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showWelcomeMessage(phoneNumber)
+  await sendWhatsAppButtons(phoneNumber, '¿Qué más necesitás?', [
+    { id: 'guided_back_queries', title: '📊 Consultas' },
+    { id: 'guided_back_main', title: '📋 Menú' }
+  ])
 }
 
 async function showMonthlySummary(userId: string, phoneNumber: string) {
@@ -920,7 +1696,10 @@ async function showMonthlySummary(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showWelcomeMessage(phoneNumber)
+  await sendWhatsAppButtons(phoneNumber, '¿Qué más necesitás?', [
+    { id: 'guided_back_queries', title: '📊 Consultas' },
+    { id: 'guided_back_main', title: '📋 Menú' }
+  ])
 }
 
 async function showCategoryDetail(
@@ -996,7 +1775,10 @@ async function showRecentMovements(userId: string, phoneNumber: string) {
   }
 
   await sendWhatsAppMessage(phoneNumber, message)
-  await showWelcomeMessage(phoneNumber)
+  await sendWhatsAppButtons(phoneNumber, '¿Qué más necesitás?', [
+    { id: 'guided_back_queries', title: '📊 Consultas' },
+    { id: 'guided_back_main', title: '📋 Menú' }
+  ])
 }
 
 async function showQueryCategoryList(userId: string, phoneNumber: string) {

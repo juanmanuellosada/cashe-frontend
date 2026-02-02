@@ -10,11 +10,17 @@ export type Intent =
   | "REGISTRAR_GASTO"
   | "REGISTRAR_INGRESO"
   | "REGISTRAR_TRANSFERENCIA"
+  | "PAGAR_TARJETA"
+  | "AGREGAR_SELLOS"
   | "CONSULTAR_SALDO"
   | "CONSULTAR_GASTOS"
+  | "CONSULTAR_INGRESOS"
   | "ULTIMOS_MOVIMIENTOS"
   | "RESUMEN_MES"
+  | "CONSULTAR_RESUMEN_TARJETA"
   | "CONSULTAR_PRESUPUESTOS"
+  | "MENU"
+  | "CANCELAR"
   | "AYUDA"
   | "DESCONOCIDO";
 
@@ -25,7 +31,15 @@ export type ConversationState =
   | "awaiting_edit_value"
   | "awaiting_account_selection"
   | "awaiting_category_selection"
-  | "awaiting_disambiguation";
+  | "awaiting_disambiguation"
+  // Nuevos estados para flujos guiados
+  | "awaiting_card_selection"
+  | "awaiting_statement_selection"
+  | "awaiting_source_account"
+  | "awaiting_stamp_tax_amount"
+  | "awaiting_period_selection"
+  | "awaiting_amount_input"
+  | "awaiting_type_selection";
 
 // Campos editables
 export type EditableField =
@@ -35,7 +49,19 @@ export type EditableField =
   | "from_account"
   | "to_account"
   | "date"
-  | "note";
+  | "note"
+  | "target_card"
+  | "source_account"
+  | "statement_month"
+  | "stamp_tax";
+
+// Período para consultas
+export interface QueryPeriod {
+  type: "relative" | "range" | "month";
+  value: string; // 'today', 'this_week', 'enero', etc.
+  startDate?: string; // Para rangos: fecha inicio (YYYY-MM-DD)
+  endDate?: string; // Para rangos: fecha fin (YYYY-MM-DD)
+}
 
 // Entidades extraídas del mensaje
 export interface ParsedEntities {
@@ -57,6 +83,18 @@ export interface ParsedEntities {
   queryCategoryId?: string;
   queryAccountId?: string;
   limit?: number; // para "últimos N movimientos"
+
+  // Campos para tarjetas de crédito
+  targetCard?: string; // Nombre de la tarjeta a pagar/modificar
+  targetCardId?: string; // ID de la tarjeta
+  statementMonth?: string; // Mes del resumen (enero, febrero, etc. o 'actual')
+  statementId?: string; // ID del resumen
+  sourceAccount?: string; // Cuenta desde donde pagar
+  sourceAccountId?: string; // ID de la cuenta origen
+  stampTaxAmount?: number; // Monto del impuesto de sellos
+
+  // Campos para consultas por período
+  period?: QueryPeriod;
 }
 
 // Resultado del clasificador de intents
@@ -253,15 +291,20 @@ export const INTENTS_REQUIRING_CONFIRMATION: Intent[] = [
   "REGISTRAR_GASTO",
   "REGISTRAR_INGRESO",
   "REGISTRAR_TRANSFERENCIA",
+  "PAGAR_TARJETA",
+  "AGREGAR_SELLOS",
 ];
 
 // Tipo para mapeo de intents de solo lectura
 export const READ_ONLY_INTENTS: Intent[] = [
   "CONSULTAR_SALDO",
   "CONSULTAR_GASTOS",
+  "CONSULTAR_INGRESOS",
   "ULTIMOS_MOVIMIENTOS",
   "RESUMEN_MES",
+  "CONSULTAR_RESUMEN_TARJETA",
   "CONSULTAR_PRESUPUESTOS",
+  "MENU",
   "AYUDA",
 ];
 
@@ -270,11 +313,17 @@ export const REQUIRED_FIELDS: Record<Intent, (keyof ParsedEntities)[]> = {
   REGISTRAR_GASTO: ["amount", "accountId", "categoryId"],
   REGISTRAR_INGRESO: ["amount", "accountId", "categoryId"],
   REGISTRAR_TRANSFERENCIA: ["amount", "fromAccountId", "toAccountId"],
+  PAGAR_TARJETA: ["targetCardId", "sourceAccountId"],
+  AGREGAR_SELLOS: ["targetCardId", "stampTaxAmount"],
   CONSULTAR_SALDO: [],
   CONSULTAR_GASTOS: [],
+  CONSULTAR_INGRESOS: [],
   ULTIMOS_MOVIMIENTOS: [],
   RESUMEN_MES: [],
+  CONSULTAR_RESUMEN_TARJETA: [],
   CONSULTAR_PRESUPUESTOS: [],
+  MENU: [],
+  CANCELAR: [],
   AYUDA: [],
   DESCONOCIDO: [],
 };

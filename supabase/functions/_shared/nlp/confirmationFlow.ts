@@ -70,6 +70,16 @@ export function buildConfirmationPreview(
     resumen: resumenLabel,
   };
 
+  // Agregar valores específicos para tarjetas de crédito
+  const targetCardName = getDisplayName("account", entities.targetCardId, context) ||
+    entities.targetCard || "-";
+  const sourceAccountName = getDisplayName("account", entities.sourceAccountId, context) ||
+    entities.sourceAccount || "-";
+
+  values.tarjeta = targetCardName;
+  values.cuenta_origen = sourceAccountName || values.cuenta_origen;
+  values.mes = entities.statementMonth || "actual";
+
   let template: string;
   switch (intent) {
     case "REGISTRAR_GASTO":
@@ -90,6 +100,13 @@ export function buildConfirmationPreview(
       break;
     case "REGISTRAR_TRANSFERENCIA":
       template = RESPONSES.PREVIEW_TRANSFERENCIA;
+      break;
+    case "PAGAR_TARJETA":
+      template = RESPONSES.PREVIEW_PAGAR_TARJETA;
+      break;
+    case "AGREGAR_SELLOS":
+      values.monto = formatCurrency(entities.stampTaxAmount || 0, "ARS");
+      template = RESPONSES.PREVIEW_AGREGAR_SELLOS;
       break;
     default:
       return "";

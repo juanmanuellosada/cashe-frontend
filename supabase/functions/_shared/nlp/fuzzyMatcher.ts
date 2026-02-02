@@ -37,6 +37,25 @@ const EXACT_MATCH_THRESHOLD = 0.85;
 const CLEAR_WINNER_THRESHOLD = 0.15;
 
 /**
+ * Detecta si el query especifica una moneda
+ */
+function detectCurrencyInQuery(query: string): "ARS" | "USD" | null {
+  const normalized = normalizeText(query);
+
+  // Detectar pesos
+  if (/\b(pesos?|ars|en\s+pesos?|de\s+pesos?)\b/i.test(normalized)) {
+    return "ARS";
+  }
+
+  // Detectar dólares
+  if (/\b(d[oó]lares?|usd|en\s+d[oó]lares?|de\s+d[oó]lares?)\b/i.test(normalized)) {
+    return "USD";
+  }
+
+  return null;
+}
+
+/**
  * Busca una cuenta en los datos del usuario
  */
 export function findAccount(
@@ -49,9 +68,18 @@ export function findAccount(
   const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 1);
   const matches: FuzzyMatch[] = [];
 
+  // Detectar si el usuario especificó moneda
+  const requestedCurrency = detectCurrencyInQuery(query);
+
   for (const account of accounts) {
     let bestScore = 0;
     let bestAlias: string | undefined;
+
+    // Penalizar cuentas que no coinciden con la moneda solicitada
+    let currencyPenalty = 0;
+    if (requestedCurrency && account.currency !== requestedCurrency) {
+      currencyPenalty = 0.5; // Penalización fuerte para moneda incorrecta
+    }
 
     // 1. Match directo con nombre de cuenta (normalizado, sin comas ni puntuación)
     const normalizedName = normalizeText(account.name);
@@ -118,10 +146,13 @@ export function findAccount(
       }
     }
 
-    if (bestScore >= MATCH_THRESHOLD) {
+    // Aplicar penalización por moneda incorrecta
+    const finalScore = bestScore - currencyPenalty;
+
+    if (finalScore >= MATCH_THRESHOLD) {
       matches.push({
         item: account,
-        score: bestScore,
+        score: finalScore,
         matchedAlias: bestAlias,
       });
     }

@@ -5,7 +5,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useDataEvent, DataEvents, emit } from '../services/dataEvents';
 
 function Income() {
   const { showError } = useError();
@@ -47,6 +47,9 @@ function Income() {
       setSaving(true);
       await updateMovement(movement);
       setEditingMovement(null);
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.INCOMES_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       await fetchData(true, false); // Force refresh, no loading spinner
     } catch (err) {
       console.error('Error updating:', err);
@@ -64,6 +67,9 @@ function Income() {
     // Borrar en background
     try {
       await deleteMovement(movement);
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.INCOMES_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
     } catch (err) {
       console.error('Error deleting:', err);
       showError('No se pudo eliminar el ingreso', err.message);
@@ -79,6 +85,9 @@ function Income() {
 
     // Borrar en background
     await bulkDeleteMovements(movements);
+    // Emitir eventos para propagar cambios a otros componentes
+    emit(DataEvents.INCOMES_CHANGED);
+    emit(DataEvents.ACCOUNTS_CHANGED);
     await fetchData();
   };
 
@@ -91,6 +100,9 @@ function Income() {
 
     // Actualizar en background
     await bulkUpdateMovements(movements, field, value);
+    // Emitir eventos para propagar cambios a otros componentes
+    emit(DataEvents.INCOMES_CHANGED);
+    emit(DataEvents.ACCOUNTS_CHANGED);
     await fetchData();
   };
 

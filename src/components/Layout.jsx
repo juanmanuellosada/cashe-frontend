@@ -8,6 +8,7 @@ import NewMovementModal from './NewMovementModal';
 import Avatar from './Avatar';
 import OfflineIndicator from './OfflineIndicator';
 import { getAccounts, getCategories, updateMovement, deleteMovement, invalidateMovementCache } from '../services/supabaseApi';
+import { emit, DataEvents } from '../services/dataEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useError } from '../contexts/ErrorContext';
 import { useHaptics } from '../hooks/useHaptics';
@@ -145,6 +146,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       await updateMovement(updatedMovement);
       setEditingMovement(null);
       haptics.success();
+      // Emitir eventos para propagar cambios a otros componentes
+      const eventType = updatedMovement.tipo === 'ingreso' ? DataEvents.INCOMES_CHANGED :
+                        updatedMovement.tipo === 'gasto' ? DataEvents.EXPENSES_CHANGED :
+                        DataEvents.TRANSFERS_CHANGED;
+      emit(eventType);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       // Notify data change instead of reloading
       notifyDataChange();
       // Navigate to trigger page refresh if needed
@@ -166,6 +173,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     // Borrar en background
     try {
       await deleteMovement(movement);
+      // Emitir eventos para propagar cambios a otros componentes
+      const eventType = movement.tipo === 'ingreso' ? DataEvents.INCOMES_CHANGED :
+                        movement.tipo === 'gasto' ? DataEvents.EXPENSES_CHANGED :
+                        DataEvents.TRANSFERS_CHANGED;
+      emit(eventType);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       // Notify data change instead of reloading
       notifyDataChange();
       // Navigate to trigger page refresh if needed

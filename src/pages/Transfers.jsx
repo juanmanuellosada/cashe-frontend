@@ -5,7 +5,7 @@ import EditMovementModal from '../components/EditMovementModal';
 import NewMovementModal from '../components/NewMovementModal';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useDataEvent, DataEvents, emit } from '../services/dataEvents';
 
 function Transfers() {
   const { showError } = useError();
@@ -44,6 +44,9 @@ function Transfers() {
       setSaving(true);
       await updateTransfer(transfer);
       setEditingMovement(null);
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.TRANSFERS_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
       await fetchData(true, false); // Force refresh, no loading spinner
     } catch (err) {
       console.error('Error updating:', err);
@@ -61,6 +64,9 @@ function Transfers() {
     // Borrar en background
     try {
       await deleteTransfer(transfer);
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.TRANSFERS_CHANGED);
+      emit(DataEvents.ACCOUNTS_CHANGED);
     } catch (err) {
       console.error('Error deleting:', err);
       showError('No se pudo eliminar la transferencia', err.message);
@@ -78,6 +84,9 @@ function Transfers() {
     for (const transfer of transfersToDelete) {
       await deleteTransfer(transfer);
     }
+    // Emitir eventos para propagar cambios a otros componentes
+    emit(DataEvents.TRANSFERS_CHANGED);
+    emit(DataEvents.ACCOUNTS_CHANGED);
     await fetchData();
   };
 

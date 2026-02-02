@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
 import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
+import { emit, DataEvents } from '../services/dataEvents';
 import MovementForm from '../components/forms/MovementForm';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
@@ -53,6 +54,21 @@ function NewMovement() {
         message: successMessage,
         type: 'success',
       });
+
+      // Emitir eventos para propagar cambios a otros componentes
+      emit(DataEvents.ACCOUNTS_CHANGED);
+      switch (type) {
+        case 'income':
+          emit(DataEvents.INCOMES_CHANGED);
+          break;
+        case 'expense':
+        case 'expense_installments':
+          emit(DataEvents.EXPENSES_CHANGED);
+          break;
+        case 'transfer':
+          emit(DataEvents.TRANSFERS_CHANGED);
+          break;
+      }
 
       // Resetear el formulario incrementando el key (si no es prefill/duplicar)
       if (!prefillData) {
