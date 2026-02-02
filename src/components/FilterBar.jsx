@@ -147,11 +147,14 @@ function FilterBar({
                 <>
                   <span className="w-full text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--accent-green)' }}>Ingresos:</span>
                   {categories.ingresos.map((cat) => {
-                    const selected = isSelected('categorias', cat);
+                    // Support both string and object format
+                    const catValue = typeof cat === 'string' ? cat : cat.value;
+                    const catLabel = typeof cat === 'string' ? cat : cat.label;
+                    const selected = isSelected('categorias', catValue);
                     return (
                       <button
-                        key={cat}
-                        onClick={() => toggleArrayFilter('categorias', cat)}
+                        key={catValue}
+                        onClick={() => toggleArrayFilter('categorias', catValue)}
                         className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                         style={{
                           backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-secondary)',
@@ -159,7 +162,7 @@ function FilterBar({
                           boxShadow: selected ? '0 4px 16px rgba(0, 217, 154, 0.3)' : 'none',
                         }}
                       >
-                        {cat}
+                        {catLabel}
                       </button>
                     );
                   })}
@@ -169,11 +172,14 @@ function FilterBar({
                 <>
                   <span className="w-full text-[10px] font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--accent-red)' }}>Gastos:</span>
                   {categories.gastos.map((cat) => {
-                    const selected = isSelected('categorias', cat);
+                    // Support both string and object format
+                    const catValue = typeof cat === 'string' ? cat : cat.value;
+                    const catLabel = typeof cat === 'string' ? cat : cat.label;
+                    const selected = isSelected('categorias', catValue);
                     return (
                       <button
-                        key={cat}
-                        onClick={() => toggleArrayFilter('categorias', cat)}
+                        key={catValue}
+                        onClick={() => toggleArrayFilter('categorias', catValue)}
                         className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                         style={{
                           backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-secondary)',
@@ -181,7 +187,7 @@ function FilterBar({
                           boxShadow: selected ? '0 4px 16px rgba(255, 92, 114, 0.3)' : 'none',
                         }}
                       >
-                        {cat}
+                        {catLabel}
                       </button>
                     );
                   })}

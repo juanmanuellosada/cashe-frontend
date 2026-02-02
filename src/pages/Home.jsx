@@ -27,18 +27,64 @@ function Home() {
     to: endOfMonth(new Date()),
   });
 
-  // Movements date range (default: current week)
-  const [movementDateRange, setMovementDateRange] = useState({
-    from: startOfWeek(new Date(), { weekStartsOn: 1 }),
-    to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+  // Movements date range (default: current week) - load from localStorage
+  const [movementDateRange, setMovementDateRange] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cashe_home_movement_dates');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          from: parsed.from ? new Date(parsed.from) : startOfWeek(new Date(), { weekStartsOn: 1 }),
+          to: parsed.to ? new Date(parsed.to) : endOfWeek(new Date(), { weekStartsOn: 1 }),
+        };
+      }
+    } catch (e) {
+      console.warn('Error loading saved date range:', e);
+    }
+    return {
+      from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+    };
   });
 
-  // Movements filters (arrays for multi-select)
-  const [movementFilters, setMovementFilters] = useState({
-    tipos: [],
-    cuentas: [],
-    categorias: [],
+  // Save movement date range to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashe_home_movement_dates', JSON.stringify({
+        from: movementDateRange.from?.toISOString() || null,
+        to: movementDateRange.to?.toISOString() || null,
+      }));
+    } catch (e) {
+      console.warn('Error saving date range:', e);
+    }
+  }, [movementDateRange]);
+
+  // Movements filters (arrays for multi-select) - load from localStorage
+  const [movementFilters, setMovementFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cashe_home_filters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          tipos: parsed.tipos || [],
+          cuentas: parsed.cuentas || [],
+          categorias: parsed.categorias || [],
+        };
+      }
+    } catch (e) {
+      console.warn('Error loading saved filters:', e);
+    }
+    return { tipos: [], cuentas: [], categorias: [] };
   });
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashe_home_filters', JSON.stringify(movementFilters));
+    } catch (e) {
+      console.warn('Error saving filters:', e);
+    }
+  }, [movementFilters]);
 
   // Data states
   const [dashboard, setDashboard] = useState(null);
