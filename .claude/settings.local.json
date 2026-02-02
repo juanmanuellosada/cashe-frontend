@@ -52,7 +52,8 @@
       "Bash(supabase secrets list:*)",
       "Bash(supabase projects:*)",
       "Bash(supabase link:*)",
-      "Bash(supabase functions deploy:*)"
+      "Bash(supabase functions deploy:*)",
+      "mcp__supabase__get_advisors"
     ]
   },
   "enableAllProjectMcpServers": true,

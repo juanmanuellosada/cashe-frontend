@@ -342,7 +342,8 @@ async function showMainMenu(chatId: number) {
         { text: '💰 Ingreso', callback_data: 'type_income' }
       ],
       [
-        { text: '🔄 Transferencia', callback_data: 'type_transfer' }
+        { text: '🔄 Transferencia', callback_data: 'type_transfer' },
+        { text: '💳 Tarjetas', callback_data: 'menu_tarjetas' }
       ],
       [
         { text: '💰 Ver saldos', callback_data: 'query_balances' },
@@ -355,7 +356,20 @@ async function showMainMenu(chatId: number) {
     ]
   }
 
-  await sendMessage(chatId, '¿Qué querés hacer?', { reply_markup: keyboard })
+  const welcomeText = `👋 *¡Hola! Soy tu asistente de Cashé*
+
+📝 *FIRMAS RÁPIDAS:*
+• gasté {monto} en {cuenta} de {categoría}
+• cobré {monto} en {cuenta} de {categoría}
+• transferí {monto} de {origen} a {destino}
+• pagar {tarjeta} desde {cuenta}
+• agregar sellos de {monto} a {tarjeta}
+
+📊 *CONSULTAS:* saldo, gastos, ingresos, resumen
+
+💡 Escribí con lenguaje natural o usá los botones:`;
+
+  await sendMessage(chatId, welcomeText, { parse_mode: 'Markdown', reply_markup: keyboard })
 }
 
 // ============================================
@@ -392,6 +406,41 @@ async function handleIdleStep(tgUser: any, messageText: string, chatId: number, 
     } else {
       await showAccountList(tgUser.user_id, chatId, type === 'expense' ? '¿De qué cuenta sale?' : '¿A qué cuenta entra?', '')
     }
+    return
+  }
+
+  // Handle credit card menu
+  if (messageText === 'menu_tarjetas') {
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: '💵 Pagar tarjeta', callback_data: 'tarjeta_pagar' }],
+        [{ text: '🏛️ Agregar sellos', callback_data: 'tarjeta_sellos' }],
+        [{ text: '📋 Ver resumen', callback_data: 'tarjeta_resumen' }],
+        [{ text: '◀️ Volver', callback_data: 'menu_volver' }]
+      ]
+    }
+    await sendMessage(chatId, '💳 *Tarjetas de crédito*\n\nElegí una opción o escribí directamente:\n• "pagar visa desde brubank"\n• "agregar sellos de 1500 a visa"\n• "resumen visa"', { parse_mode: 'Markdown', reply_markup: keyboard })
+    return
+  }
+
+  // Handle tarjeta submenu callbacks - redirect to NLP
+  if (messageText === 'tarjeta_pagar') {
+    await sendMessage(chatId, '💳 *Pagar tarjeta*\n\nEscribí algo como:\n"pagar visa desde brubank"\n"pagar mastercard resumen enero desde galicia"', { parse_mode: 'Markdown' })
+    return
+  }
+
+  if (messageText === 'tarjeta_sellos') {
+    await sendMessage(chatId, '🏛️ *Agregar impuesto de sellos*\n\nEscribí algo como:\n"agregar sellos de 1500 a visa"\n"sellos 2000 a mastercard"', { parse_mode: 'Markdown' })
+    return
+  }
+
+  if (messageText === 'tarjeta_resumen') {
+    await sendMessage(chatId, '📋 *Ver resumen de tarjeta*\n\nEscribí algo como:\n"resumen visa"\n"resumen mastercard enero"', { parse_mode: 'Markdown' })
+    return
+  }
+
+  if (messageText === 'menu_volver') {
+    await showMainMenu(chatId)
     return
   }
 
