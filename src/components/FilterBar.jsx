@@ -113,9 +113,27 @@ function FilterBar({
 
           {/* Cuentas - Multi select */}
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'var(--text-secondary)' }}>
-              Cuentas
-            </label>
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                Cuentas
+              </label>
+              <button
+                onClick={() => {
+                  const allAccountNames = accounts.map(a => a.nombre);
+                  const allSelected = allAccountNames.every(name => filters.cuentas?.includes(name));
+                  onFilterChange?.({
+                    ...filters,
+                    cuentas: allSelected ? [] : allAccountNames
+                  });
+                }}
+                className="text-[10px] font-semibold transition-colors hover:opacity-80"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                {accounts.length > 0 && accounts.every(a => filters.cuentas?.includes(a.nombre))
+                  ? 'Deseleccionar todos'
+                  : 'Seleccionar todos'}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
               {accounts.map((account) => {
                 const selected = isSelected('cuentas', account.nombre);
@@ -139,9 +157,32 @@ function FilterBar({
 
           {/* Categorias - Multi select */}
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'var(--text-secondary)' }}>
-              Categorías
-            </label>
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                Categorías
+              </label>
+              {(() => {
+                const allCatValues = [
+                  ...(categories.ingresos || []).map(c => typeof c === 'string' ? c : c.value),
+                  ...(categories.gastos || []).map(c => typeof c === 'string' ? c : c.value)
+                ];
+                const allSelected = allCatValues.length > 0 && allCatValues.every(v => filters.categorias?.includes(v));
+                return (
+                  <button
+                    onClick={() => {
+                      onFilterChange?.({
+                        ...filters,
+                        categorias: allSelected ? [] : allCatValues
+                      });
+                    }}
+                    className="text-[10px] font-semibold transition-colors hover:opacity-80"
+                    style={{ color: 'var(--accent-primary)' }}
+                  >
+                    {allSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                  </button>
+                );
+              })()}
+            </div>
             <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto custom-scrollbar">
               {categories.ingresos?.length > 0 && (
                 <>

@@ -1818,7 +1818,7 @@ export const getDashboardFiltered = async ({ fromDate, toDate }) => {
 
 export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuentas = [], categorias = [] }) => {
   const userId = await getUserId();
-  
+
   const [{ data: movements }, { data: transfers }, { data: accounts }, { data: categoriesData }] = await Promise.all([
     supabase
       .from('movements')
@@ -1840,20 +1840,9 @@ export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuent
 
   let result = [];
 
-  // Map movements
+  // Map movements using the same function as other endpoints
   (movements || []).forEach(m => {
-    const account = accounts?.find(a => a.id === m.account_id);
-    const category = categoriesData?.find(c => c.id === m.category_id);
-    result.push({
-      id: m.id,
-      rowIndex: m.id,
-      fecha: m.date,
-      monto: parseFloat(m.amount),
-      cuenta: account?.name || '',
-      categoria: category?.name || '',
-      nota: m.note || '',
-      tipo: m.type === 'income' ? 'ingreso' : 'gasto',
-    });
+    result.push(mapMovementFromDB(m, accounts, categoriesData));
   });
 
   // Map transfers
@@ -1872,6 +1861,14 @@ export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuent
       monto: parseFloat(t.from_amount),
       nota: t.note || '',
       tipo: 'transferencia',
+      // Attachment info
+      attachmentUrl: t.attachment_url,
+      attachmentName: t.attachment_name,
+      // Future transaction indicator
+      isFuture: t.is_future || false,
+      // Recurring indicator
+      isRecurring: !!t.recurring_occurrence_id,
+      recurringOccurrenceId: t.recurring_occurrence_id,
     });
   });
 

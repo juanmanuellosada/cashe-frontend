@@ -9,7 +9,6 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
   const [movements, setMovements] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
   const inputRef = useRef(null);
 
   // Drag to dismiss state
@@ -25,12 +24,12 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
     }
   }, [isOpen]);
 
-  // Load movements when modal opens
+  // Load movements when modal opens (always reload to get fresh data)
   useEffect(() => {
-    if (isOpen && initialLoad) {
+    if (isOpen) {
       loadMovements();
     }
-  }, [isOpen, initialLoad]);
+  }, [isOpen]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -52,7 +51,6 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
       setLoading(true);
       const data = await getRecentMovements(500);
       setMovements(data.movimientos || []);
-      setInitialLoad(false);
     } catch (err) {
       console.error('Error loading movements:', err);
     } finally {
