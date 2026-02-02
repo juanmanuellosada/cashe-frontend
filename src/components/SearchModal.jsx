@@ -150,6 +150,12 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
 
   const formatDate = (fecha) => {
     try {
+      // Parsear manualmente si es formato yyyy-MM-dd para evitar timezone issues
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return format(date, 'd MMM yyyy', { locale: es });
+      }
       return format(new Date(fecha), 'd MMM yyyy', { locale: es });
     } catch {
       return fecha;

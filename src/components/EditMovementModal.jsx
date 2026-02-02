@@ -4,7 +4,7 @@ import DatePicker from './DatePicker';
 import Combobox from './Combobox';
 import LoadingSpinner from './LoadingSpinner';
 import AttachmentInput from './AttachmentInput';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseLocalDate } from '../utils/format';
 import { useError } from '../contexts/ErrorContext';
 import { convertToRecurring } from '../services/supabaseApi';
 
@@ -72,9 +72,11 @@ function EditMovementModal({
 
   useEffect(() => {
     if (movement) {
-      const fecha = movement.fecha
-        ? format(new Date(movement.fecha), 'yyyy-MM-dd')
-        : format(new Date(), 'yyyy-MM-dd');
+      // Si la fecha ya es yyyy-MM-dd, usarla directamente
+      // Si no, usar parseLocalDate para evitar problemas de timezone
+      const fecha = movement.fecha && /^\d{4}-\d{2}-\d{2}$/.test(movement.fecha)
+        ? movement.fecha
+        : (movement.fecha ? format(parseLocalDate(movement.fecha), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
 
       if (isTransfer) {
         setTransferData({

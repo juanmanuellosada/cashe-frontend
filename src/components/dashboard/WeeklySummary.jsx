@@ -72,20 +72,30 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
     const totalWeek = weekExpenses.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
     const totalWeekDolares = weekExpenses.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
 
-    // Calculate days with expenses
+    // Calculate days with expenses - usar fecha directamente si es yyyy-MM-dd
     const daysWithExpenses = new Set(
-      weekExpenses.map(m => format(new Date(m.fecha), 'yyyy-MM-dd'))
+      weekExpenses.map(m => m.fecha)
     ).size;
 
     // Average daily expense
     const avgDaily = totalWeek / 7;
     const avgDailyDolares = totalWeekDolares / 7;
 
+    // Helper para obtener nombre del día desde fecha yyyy-MM-dd
+    const getDayName = (fecha) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return format(date, 'EEEE', { locale: es });
+      }
+      return format(new Date(fecha), 'EEEE', { locale: es });
+    };
+
     // Group by day to find max day
     const byDay = {};
     weekExpenses.forEach(m => {
-      const dayKey = format(new Date(m.fecha), 'yyyy-MM-dd');
-      const dayName = format(new Date(m.fecha), 'EEEE', { locale: es });
+      const dayKey = m.fecha;
+      const dayName = getDayName(m.fecha);
       if (!byDay[dayKey]) {
         byDay[dayKey] = { name: dayName, amount: 0, amountDolares: 0, date: dayKey };
       }

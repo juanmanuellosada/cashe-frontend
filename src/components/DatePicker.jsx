@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { DayPicker } from 'react-day-picker';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { parseLocalDate } from '../utils/format';
 import 'react-day-picker/style.css';
 
 function DatePicker({ value, onChange, name, compact = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Convertir string yyyy-mm-dd a Date
-  const selectedDate = value ? parse(value, 'yyyy-MM-dd', new Date()) : new Date();
+  // Convertir string yyyy-mm-dd a Date usando parseLocalDate para evitar timezone issues
+  const selectedDate = value ? parseLocalDate(value) : new Date();
 
   // Formatear fecha para mostrar
   const displayDate = selectedDate

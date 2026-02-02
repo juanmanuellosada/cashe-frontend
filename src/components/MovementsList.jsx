@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth } from 'date-fns';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
@@ -159,16 +159,16 @@ function MovementsList({
   const filteredMovements = useMemo(() => {
     let filtered = [...movements];
 
-    // Filter by date
+    // Filter by date (usar parseLocalDate para evitar problemas de timezone)
     if (dateRange.from) {
       const from = new Date(dateRange.from);
       from.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(m => new Date(m.fecha) >= from);
+      filtered = filtered.filter(m => parseLocalDate(m.fecha) >= from);
     }
     if (dateRange.to) {
       const to = new Date(dateRange.to);
       to.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(m => new Date(m.fecha) <= to);
+      filtered = filtered.filter(m => parseLocalDate(m.fecha) <= to);
     }
 
     // Filter by accounts
@@ -214,7 +214,7 @@ function MovementsList({
 
       switch (sortBy) {
         case 'date':
-          comparison = new Date(a.fecha) - new Date(b.fecha);
+          comparison = parseLocalDate(a.fecha) - parseLocalDate(b.fecha);
           break;
         case 'amount':
           if (type === 'transferencia') {

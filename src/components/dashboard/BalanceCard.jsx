@@ -5,28 +5,11 @@ function BalanceCard({
   accounts = [],
   dashboard,
   currency = 'ARS',
+  onCurrencyChange,
+  accountFilters = [],
+  onAccountFiltersChange,
 }) {
   const [showFilters, setShowFilters] = useState(false);
-
-  // Filters state with localStorage persistence
-  const [accountFilters, setAccountFilters] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cashe_balance_account_filters');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Error loading balance account filters:', e);
-    }
-    return []; // Empty means show all
-  });
-
-  // Save filters to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('cashe_balance_account_filters', JSON.stringify(accountFilters));
-    } catch (e) {
-      console.warn('Error saving balance account filters:', e);
-    }
-  }, [accountFilters]);
 
   // Calculate filtered balance from accounts
   const filteredData = useMemo(() => {
@@ -48,53 +31,35 @@ function BalanceCard({
     const totalGeneralPesos = totalPesos + (totalDolares * tipoCambio);
     const totalGeneralDolares = totalDolares + (totalPesos / tipoCambio);
 
-    // Ingresos y gastos del mes (solo si no hay filtros, usar dashboard)
-    // Si hay filtros, sumar de las cuentas filtradas
-    let ingresosMes = 0;
-    let gastosMes = 0;
-
-    if (accountFilters.length === 0) {
-      // Sin filtros: usar valores del dashboard
-      ingresosMes = dashboard?.ingresosMes || 0;
-      gastosMes = dashboard?.gastosMes || 0;
-    } else {
-      // Con filtros: sumar de las cuentas filtradas
-      ingresosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalIngresos || 0), 0);
-      gastosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalGastos || 0), 0);
-    }
-
     return {
       totalPesos,
       totalDolares,
       totalGeneralPesos,
       totalGeneralDolares,
       tipoCambio,
-      ingresosMes,
-      gastosMes,
       filteredAccounts,
     };
   }, [accounts, accountFilters, dashboard]);
 
   const balance = currency === 'ARS' ? filteredData.totalGeneralPesos : filteredData.totalGeneralDolares;
-  const ingresos = filteredData.ingresosMes;
-  const gastos = filteredData.gastosMes;
-  const netFlow = ingresos - Math.abs(gastos);
 
   // Count active filters
   const activeFiltersCount = accountFilters.length > 0 ? accountFilters.length : 0;
 
   // Toggle filter value
   const toggleFilter = (accountName) => {
+    if (!onAccountFiltersChange) return;
+
     if (accountFilters.length === 0) {
       // First selection: select only this account
-      setAccountFilters([accountName]);
+      onAccountFiltersChange([accountName]);
     } else if (accountFilters.includes(accountName)) {
       // Deselect
       const newFilters = accountFilters.filter(n => n !== accountName);
-      setAccountFilters(newFilters);
+      onAccountFiltersChange(newFilters);
     } else {
       // Add to selection
-      setAccountFilters([...accountFilters, accountName]);
+      onAccountFiltersChange([...accountFilters, accountName]);
     }
   };
 
@@ -105,14 +70,17 @@ function BalanceCard({
 
   // Select all accounts
   const selectAll = () => {
+    if (!onAccountFiltersChange) return;
     const allAccountNames = accounts.map(a => a.nombre);
     const allSelected = allAccountNames.length > 0 && allAccountNames.every(name => accountFilters.includes(name));
-    setAccountFilters(allSelected ? [] : allAccountNames);
+    onAccountFiltersChange(allSelected ? [] : allAccountNames);
   };
 
   // Clear filters (show all)
   const clearFilters = () => {
-    setAccountFilters([]);
+    if (onAccountFiltersChange) {
+      onAccountFiltersChange([]);
+    }
   };
 
   return (
@@ -123,68 +91,74 @@ function BalanceCard({
         border: '1px solid var(--border-subtle)'
       }}
     >
-      {/* Header */}
+      {/* Header with currency selector */}
       <div className="flex items-center justify-between mb-2 sm:mb-3">
         <span className="text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>
-          Balance total
+          Saldo actual
         </span>
-        <span
-          className="px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium"
-          style={{
-            backgroundColor: currency === 'ARS' ? 'var(--accent-primary-dim)' : 'var(--accent-green-dim)',
-            color: currency === 'ARS' ? 'var(--accent-primary)' : 'var(--accent-green)'
-          }}
+        {/* Currency Selector */}
+        <div
+          className="inline-flex p-0.5 rounded-md"
+          style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
-          {currency}
-        </span>
+          <button
+            onClick={() => onCurrencyChange?.('ARS')}
+            className="px-2 py-1 rounded text-[10px] font-medium transition-colors duration-150 flex items-center gap-1"
+            style={{
+              backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 rounded-sm" />
+            ARS
+          </button>
+          <button
+            onClick={() => onCurrencyChange?.('USD')}
+            className="px-2 py-1 rounded text-[10px] font-medium transition-colors duration-150 flex items-center gap-1"
+            style={{
+              backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
+            }}
+          >
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 rounded-sm" />
+            USD
+          </button>
+        </div>
       </div>
 
       {/* Main balance */}
       <h2
-        className="text-xl sm:text-2xl font-medium tracking-tight mb-3 sm:mb-4"
+        className="text-2xl sm:text-3xl font-semibold tracking-tight mb-3 sm:mb-4"
         style={{ color: 'var(--text-primary)' }}
       >
         {formatCurrency(balance, currency)}
       </h2>
 
-      {/* Income / Expenses row */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3">
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-dim)' }}>
+      {/* Currency breakdown */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
+        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
           <p className="text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1" style={{ color: 'var(--text-muted)' }}>
-            Ingresos
+            En pesos
           </p>
-          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--accent-green)' }}>
-            +{formatCurrency(Math.abs(ingresos), currency)}
+          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+            {formatCurrency(filteredData.totalPesos, 'ARS')}
           </p>
         </div>
 
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-red-dim)' }}>
+        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
           <p className="text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1" style={{ color: 'var(--text-muted)' }}>
-            Gastos
+            En dólares
           </p>
-          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--accent-red)' }}>
-            -{formatCurrency(Math.abs(gastos), currency)}
+          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+            {formatCurrency(filteredData.totalDolares, 'USD')}
           </p>
         </div>
-      </div>
-
-      {/* Net flow */}
-      <div className="flex items-center justify-between py-1.5 sm:py-2">
-        <span className="text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>
-          Flujo neto
-        </span>
-        <span
-          className="text-xs sm:text-sm font-medium"
-          style={{ color: netFlow >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
-        >
-          {netFlow >= 0 ? '+' : ''}{formatCurrency(netFlow, currency)}
-        </span>
       </div>
 
       {/* Exchange rate */}
       {filteredData.tipoCambio && (
         <div
-          className="flex items-center justify-between pt-1.5 sm:pt-2 mt-1.5 sm:mt-2"
+          className="flex items-center justify-between py-1.5 sm:py-2"
           style={{ borderTop: '1px solid var(--border-subtle)' }}
         >
           <span className="text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>

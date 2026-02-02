@@ -66,6 +66,25 @@ export function formatNumber(amount) {
 }
 
 /**
+ * Parsea un string de fecha en formato yyyy-MM-dd a un Date object local
+ * Evita problemas de timezone al no usar new Date(string) directamente
+ * @param {string} dateStr - La fecha en formato yyyy-MM-dd
+ * @returns {Date} - Date object en zona horaria local
+ */
+export function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date();
+
+  // Si es formato yyyy-MM-dd, parsear manualmente para evitar timezone issues
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0); // Usar mediodía para evitar edge cases
+  }
+
+  // Fallback para otros formatos
+  return new Date(dateStr);
+}
+
+/**
  * Formatea una fecha en formato dd-MM-yyyy
  * @param {string|Date} dateStr - La fecha a formatear
  * @param {string} style - 'short' para dd-MM, 'full' para dd-MM-yyyy
@@ -73,6 +92,16 @@ export function formatNumber(amount) {
  */
 export function formatDate(dateStr, style = 'full') {
   if (!dateStr) return '-';
+
+  // Para fechas en formato yyyy-MM-dd, parsear manualmente para evitar timezone issues
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (style === 'short') {
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return `${day.toString().padStart(2, '0')}-${months[month - 1]}`;
+    }
+    return `${day.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${year}`;
+  }
 
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '-';

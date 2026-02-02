@@ -1445,7 +1445,13 @@ function CreditCards() {
                         </p>
                       )}
                       <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        {format(new Date(item.fecha), "d 'de' MMMM", { locale: es })}
+                        {(() => {
+                          if (/^\d{4}-\d{2}-\d{2}$/.test(item.fecha)) {
+                            const [year, month, day] = item.fecha.split('-').map(Number);
+                            return format(new Date(year, month - 1, day), "d 'de' MMMM", { locale: es });
+                          }
+                          return format(new Date(item.fecha), "d 'de' MMMM", { locale: es });
+                        })()}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0 flex items-center gap-2">
