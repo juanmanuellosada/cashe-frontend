@@ -743,12 +743,35 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
     .eq('name', cuenta)
     .single();
 
-  const { data: categoryData } = await supabase
+  // Buscar categoría - primero intento exacto, luego fallback
+  let categoryData = null;
+  const { data: exactMatch, error: exactError } = await supabase
     .from('categories')
-    .select('id')
+    .select('id, name')
     .eq('user_id', userId)
     .eq('name', categoria)
     .single();
+
+  if (exactMatch) {
+    categoryData = exactMatch;
+  } else {
+    // Fallback: buscar con ilike para manejar diferencias de espacios o case
+    console.log('Category exact match failed for:', categoria, 'Error:', exactError?.message);
+    const { data: fuzzyMatch } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', userId)
+      .ilike('name', `%${categoria}%`)
+      .limit(1)
+      .single();
+
+    if (fuzzyMatch) {
+      console.log('Category fuzzy match found:', fuzzyMatch.name);
+      categoryData = fuzzyMatch;
+    } else {
+      console.warn('No category found for:', categoria);
+    }
+  }
 
   // Subir adjunto si existe
   let attachmentUrl = null;
@@ -797,12 +820,35 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
     .eq('name', cuenta)
     .single();
 
-  const { data: categoryData } = await supabase
+  // Buscar categoría - primero intento exacto, luego fallback
+  let categoryData = null;
+  const { data: exactMatch, error: exactError } = await supabase
     .from('categories')
-    .select('id')
+    .select('id, name')
     .eq('user_id', userId)
     .eq('name', categoria)
     .single();
+
+  if (exactMatch) {
+    categoryData = exactMatch;
+  } else {
+    // Fallback: buscar con ilike para manejar diferencias de espacios o case
+    console.log('Category exact match failed for:', categoria, 'Error:', exactError?.message);
+    const { data: fuzzyMatch } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', userId)
+      .ilike('name', `%${categoria}%`)
+      .limit(1)
+      .single();
+
+    if (fuzzyMatch) {
+      console.log('Category fuzzy match found:', fuzzyMatch.name);
+      categoryData = fuzzyMatch;
+    } else {
+      console.warn('No category found for:', categoria);
+    }
+  }
 
   // Subir adjunto si existe
   let attachmentUrl = null;
