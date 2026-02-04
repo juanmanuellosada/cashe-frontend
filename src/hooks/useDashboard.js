@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getDashboard, getRecentMovements, processFutureTransactions } from '../services/supabaseApi';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 export function useDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -7,9 +8,9 @@ export function useDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
 
       // Procesar transacciones futuras cuya fecha ya llegó
@@ -27,13 +28,16 @@ export function useDashboard() {
       setError(err.message);
       console.error('Error fetching dashboard:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Suscribirse a cambios de datos para refrescar automáticamente
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => fetchData(false));
 
   return { dashboard, movements, loading, error, refetch: fetchData };
 }

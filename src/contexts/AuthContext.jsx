@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../config/supabase';
+import { clear as clearDataListeners } from '../services/dataEvents';
 
 const AuthContext = createContext({});
 
@@ -212,6 +213,9 @@ export const AuthProvider = ({ children }) => {
       // Clear local state
       setUser(null);
       setProfile(null);
+
+      // Clear all data event listeners
+      clearDataListeners();
 
       // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();

@@ -41,6 +41,11 @@ export const emit = (event) => {
   }
 };
 
+// Clear all listeners (useful on logout)
+export const clear = () => {
+  listeners.clear();
+};
+
 // Hook for easy subscription in components
 import { useEffect, useCallback, useRef } from 'react';
 

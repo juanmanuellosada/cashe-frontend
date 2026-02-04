@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { getRecentMovements } from '../services/supabaseApi';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 import { formatCurrency } from '../utils/format';
 import DateRangePicker from '../components/DateRangePicker';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -39,22 +40,26 @@ function CategorySummary() {
   });
 
   // Cargar movimientos
-  useEffect(() => {
-    async function loadMovements() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getRecentMovements(5000);
-        setMovements(data.movimientos || []);
-      } catch (err) {
-        console.error('Error loading movements:', err);
-        setError('Error al cargar los movimientos');
-      } finally {
-        setLoading(false);
-      }
+  const loadMovements = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      setError(null);
+      const data = await getRecentMovements(5000);
+      setMovements(data.movimientos || []);
+    } catch (err) {
+      console.error('Error loading movements:', err);
+      setError('Error al cargar los movimientos');
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    loadMovements();
   }, []);
+
+  useEffect(() => {
+    loadMovements();
+  }, [loadMovements]);
+
+  // Subscribe to data changes for automatic refresh
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => loadMovements(false));
 
   // Filtrar movimientos por tipo y rango de fechas
   const filteredMovements = useMemo(() => {

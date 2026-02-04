@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { getRecentMovements, getAccounts, getCategories } from '../services/supabaseApi';
+import { useDataEvent, DataEvents } from '../services/dataEvents';
 import { formatCurrency, formatDate } from '../utils/format';
 import DateRangePicker from '../components/DateRangePicker';
 
@@ -37,26 +38,30 @@ function Comparador() {
   const [showAccountFilters, setShowAccountFilters] = useState(false);
   const [showCategoryFilters, setShowCategoryFilters] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const [movementsData, accountsData, categoriesData] = await Promise.all([
-          getRecentMovements(2000),
-          getAccounts(),
-          getCategories(),
-        ]);
-        setMovements(movementsData.movimientos || []);
-        setAccounts(accountsData.accounts || []);
-        setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
-      } catch (err) {
-        console.error('Error loading data:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      const [movementsData, accountsData, categoriesData] = await Promise.all([
+        getRecentMovements(2000),
+        getAccounts(),
+        getCategories(),
+      ]);
+      setMovements(movementsData.movimientos || []);
+      setAccounts(accountsData.accounts || []);
+      setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
+    } catch (err) {
+      console.error('Error loading data:', err);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Subscribe to data changes for automatic refresh
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => loadData(false));
 
   // Toggle para arrays
   const toggleArrayFilter = (array, setArray, value) => {
