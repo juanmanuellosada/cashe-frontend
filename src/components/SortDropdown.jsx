@@ -94,7 +94,7 @@ export default function SortDropdown({
             <button
               key={option.id}
               onClick={() => handleOptionClick(option.id)}
-              className="w-full px-4 py-2.5 text-left text-sm flex items-center justify-between gap-3 transition-colors hover:bg-[var(--bg-tertiary)]"
+              className="w-full px-4 py-2.5 min-h-[44px] text-left text-sm flex items-center justify-between gap-3 transition-colors hover:bg-[var(--bg-tertiary)]"
               style={{
                 color: value.sortBy === option.id ? 'var(--accent-primary)' : 'var(--text-primary)',
               }}

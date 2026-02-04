@@ -292,7 +292,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={account.nombre}
                     onClick={() => toggleFilter('cuentas', account.nombre)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -340,7 +340,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={catValue}
                     onClick={() => toggleFilter('categorias', catValue)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',

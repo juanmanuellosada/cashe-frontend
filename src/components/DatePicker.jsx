@@ -65,8 +65,12 @@ function DatePicker({ value, onChange, name, compact = false }) {
 
       {isOpen && (
         <div
-          className="absolute z-50 mt-2 rounded-xl shadow-xl p-4"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--bg-tertiary)' }}
+          className="absolute z-50 mt-2 rounded-xl shadow-xl p-3 sm:p-4 left-0 sm:left-0 max-w-[calc(100vw-32px)] sm:max-w-none"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--bg-tertiary)',
+            minWidth: 'min(280px, calc(100vw - 32px))',
+          }}
         >
           <DayPicker
             mode="single"
@@ -84,17 +88,17 @@ function DatePicker({ value, onChange, name, compact = false }) {
             }}
             classNames={{
               months: 'flex flex-col',
-              month: 'space-y-3',
-              month_caption: 'flex justify-center relative items-center h-10 mb-2',
-              caption_label: 'text-sm font-semibold',
+              month: 'space-y-2 sm:space-y-3',
+              month_caption: 'flex justify-center relative items-center h-8 sm:h-10 mb-1 sm:mb-2',
+              caption_label: 'text-xs sm:text-sm font-semibold',
               nav: 'flex items-center',
-              button_previous: 'absolute left-0 h-7 w-7 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
-              button_next: 'absolute right-0 h-7 w-7 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
+              button_previous: 'absolute left-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
+              button_next: 'absolute right-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
               month_grid: 'w-full border-collapse',
               weekdays: 'flex w-full',
-              weekday: 'w-9 h-9 font-medium text-xs flex items-center justify-center',
+              weekday: 'w-8 h-8 sm:w-9 sm:h-9 font-medium text-[10px] sm:text-xs flex items-center justify-center',
               week: 'flex w-full',
-              day: 'w-9 h-9 text-center text-sm p-0',
+              day: 'w-8 h-8 sm:w-9 sm:h-9 text-center text-xs sm:text-sm p-0',
               day_button: 'w-full h-full rounded-full hover:bg-[var(--accent-primary)] hover:bg-opacity-20 flex items-center justify-center cursor-pointer transition-colors',
               selected: 'rounded-full bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]',
               today: 'font-bold',

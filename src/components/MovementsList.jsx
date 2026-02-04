@@ -802,7 +802,7 @@ function MovementsList({
                 <button
                   key={account.nombre}
                   onClick={() => toggleAccount(account.nombre)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                  className="px-3 py-2.5 min-h-[44px] rounded-full text-xs font-medium transition-all duration-200"
                   style={{
                     backgroundColor: selectedAccounts.includes(account.nombre)
                       ? getTypeColor()
@@ -851,7 +851,7 @@ function MovementsList({
                     <button
                       key={catValue || `cat-${index}`}
                       onClick={() => toggleCategory(catValue)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                      className="px-3 py-2.5 min-h-[44px] rounded-full text-xs font-medium transition-all duration-200"
                       style={{
                         backgroundColor: selectedCategories.includes(catValue)
                           ? getTypeColor()

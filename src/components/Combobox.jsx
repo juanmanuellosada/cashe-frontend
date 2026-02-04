@@ -127,7 +127,7 @@ function Combobox({
       {/* Dropdown */}
       {isOpen && (
         <div
-          className="absolute z-50 mt-2 w-full rounded-xl shadow-xl overflow-hidden animate-scale-in"
+          className="absolute z-50 mt-2 w-full rounded-xl shadow-xl overflow-hidden animate-scale-in max-h-[60vh]"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)'
@@ -178,7 +178,7 @@ function Combobox({
                     key={optValue}
                     type="button"
                     onClick={() => handleSelect(opt)}
-                    className={`w-full px-4 py-3 text-left text-sm transition-colors ${
+                    className={`w-full px-4 py-3 min-h-[44px] text-left text-sm transition-colors ${
                       isSelected ? 'font-medium' : ''
                     }`}
                     style={{
