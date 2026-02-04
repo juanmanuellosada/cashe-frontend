@@ -47,7 +47,7 @@ function FilterBar({
       {/* Toggle Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
+        className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg min-[400px]:rounded-xl text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
       >
         <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +79,7 @@ function FilterBar({
       {/* Filters Panel */}
       {isExpanded && (
         <div
-          className="p-4 rounded-2xl space-y-4 animate-scale-in card-glass"
+          className="p-4 rounded-lg min-[400px]:rounded-xl space-y-4 animate-scale-in card-glass"
         >
           {/* Tipo - Multi select */}
           <div>
@@ -97,7 +97,7 @@ function FilterBar({
                   <button
                     key={option.value}
                     onClick={() => toggleArrayFilter('tipos', option.value)}
-                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3.5 py-2.5 min-h-[44px] rounded-lg min-[400px]:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? option.color : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -141,7 +141,7 @@ function FilterBar({
                   <button
                     key={account.nombre}
                     onClick={() => toggleArrayFilter('cuentas', account.nombre)}
-                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3.5 py-2.5 min-h-[44px] rounded-lg min-[400px]:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -196,7 +196,7 @@ function FilterBar({
                       <button
                         key={catValue}
                         onClick={() => toggleArrayFilter('categorias', catValue)}
-                        className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                        className="px-3.5 py-2.5 min-h-[44px] rounded-lg min-[400px]:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                         style={{
                           backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-secondary)',
                           color: selected ? 'white' : 'var(--text-secondary)',
@@ -221,7 +221,7 @@ function FilterBar({
                       <button
                         key={catValue}
                         onClick={() => toggleArrayFilter('categorias', catValue)}
-                        className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                        className="px-3.5 py-2.5 min-h-[44px] rounded-lg min-[400px]:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                         style={{
                           backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-secondary)',
                           color: selected ? 'white' : 'var(--text-secondary)',

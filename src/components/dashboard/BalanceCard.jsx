@@ -85,42 +85,42 @@ function BalanceCard({
 
   return (
     <div
-      className="p-3 sm:p-4 rounded-xl"
+      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)'
       }}
     >
-      {/* Header with currency selector */}
-      <div className="flex items-center justify-between mb-2 sm:mb-3">
-        <span className="text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>
+      {/* Header with currency selector - stacks on <400px */}
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2 mb-2 sm:mb-3">
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           Saldo actual
         </span>
         {/* Currency Selector */}
         <div
-          className="inline-flex p-0.5 rounded-md"
+          className="inline-flex p-0.5 rounded-lg self-start min-[400px]:self-auto"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           <button
             onClick={() => onCurrencyChange?.('ARS')}
-            className="px-2 py-1 rounded text-[10px] font-medium transition-colors duration-150 flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
             style={{
               backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
               color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
             ARS
           </button>
           <button
             onClick={() => onCurrencyChange?.('USD')}
-            className="px-2 py-1 rounded text-[10px] font-medium transition-colors duration-150 flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
             style={{
               backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
               color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
             USD
           </button>
         </div>
@@ -128,43 +128,43 @@ function BalanceCard({
 
       {/* Main balance */}
       <h2
-        className="text-2xl sm:text-3xl font-semibold tracking-tight mb-3 sm:mb-4"
+        className="text-2xl sm:text-3xl font-semibold tracking-tight mb-3 sm:mb-4 truncate"
         style={{ color: 'var(--text-primary)' }}
       >
         {formatCurrency(balance, currency)}
       </h2>
 
-      {/* Currency breakdown */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-          <p className="text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1" style={{ color: 'var(--text-muted)' }}>
+      {/* Currency breakdown - 1 col en <400px, 2 cols en 400px+ */}
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:gap-3 mb-3">
+        <div className="p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
             En pesos
           </p>
-          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+          <p className="text-sm sm:text-base font-medium truncate" style={{ color: 'var(--text-primary)' }}>
             {formatCurrency(filteredData.totalPesos, 'ARS')}
           </p>
         </div>
 
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-          <p className="text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1" style={{ color: 'var(--text-muted)' }}>
+        <div className="p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
             En dólares
           </p>
-          <p className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+          <p className="text-sm sm:text-base font-medium truncate" style={{ color: 'var(--text-primary)' }}>
             {formatCurrency(filteredData.totalDolares, 'USD')}
           </p>
         </div>
       </div>
 
-      {/* Exchange rate */}
+      {/* Exchange rate - stacks on <400px */}
       {filteredData.tipoCambio && (
         <div
-          className="flex items-center justify-between py-1.5 sm:py-2"
+          className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-1 min-[400px]:gap-0 py-2"
           style={{ borderTop: '1px solid var(--border-subtle)' }}
         >
-          <span className="text-[11px] sm:text-xs" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Tipo de cambio
           </span>
-          <span className="text-[11px] sm:text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <span className="text-sm min-[400px]:text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
             {formatCurrency(filteredData.tipoCambio)} / USD
           </span>
         </div>
@@ -174,17 +174,17 @@ function BalanceCard({
       <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99]"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-md min-[400px]:rounded-lg text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99]"
           style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
         >
           <div className="flex items-center gap-2">
-            <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <span className="font-medium">Filtrar cuentas</span>
             {activeFiltersCount > 0 && (
               <span
-                className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                className="px-1.5 py-0.5 rounded text-[10px] font-bold"
                 style={{
                   backgroundColor: 'var(--accent-primary)',
                   color: 'white',
@@ -195,7 +195,7 @@ function BalanceCard({
             )}
           </div>
           <svg
-            className={`w-3.5 h-3.5 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -206,29 +206,29 @@ function BalanceCard({
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mt-2 p-3 rounded-lg space-y-2 animate-scale-in" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+          <div className="mt-2 p-3 rounded-md min-[400px]:rounded-lg space-y-2 animate-scale-in" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                 Cuentas incluidas
               </label>
               <button
                 onClick={selectAll}
-                className="text-[10px] font-semibold transition-colors hover:opacity-80"
+                className="text-xs font-semibold transition-colors hover:opacity-80"
                 style={{ color: 'var(--accent-primary)' }}
               >
                 {accounts.length > 0 && accounts.every(a => accountFilters.includes(a.nombre))
-                  ? 'Deseleccionar todos'
+                  ? 'Deseleccionar'
                   : 'Seleccionar todos'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
               {accounts.map((account) => {
                 const selected = isSelected(account.nombre);
                 return (
                   <button
                     key={account.nombre}
                     onClick={() => toggleFilter(account.nombre)}
-                    className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3 py-2 rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -244,10 +244,10 @@ function BalanceCard({
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearFilters}
-                className="text-[10px] font-semibold flex items-center gap-1 transition-all duration-200 hover:opacity-80 mt-2"
+                className="text-xs font-semibold flex items-center gap-1 transition-all duration-200 hover:opacity-80 mt-2"
                 style={{ color: 'var(--accent-primary)' }}
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 Mostrar todas

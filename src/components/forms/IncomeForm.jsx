@@ -4,9 +4,22 @@ import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
 import BudgetGoalImpact from '../common/BudgetGoalImpact';
+import { useRecentUsage } from '../../hooks/useRecentUsage';
+import { sortByRecency } from '../../utils/sortByRecency';
 
 function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
+
+  // Ordenar cuentas y categorías por uso reciente
+  const { recentAccountIds, recentCategoryIds } = useRecentUsage();
+
+  const sortedAccounts = useMemo(() => {
+    return sortByRecency(accounts, recentAccountIds, 'id');
+  }, [accounts, recentAccountIds]);
+
+  const sortedCategories = useMemo(() => {
+    return sortByRecency(categories, recentCategoryIds, 'id');
+  }, [categories, recentCategoryIds]);
 
   const [formData, setFormData] = useState({
     fecha: prefillData?.fecha || today,
@@ -165,7 +178,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           name="cuenta"
           value={formData.cuenta}
           onChange={handleChange}
-          options={accounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
+          options={sortedAccounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
           placeholder="Seleccionar cuenta"
           icon={accountIcon}
           emptyMessage="No hay cuentas"
@@ -186,7 +199,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           name="categoria"
           value={formData.categoria}
           onChange={handleChange}
-          options={categories}
+          options={sortedCategories}
           placeholder="Seleccionar categoría"
           icon={categoryIcon}
           emptyMessage="No hay categorías"

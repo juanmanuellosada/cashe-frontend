@@ -30,11 +30,11 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
   };
 
   return (
-    <div className="card-glass overflow-hidden transition-all duration-300">
-      {/* Header - always visible */}
+    <div className="card-glass overflow-hidden transition-all duration-300 rounded-lg min-[400px]:rounded-xl">
+      {/* Header - always visible, stacks on <400px */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-3 sm:p-4 flex items-center justify-between text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99]"
+        className="w-full px-3 py-3 sm:p-4 flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99]"
       >
         <div className="flex items-center gap-2 sm:gap-3">
           <div
@@ -42,7 +42,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
             style={{ backgroundColor: 'var(--accent-primary-dim)' }}
           >
             <svg
-              className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+              className="w-4 h-4"
               style={{ color: 'var(--accent-primary)' }}
               fill="none"
               stroke="currentColor"
@@ -56,23 +56,23 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
               Cuentas
             </span>
             <span
-              className="ml-1.5 sm:ml-2 text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-medium"
+              className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
             >
               {accounts.length}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="text-[11px] sm:text-xs font-medium hidden sm:inline" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex items-center gap-2 self-end min-[400px]:self-auto">
+          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
             {expanded ? 'Ocultar' : 'Ver todas'}
           </span>
           <div
-            className="w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <svg
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
               style={{ color: 'var(--text-secondary)' }}
               fill="none"
               stroke="currentColor"
@@ -164,56 +164,58 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                 <button
                   key={account.nombre}
                   onClick={() => handleAccountClick(account)}
-                  className="w-full px-3 py-2.5 flex items-start gap-2 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99] group"
+                  className="w-full px-3 py-2.5 flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99] group"
                   style={{
                     borderBottom: index < accounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
                   }}
                 >
-                  {/* Account icon or currency fallback */}
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden"
-                    style={{ backgroundColor: hasIcon && !iconIsEmoji ? 'transparent' : `${currencyColor}15` }}
-                  >
-                    {hasIcon ? (
-                      iconIsEmoji ? (
-                        <span className="text-lg">{account.icon}</span>
-                      ) : (
-                        <img
-                          src={resolveIconPath(account.icon)}
-                          alt={account.nombre}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      )
-                    ) : (
-                      <span className="text-[11px] font-bold" style={{ color: currencyColor }}>
-                        {isARS ? '$' : 'US$'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Account info */}
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="font-medium text-[13px] leading-tight break-words"
-                      style={{
-                        color: 'var(--text-primary)',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}
+                  {/* Top row: Icon + Name */}
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Account icon or currency fallback */}
+                    <div
+                      className="w-8 h-8 rounded-md min-[400px]:rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                      style={{ backgroundColor: hasIcon && !iconIsEmoji ? 'transparent' : `${currencyColor}15` }}
                     >
-                      {account.nombre}
-                    </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                      {isARS ? 'Pesos' : 'Dólares'}
-                      {account.tipo && ` · ${account.tipo}`}
-                    </p>
+                      {hasIcon ? (
+                        iconIsEmoji ? (
+                          <span className="text-lg">{account.icon}</span>
+                        ) : (
+                          <img
+                            src={resolveIconPath(account.icon)}
+                            alt={account.nombre}
+                            className="w-full h-full object-cover rounded-md min-[400px]:rounded-lg"
+                          />
+                        )
+                      ) : (
+                        <span className="text-[11px] font-bold" style={{ color: currencyColor }}>
+                          {isARS ? '$' : 'US$'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Account info */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-medium text-sm leading-tight"
+                        style={{
+                          color: 'var(--text-primary)',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {account.nombre}
+                      </p>
+                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        {isARS ? 'Pesos' : 'Dólares'}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Balance */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-[13px]" style={{ color: currencyColor }}>
+                  {/* Balance - below on <400px, right on 400px+ */}
+                  <div className="text-left min-[400px]:text-right flex-shrink-0 pl-10 min-[400px]:pl-0">
+                    <p className="font-bold text-sm" style={{ color: currencyColor }}>
                       {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
                     </p>
                   </div>
@@ -225,7 +227,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
           {/* View all button */}
           <button
             onClick={() => navigate('/cuentas')}
-            className="w-full py-2.5 sm:p-3.5 text-center text-xs sm:text-sm font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] active:scale-[0.99]"
+            className="w-full py-3 sm:p-3.5 text-center text-sm font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] active:scale-[0.99]"
             style={{ color: 'var(--accent-primary)', borderTop: '1px solid var(--border-subtle)' }}
           >
             Ver detalles de cuentas →

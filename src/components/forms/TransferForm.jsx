@@ -1,10 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import AttachmentInput from '../AttachmentInput';
+import { useRecentUsage } from '../../hooks/useRecentUsage';
+import { sortByRecency } from '../../utils/sortByRecency';
 
 function TransferForm({ accounts, onSubmit, loading, prefillData }) {
   const today = new Date().toISOString().split('T')[0];
+
+  // Ordenar cuentas por uso reciente
+  const { recentAccountIds } = useRecentUsage();
+
+  const sortedAccounts = useMemo(() => {
+    return sortByRecency(accounts, recentAccountIds, 'id');
+  }, [accounts, recentAccountIds]);
 
   const [formData, setFormData] = useState({
     fecha: prefillData?.fecha || today,
@@ -92,7 +101,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
     </svg>
   );
 
-  const availableDestinationAccounts = accounts
+  const availableDestinationAccounts = sortedAccounts
     .filter((acc) => acc.nombre !== formData.cuentaSaliente)
     .map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }));
 
@@ -136,7 +145,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
             name="cuentaSaliente"
             value={formData.cuentaSaliente}
             onChange={handleChange}
-            options={accounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
+            options={sortedAccounts.map(a => ({ value: a.nombre, label: a.nombre, icon: a.icon || null }))}
             placeholder="Seleccionar cuenta"
             icon={accountIcon}
             emptyMessage="No hay cuentas"

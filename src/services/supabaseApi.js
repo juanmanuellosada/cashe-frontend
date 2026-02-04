@@ -72,6 +72,12 @@ const invalidateCache = (type) => {
     }
   }
 
+  // Invalidar recentUsage cuando hay mutaciones de movimientos o transferencias (no para categorías)
+  if (!type.includes('categor')) {
+    cache.delete('recentUsage');
+    pendingRequests.delete('recentUsage');
+  }
+
   // Emitir evento según el tipo de datos invalidados
   if (type.includes('expense')) {
     emit(DataEvents.EXPENSES_CHANGED);
@@ -103,6 +109,65 @@ const getUserId = async () => {
   }
   return user.id;
 };
+
+// ============================================
+// RECENT USAGE TRACKING
+// ============================================
+// Obtiene las cuentas y categorías usadas recientemente para ordenar selectores
+export const getRecentUsage = () => withDeduplication('recentUsage', async () => {
+  const userId = await getUserId();
+
+  // Obtener últimos 50 movimientos (cubren ~1-2 meses de uso activo)
+  const { data: recentMovements } = await supabase
+    .from('movements')
+    .select('account_id, category_id, date')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(50);
+
+  // Obtener últimas 20 transferencias
+  const { data: recentTransfers } = await supabase
+    .from('transfers')
+    .select('from_account_id, to_account_id, date')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(20);
+
+  // Construir mapa de última fecha de uso por account_id
+  const accountLastUsed = new Map();
+  const categoryLastUsed = new Map();
+
+  (recentMovements || []).forEach(m => {
+    if (m.account_id && !accountLastUsed.has(m.account_id)) {
+      accountLastUsed.set(m.account_id, m.date);
+    }
+    if (m.category_id && !categoryLastUsed.has(m.category_id)) {
+      categoryLastUsed.set(m.category_id, m.date);
+    }
+  });
+
+  (recentTransfers || []).forEach(t => {
+    if (t.from_account_id && !accountLastUsed.has(t.from_account_id)) {
+      accountLastUsed.set(t.from_account_id, t.date);
+    }
+    if (t.to_account_id && !accountLastUsed.has(t.to_account_id)) {
+      accountLastUsed.set(t.to_account_id, t.date);
+    }
+  });
+
+  // Convertir a arrays ordenados (más reciente primero)
+  const recentAccountIds = [...accountLastUsed.entries()]
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .map(([id]) => id);
+
+  const recentCategoryIds = [...categoryLastUsed.entries()]
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .map(([id]) => id);
+
+  const result = { recentAccountIds, recentCategoryIds };
+  setCachedData('recentUsage', result);
+  return result;
+});
 
 // ============================================
 // ACCOUNT TYPE MAPPING
@@ -522,6 +587,7 @@ export const getCategories = () => withDeduplication('categories', async () => {
       : (customIcon || emojiFromName);
 
     return {
+      id: c.id,  // Include ID for recent usage sorting
       value: c.name,  // Keep original name as value for saving
       label: displayLabel,  // Clean label for display
       icon: resolvedIcon,

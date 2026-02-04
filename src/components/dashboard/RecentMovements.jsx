@@ -92,21 +92,21 @@ function RecentMovements({
 
   // Skeleton loading
   const renderSkeleton = () => (
-    <div className="card-glass overflow-hidden">
+    <div className="card-glass overflow-hidden rounded-lg min-[400px]:rounded-xl">
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:p-4"
+          className="flex items-center gap-2.5 sm:gap-3 px-3 py-2.5 sm:p-4"
           style={{ borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}
         >
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-          <div className="flex-1 space-y-2 sm:space-y-2.5">
-            <div className="h-3.5 sm:h-4 w-20 sm:w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-            <div className="h-2.5 sm:h-3 w-24 sm:w-36 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-md min-[400px]:rounded-lg sm:rounded-xl skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-24 sm:w-28 skeleton-shimmer rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            <div className="h-3 w-32 sm:w-36 skeleton-shimmer rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
           </div>
-          <div className="text-right space-y-2 sm:space-y-2.5">
-            <div className="h-4 sm:h-5 w-16 sm:w-24 skeleton-shimmer rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-            <div className="h-2.5 sm:h-3 w-12 sm:w-16 skeleton-shimmer rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="text-right space-y-2">
+            <div className="h-4 sm:h-5 w-20 sm:w-24 skeleton-shimmer rounded-md min-[400px]:rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            <div className="h-3 w-14 sm:w-16 skeleton-shimmer rounded-md min-[400px]:rounded-lg ml-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
           </div>
         </div>
       ))}
@@ -114,12 +114,12 @@ function RecentMovements({
   );
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* Header con titulo y selector de fechas */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+    <div className="space-y-2 sm:space-y-4">
+      {/* Header con titulo y selector de fechas - stacks on <400px */}
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: 'var(--accent-primary-dim)' }}
           >
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,24 +133,12 @@ function RecentMovements({
             Movimientos
           </h3>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="self-start min-[400px]:self-auto">
           <DateRangePicker
             value={dateRange}
             onChange={onDateRangeChange}
             defaultPreset="Esta semana"
           />
-          {(dateRange.from || dateRange.to) && (
-            <button
-              onClick={() => onDateRangeChange({ from: null, to: null })}
-              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-              title="Limpiar fechas"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
@@ -166,13 +154,13 @@ function RecentMovements({
       {loading ? (
         renderSkeleton()
       ) : !movements || movements.length === 0 ? (
-        <div className="card-glass p-6 sm:p-8 text-center">
+        <div className="card-glass p-6 sm:p-8 text-center rounded-lg min-[400px]:rounded-xl">
           <div
-            className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl flex items-center justify-center"
+            className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-lg min-[400px]:rounded-xl sm:rounded-2xl flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <svg
-              className="w-6 h-6 sm:w-8 sm:h-8"
+              className="w-7 h-7 sm:w-8 sm:h-8"
               style={{ color: 'var(--text-secondary)' }}
               fill="none"
               stroke="currentColor"
@@ -181,22 +169,22 @@ function RecentMovements({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <p className="font-semibold text-sm sm:text-base mb-0.5 sm:mb-1" style={{ color: 'var(--text-primary)' }}>
+          <p className="font-semibold text-base mb-1" style={{ color: 'var(--text-primary)' }}>
             Sin movimientos
           </p>
-          <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             No hay movimientos en este periodo
           </p>
         </div>
       ) : (
-        <div className="card-glass overflow-hidden">
+        <div className="card-glass overflow-hidden rounded-lg min-[400px]:rounded-xl">
           {movements.map((movement, index) => {
             const styles = getTypeStyles(movement.tipo);
 
             return (
               <div
                 key={movement.rowIndex || index}
-                className={`group flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:p-4 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.995] ${
+                className={`group flex items-start min-[400px]:items-center gap-2 px-3 py-2.5 sm:p-4 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.995] ${
                   index !== movements.length - 1 ? 'border-b' : ''
                 }`}
                 style={{ borderColor: 'var(--border-subtle)' }}
@@ -204,64 +192,56 @@ function RecentMovements({
                 {/* Clickable area for edit */}
                 <button
                   onClick={() => onMovementClick?.(movement)}
-                  className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left transition-transform duration-200"
+                  className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left transition-transform duration-200"
                   style={{ backgroundColor: 'transparent' }}
                 >
-                  {/* Icon with subtle glow on hover */}
-                  <div
-                    className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-110"
-                    style={{
-                      backgroundColor: styles.bgColor,
-                      boxShadow: `0 0 0 ${styles.glowColor}`
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = `0 0 20px ${styles.glowColor}`}
-                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = `0 0 0 ${styles.glowColor}`}
-                  >
-                    {renderIcon(movement.tipo, styles.color)}
-                  </div>
+                  {/* Top row: Icon + Info */}
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    {/* Icon with subtle glow on hover */}
+                    <div
+                      className="w-9 h-9 sm:w-11 sm:h-11 rounded-md min-[400px]:rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-110"
+                      style={{
+                        backgroundColor: styles.bgColor,
+                      }}
+                    >
+                      {renderIcon(movement.tipo, styles.color)}
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
+                    {/* Info */}
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p
-                        className="font-semibold truncate text-sm sm:text-[15px]"
-                        style={{ color: 'var(--text-primary)' }}
+                        className="font-semibold text-sm sm:text-[15px]"
+                        style={{
+                          color: 'var(--text-primary)',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
                       >
                         {movement.tipo === 'transferencia'
-                          ? 'Transferencia'
+                          ? 'Transfer'
                           : movement.categoria || ''}
                       </p>
-                      {/* Installment badge */}
-                      {movement.cuota && (
-                        <span
-                          className="px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-semibold flex-shrink-0"
-                          style={{
-                            backgroundColor: 'rgba(20, 184, 166, 0.12)',
-                            color: 'var(--accent-primary)',
-                          }}
-                        >
-                          {movement.cuota}
-                        </span>
-                      )}
+                      <p
+                        className="text-[11px] sm:text-xs truncate"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        {movement.tipo === 'transferencia'
+                          ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
+                          : movement.cuenta}
+                      </p>
                     </div>
-                    <p
-                      className="text-[11px] sm:text-xs truncate mt-0.5"
-                      style={{ color: 'var(--text-secondary)' }}
-                    >
-                      {movement.tipo === 'transferencia'
-                        ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
-                        : movement.cuenta}
-                    </p>
                   </div>
 
-                  {/* Amount and date */}
-                  <div className="text-right flex-shrink-0 pl-1">
+                  {/* Amount and date - below on <400px, right on 400px+ */}
+                  <div className="text-left min-[400px]:text-right flex-shrink-0 pl-11 min-[400px]:pl-0">
                     <p className="font-bold text-sm sm:text-lg" style={{ color: styles.color }}>
                       {movement.tipo === 'transferencia'
                         ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
                         : `${styles.prefix}${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
                     </p>
-                    <p className="text-[10px] sm:text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-[11px] sm:text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
                     </p>
                   </div>
@@ -270,7 +250,7 @@ function RecentMovements({
                 {/* Delete button - always visible */}
                 <button
                   onClick={(e) => handleDeleteClick(e, movement)}
-                  className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 transition-all duration-200 hover:bg-red-500/15 active:scale-95"
+                  className="p-2 sm:p-2.5 rounded-md min-[400px]:rounded-lg sm:rounded-xl flex-shrink-0 transition-all duration-200 hover:bg-red-500/15 active:scale-95 self-start min-[400px]:self-center"
                   style={{ color: 'var(--text-muted)' }}
                   title="Eliminar"
                 >
@@ -286,7 +266,7 @@ function RecentMovements({
 
       {/* Contador de resultados */}
       {movements && movements.length > 0 && (
-        <p className="text-[10px] sm:text-[11px] text-center font-medium" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-xs text-center font-medium" style={{ color: 'var(--text-secondary)' }}>
           Mostrando {movements.length} movimiento{movements.length !== 1 ? 's' : ''}
         </p>
       )}

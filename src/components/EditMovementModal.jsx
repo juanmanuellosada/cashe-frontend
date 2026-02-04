@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
@@ -7,6 +7,8 @@ import AttachmentInput from './AttachmentInput';
 import { formatCurrency, parseLocalDate } from '../utils/format';
 import { useError } from '../contexts/ErrorContext';
 import { convertToRecurring } from '../services/supabaseApi';
+import { useRecentUsage } from '../hooks/useRecentUsage';
+import { sortByRecency } from '../utils/sortByRecency';
 
 function EditMovementModal({
   movement,
@@ -253,9 +255,20 @@ function EditMovementModal({
     onDuplicate?.(duplicated);
   };
 
+  // Ordenar cuentas y categorías por uso reciente
+  const { recentAccountIds, recentCategoryIds } = useRecentUsage();
+
+  const sortedAccounts = useMemo(() => {
+    return sortByRecency(accounts, recentAccountIds, 'id');
+  }, [accounts, recentAccountIds]);
+
   const currentCategories = movement?.tipo === 'ingreso'
     ? categories.ingresos
     : categories.gastos;
+
+  const sortedCategories = useMemo(() => {
+    return sortByRecency(currentCategories, recentCategoryIds, 'id');
+  }, [currentCategories, recentCategoryIds]);
 
   const isValidIncomeExpense = formData.monto && formData.cuenta && formData.categoria;
   const isValidTransfer = transferData.montoSaliente && transferData.montoEntrante &&
@@ -363,7 +376,7 @@ function EditMovementModal({
                   name="cuentaSaliente"
                   value={transferData.cuentaSaliente}
                   onChange={handleTransferChange}
-                  options={accounts.map(a => ({
+                  options={sortedAccounts.map(a => ({
                     value: a.nombre,
                     label: a.nombre,
                     icon: a.icon || null,
@@ -409,7 +422,7 @@ function EditMovementModal({
                   name="cuentaEntrante"
                   value={transferData.cuentaEntrante}
                   onChange={handleTransferChange}
-                  options={accounts.map(a => ({
+                  options={sortedAccounts.map(a => ({
                     value: a.nombre,
                     label: a.nombre,
                     icon: a.icon || null,
@@ -531,7 +544,7 @@ function EditMovementModal({
                   name="cuenta"
                   value={formData.cuenta}
                   onChange={handleChange}
-                  options={accounts.map(a => ({
+                  options={sortedAccounts.map(a => ({
                     value: a.nombre,
                     label: a.nombre,
                     icon: a.icon || null,
@@ -551,7 +564,7 @@ function EditMovementModal({
                   name="categoria"
                   value={formData.categoria}
                   onChange={handleChange}
-                  options={currentCategories || []}
+                  options={sortedCategories || []}
                   defaultOptionIcon="🏷️"
                   placeholder="Seleccionar categoria"
                   emptyMessage="No hay categorías"
@@ -827,7 +840,7 @@ function EditMovementModal({
                     name="recurringAccount"
                     value={recurringAccount}
                     onChange={(e) => setRecurringAccount(e.target.value)}
-                    options={accounts.map(a => ({
+                    options={sortedAccounts.map(a => ({
                       value: a.nombre,
                       label: a.nombre,
                       icon: a.icon || null,

@@ -44,40 +44,28 @@ function PeriodFlowCard({
 
   return (
     <div
-      className="p-3 sm:p-4 rounded-xl"
+      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)'
       }}
     >
-      {/* Header with date range */}
-      <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
-        <span className="text-[11px] sm:text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+      {/* Header with date range - stacks on <400px */}
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2 mb-2 sm:mb-3">
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           Flujo del período
         </span>
-        <div className="flex items-center gap-1">
+        <div className="self-start min-[400px]:self-auto">
           <DateRangePicker
             value={dateRange}
             onChange={onDateRangeChange}
             defaultPreset="Este mes"
           />
-          {(dateRange?.from || dateRange?.to) && (
-            <button
-              onClick={() => onDateRangeChange({ from: null, to: null })}
-              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-              title="Limpiar fechas"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
       {/* Flow visualization bar */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <div className="h-2 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
           <div
             className="h-full transition-all duration-500"
@@ -96,31 +84,21 @@ function PeriodFlowCard({
         </div>
       </div>
 
-      {/* Income / Expenses row */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-dim)' }}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <svg className="w-3 h-3" style={{ color: 'var(--accent-green)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-            </svg>
-            <p className="text-[9px] sm:text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              Ingresos
-            </p>
-          </div>
+      {/* Income / Expenses - 1 col en <400px, 2 cols en 400px+ */}
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:gap-3 mb-3">
+        <div className="p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--accent-green-dim)' }}>
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+            Ingresos
+          </p>
           <p className="text-sm sm:text-base font-semibold truncate" style={{ color: 'var(--accent-green)' }}>
             +{formatCurrency(Math.abs(ingresos), currency)}
           </p>
         </div>
 
-        <div className="p-2 sm:p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-red-dim)' }}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <svg className="w-3 h-3" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-            </svg>
-            <p className="text-[9px] sm:text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              Gastos
-            </p>
-          </div>
+        <div className="p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--accent-red-dim)' }}>
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+            Gastos
+          </p>
           <p className="text-sm sm:text-base font-semibold truncate" style={{ color: 'var(--accent-red)' }}>
             -{formatCurrency(Math.abs(gastos), currency)}
           </p>
@@ -129,39 +107,21 @@ function PeriodFlowCard({
 
       {/* Net flow - prominent display */}
       <div
-        className="p-3 rounded-lg flex items-center justify-between"
+        className="p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg"
         style={{
           backgroundColor: flujoNeto >= 0 ? 'var(--accent-green-dim)' : 'var(--accent-red-dim)',
           border: `1px solid ${flujoNeto >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}20`,
         }}
       >
-        <div className="flex items-center gap-2">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{
-              backgroundColor: flujoNeto >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
-            }}
-          >
-            {flujoNeto >= 0 ? (
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            )}
-          </div>
-          <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Flujo neto
-          </span>
-        </div>
-        <span
-          className="text-base sm:text-lg font-bold"
+        <p className="text-[10px] sm:text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+          Flujo neto
+        </p>
+        <p
+          className="text-base sm:text-lg font-bold truncate"
           style={{ color: flujoNeto >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
         >
           {flujoNeto >= 0 ? '+' : ''}{formatCurrency(flujoNeto, currency)}
-        </span>
+        </p>
       </div>
 
       {/* Subtitle explaining filter relationship */}

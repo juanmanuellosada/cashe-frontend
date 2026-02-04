@@ -311,14 +311,14 @@ function Home() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={loadingDashboard && loadingMovements}>
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header - simplified */}
       <h1 className="text-base sm:text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
         Dashboard
       </h1>
 
       {/* Balance and Flow Cards - side by side on desktop, stacked on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Balance Card - Saldo actual */}
         {loadingDashboard ? (
           <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>

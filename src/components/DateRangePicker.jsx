@@ -39,9 +39,14 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
   };
 
   const formatDisplayDate = () => {
-    if (!range?.from) return 'Seleccionar fechas';
-    if (!range?.to) return format(range.from, 'dd-MM-yyyy');
-    return `${format(range.from, 'dd-MM-yyyy')} - ${format(range.to, 'dd-MM-yyyy')}`;
+    if (!range?.from) return 'Fechas';
+    if (!range?.to) return format(range.from, 'd/M');
+    // Formato ultra compacto: solo días si es mismo mes
+    const sameMonth = range.from.getMonth() === range.to.getMonth();
+    if (sameMonth) {
+      return `${format(range.from, 'd')}-${format(range.to, 'd')}/${format(range.to, 'M')}`;
+    }
+    return `${format(range.from, 'd/M')}-${format(range.to, 'd/M')}`;
   };
 
   useEffect(() => {
@@ -59,18 +64,18 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
+        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-sm flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >
-        <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         <span className="font-medium text-xs">{formatDisplayDate()}</span>
-        <svg 
-          className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        <svg
+          className={`w-3.5 h-3.5 transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           style={{ color: 'var(--text-secondary)' }}
-          fill="none" 
-          stroke="currentColor" 
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -79,7 +84,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
 
       {isOpen && (
         <div
-          className="absolute z-50 mt-2 rounded-2xl shadow-2xl p-3 sm:p-4 right-0 sm:right-0 left-auto animate-scale-in max-w-[calc(100vw-32px)] sm:max-w-none"
+          className="absolute z-50 mt-2 rounded-xl min-[400px]:rounded-2xl shadow-2xl p-3 sm:p-4 right-0 sm:right-0 left-auto animate-scale-in max-w-[calc(100vw-32px)] sm:max-w-none"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)',
@@ -93,7 +98,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
               <button
                 key={preset.label}
                 onClick={() => handlePresetClick(preset)}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] hover:text-[var(--accent-primary)] active:scale-95"
+                className="px-2.5 sm:px-3 py-1.5 sm:py-1.5 rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] hover:text-[var(--accent-primary)] active:scale-95"
                 style={{
                   backgroundColor: 'var(--bg-tertiary)',
                   color: 'var(--text-secondary)',
@@ -152,7 +157,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
           <div className="flex justify-end mt-3 sm:mt-4 pt-2 sm:pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
             <button
               onClick={() => setIsOpen(false)}
-              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg min-[400px]:rounded-xl text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)',
                 color: 'white',

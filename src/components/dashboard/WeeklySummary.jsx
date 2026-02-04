@@ -155,16 +155,16 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
   if (loading) {
     return (
       <div className="space-y-2 sm:space-y-3">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-          <div className="h-4 w-24 sm:w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md min-[400px]:rounded-lg skeleton-shimmer" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+          <div className="h-4 w-28 skeleton-shimmer rounded-md min-[400px]:rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
         </div>
-        <div className="card-glass p-3 sm:p-4">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="card-glass p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="space-y-1.5 sm:space-y-2">
-                <div className="h-2.5 sm:h-3 w-12 sm:w-16 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
-                <div className="h-4 sm:h-5 w-16 sm:w-20 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              <div key={i} className="space-y-2 p-2.5">
+                <div className="h-3 w-20 skeleton-shimmer rounded-md" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+                <div className="h-5 w-24 skeleton-shimmer rounded-md" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
               </div>
             ))}
           </div>
@@ -181,10 +181,11 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
 
   return (
     <div className="space-y-2 sm:space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* Header - stacks on <400px */}
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2">
+        <div className="flex items-center gap-2">
           <div
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: 'var(--accent-primary-dim)' }}
           >
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,36 +193,34 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
             </svg>
           </div>
           <h3 className="text-sm sm:text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Esta semana
+            Resumen semanal
           </h3>
         </div>
         {/* Currency Selector */}
         <div
-          className="inline-flex rounded-lg sm:rounded-xl p-0.5 sm:p-1"
+          className="inline-flex rounded-lg p-0.5 self-start min-[400px]:self-auto"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           <button
             onClick={() => setCurrency('ARS')}
-            className="px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1 sm:gap-1.5"
+            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
             style={{
-              backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-              color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
-              boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none'
+              backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
             ARS
           </button>
           <button
             onClick={() => setCurrency('USD')}
-            className="px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1 sm:gap-1.5"
+            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
             style={{
-              backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
-              color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
-              boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none'
+              backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
+              color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
             }}
           >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm" />
+            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
             USD
           </button>
         </div>
@@ -230,7 +229,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       {/* Filters Toggle */}
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
+        className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg min-[400px]:rounded-xl text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
       >
         <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,7 +260,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="p-4 rounded-2xl space-y-4 animate-scale-in card-glass">
+        <div className="p-4 rounded-lg min-[400px]:rounded-xl space-y-4 animate-scale-in card-glass">
           {/* Cuentas */}
           <div>
             <div className="flex items-center justify-between mb-2.5">
@@ -292,7 +291,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={account.nombre}
                     onClick={() => toggleFilter('cuentas', account.nombre)}
-                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -340,7 +339,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={catValue}
                     onClick={() => toggleFilter('categorias', catValue)}
-                    className="px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -374,9 +373,9 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
 
       {/* Stats Card */}
       {(!stats || stats.totalWeek === 0) ? (
-        <div className="card-glass p-4 sm:p-6 text-center">
+        <div className="card-glass p-4 sm:p-6 text-center rounded-lg min-[400px]:rounded-xl">
           <div
-            className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg sm:rounded-xl flex items-center justify-center"
+            className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-md min-[400px]:rounded-lg sm:rounded-xl flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,72 +383,45 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
             </svg>
           </div>
           <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            {activeFiltersCount > 0 ? 'Sin gastos con estos filtros' : 'Sin gastos esta semana'}
+            {activeFiltersCount > 0 ? 'Sin gastos con filtros' : 'Sin gastos esta semana'}
           </p>
         </div>
       ) : (
-        <div className="card-glass p-3 sm:p-4">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="card-glass p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl">
+          {/* Grid responsivo: 1 col <400px, 2 cols 400-640px, 3 cols 640px+ */}
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {/* Average daily expense */}
-            <div className="group p-2 sm:p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
-              <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
-                <div
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }}
-                >
-                  <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" style={{ color: 'var(--accent-blue)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Prom/día
-                </span>
-              </div>
-              <p className="text-xs sm:text-base font-bold truncate" style={{ color: 'var(--accent-blue)' }}>
+            <div className="group p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Promedio diario
+              </p>
+              <p className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--accent-blue)' }}>
                 {formatCurrency(currency === 'ARS' ? stats.avgDaily : stats.avgDailyDolares, currency)}
               </p>
             </div>
 
             {/* Day with most expenses */}
-            <div className="group p-2 sm:p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
-              <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
-                <div
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(255, 92, 114, 0.15)' }}
-                >
-                  <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Día pico
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm font-bold capitalize truncate" style={{ color: 'var(--accent-red)' }}>
+            <div className="group p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Día pico
+              </p>
+              <p className="text-sm sm:text-base font-bold capitalize truncate" style={{ color: 'var(--accent-red)' }}>
                 {stats.maxDay?.name || '-'}
               </p>
-              <p className="text-[10px] sm:text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[11px] sm:text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
                 {stats.maxDay ? formatCurrency(currency === 'ARS' ? stats.maxDay.amount : stats.maxDay.amountDolares, currency) : '-'}
               </p>
             </div>
 
             {/* Top category */}
-            <div className="group p-2 sm:p-3 rounded-xl transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
-              <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
-                <div
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[10px] sm:text-xs"
-                  style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)' }}
-                >
-                  {getCategoryEmoji(stats.topCategory?.name)}
-                </div>
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Top
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm font-bold truncate" style={{ color: 'var(--accent-primary)' }}>
+            <div className="group p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Top categoría
+              </p>
+              <p className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--accent-primary)' }}>
                 {stats.topCategory?.name?.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || '-'}
               </p>
-              <p className="text-[10px] sm:text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[11px] sm:text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
                 {stats.topCategory ? formatCurrency(currency === 'ARS' ? stats.topCategory.amount : stats.topCategory.amountDolares, currency) : '-'}
               </p>
             </div>
