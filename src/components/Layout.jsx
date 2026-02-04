@@ -535,7 +535,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         {/* Mobile Header */}
         {!isDesktop && (
           <header
-            className="sticky top-0 z-50 px-4 py-2.5 flex items-center justify-between"
+            className="sticky top-0 z-50 px-4 pt-2.5 pb-2.5 safe-top flex items-center justify-between"
             style={{
               backgroundColor: 'var(--bg-glass)',
               borderBottom: '1px solid var(--border-subtle)',
