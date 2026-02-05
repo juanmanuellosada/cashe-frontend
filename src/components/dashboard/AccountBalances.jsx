@@ -7,6 +7,9 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
   const [expanded, setExpanded] = useState(true);
   const navigate = useNavigate();
 
+  // Filter out accounts hidden from balance
+  const visibleAccounts = (accounts || []).filter(acc => !acc.ocultaDelBalance);
+
   // Skeleton loading
   if (loading) {
     return (
@@ -19,7 +22,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
     );
   }
 
-  if (!accounts || accounts.length === 0) {
+  if (!visibleAccounts || visibleAccounts.length === 0) {
     return null;
   }
 
@@ -59,7 +62,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
               className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
             >
-              {accounts.length}
+              {visibleAccounts.length}
             </span>
           </div>
         </div>
@@ -89,9 +92,10 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
         <div className="animate-scale-in" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           {/* Desktop: Grid layout */}
           <div className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-px" style={{ backgroundColor: 'var(--border-subtle)' }}>
-            {accounts.map((account, index) => {
+            {visibleAccounts.map((account, index) => {
               const isARS = account.moneda === 'Peso';
-              const currencyColor = isARS ? '#75AADB' : '#3CB371';
+              const isCreditCard = account.esTarjetaCredito;
+              const currencyColor = isCreditCard ? '#a855f7' : (isARS ? '#75AADB' : '#3CB371');
               const hasIcon = !!account.icon;
               const iconIsEmoji = hasIcon && isEmoji(account.icon);
 
@@ -125,7 +129,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                       )
                     ) : (
                       <span className="text-sm font-bold" style={{ color: currencyColor }}>
-                        {isARS ? '$' : 'US$'}
+                        {isCreditCard ? '💳' : (isARS ? '$' : 'US$')}
                       </span>
                     )}
                   </div>
@@ -136,16 +140,40 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                       {account.nombre}
                     </p>
                     <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                      {isARS ? 'Pesos' : 'Dólares'}
-                      {account.tipo && ` · ${account.tipo}`}
+                      {isCreditCard ? 'Próximo resumen' : (
+                        <>
+                          {isARS ? 'Pesos' : 'Dólares'}
+                          {account.tipo && ` · ${account.tipo}`}
+                        </>
+                      )}
                     </p>
                   </div>
 
-                  {/* Balance */}
+                  {/* Balance or Credit Card Statement */}
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-[15px]" style={{ color: currencyColor }}>
-                      {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
-                    </p>
+                    {isCreditCard ? (
+                      <div className="flex flex-col items-end gap-0.5">
+                        {account.proximoResumenPesos > 0 && (
+                          <p className="font-bold text-[14px]" style={{ color: 'var(--accent-red)' }}>
+                            -{formatCurrency(account.proximoResumenPesos, 'ARS')}
+                          </p>
+                        )}
+                        {account.proximoResumenDolares > 0 && (
+                          <p className="font-bold text-[14px]" style={{ color: '#3CB371' }}>
+                            -{formatCurrency(account.proximoResumenDolares, 'USD')}
+                          </p>
+                        )}
+                        {account.proximoResumenPesos === 0 && account.proximoResumenDolares === 0 && (
+                          <p className="font-bold text-[14px]" style={{ color: 'var(--text-muted)' }}>
+                            $0
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-bold text-[15px]" style={{ color: currencyColor }}>
+                        {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
+                      </p>
+                    )}
                   </div>
                 </button>
               );
@@ -154,9 +182,10 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
 
           {/* Mobile: List layout */}
           <div className="lg:hidden overflow-hidden">
-            {accounts.map((account, index) => {
+            {visibleAccounts.map((account, index) => {
               const isARS = account.moneda === 'Peso';
-              const currencyColor = isARS ? '#75AADB' : '#3CB371';
+              const isCreditCard = account.esTarjetaCredito;
+              const currencyColor = isCreditCard ? '#a855f7' : (isARS ? '#75AADB' : '#3CB371');
               const hasIcon = !!account.icon;
               const iconIsEmoji = hasIcon && isEmoji(account.icon);
 
@@ -166,7 +195,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                   onClick={() => handleAccountClick(account)}
                   className="w-full px-3 py-2.5 flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99] group"
                   style={{
-                    borderBottom: index < accounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
+                    borderBottom: index < visibleAccounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
                   }}
                 >
                   {/* Top row: Icon + Name */}
@@ -188,7 +217,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                         )
                       ) : (
                         <span className="text-[11px] font-bold" style={{ color: currencyColor }}>
-                          {isARS ? '$' : 'US$'}
+                          {isCreditCard ? '💳' : (isARS ? '$' : 'US$')}
                         </span>
                       )}
                     </div>
@@ -208,16 +237,36 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                         {account.nombre}
                       </p>
                       <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                        {isARS ? 'Pesos' : 'Dólares'}
+                        {isCreditCard ? 'Próximo resumen' : (isARS ? 'Pesos' : 'Dólares')}
                       </p>
                     </div>
                   </div>
 
-                  {/* Balance - below on <400px, right on 400px+ */}
+                  {/* Balance or Credit Card Statement - below on <400px, right on 400px+ */}
                   <div className="text-left min-[400px]:text-right flex-shrink-0 pl-10 min-[400px]:pl-0">
-                    <p className="font-bold text-sm" style={{ color: currencyColor }}>
-                      {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
-                    </p>
+                    {isCreditCard ? (
+                      <div className="flex flex-col min-[400px]:items-end gap-0.5">
+                        {account.proximoResumenPesos > 0 && (
+                          <p className="font-bold text-sm" style={{ color: 'var(--accent-red)' }}>
+                            -{formatCurrency(account.proximoResumenPesos, 'ARS')}
+                          </p>
+                        )}
+                        {account.proximoResumenDolares > 0 && (
+                          <p className="font-bold text-sm" style={{ color: '#3CB371' }}>
+                            -{formatCurrency(account.proximoResumenDolares, 'USD')}
+                          </p>
+                        )}
+                        {account.proximoResumenPesos === 0 && account.proximoResumenDolares === 0 && (
+                          <p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>
+                            $0
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-bold text-sm" style={{ color: currencyColor }}>
+                        {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
+                      </p>
+                    )}
                   </div>
                 </button>
               );

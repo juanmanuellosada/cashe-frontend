@@ -10,31 +10,26 @@ function PeriodFlowCard({
   onDateRangeChange,
   accountFilters = [],
 }) {
-  // Calculate filtered flow data
+  // Calculate filtered flow data (excluding hidden accounts)
   const flowData = useMemo(() => {
+    // First, exclude accounts hidden from balance
+    const visibleAccounts = accounts.filter(acc => !acc.ocultaDelBalance);
+
+    // Then apply user filters on visible accounts
     const filteredAccounts = accountFilters.length > 0
-      ? accounts.filter(acc => accountFilters.includes(acc.nombre))
-      : accounts;
+      ? visibleAccounts.filter(acc => accountFilters.includes(acc.nombre))
+      : visibleAccounts;
 
-    let ingresosMes = 0;
-    let gastosMes = 0;
-
-    if (accountFilters.length === 0) {
-      // Sin filtros: usar valores del dashboard
-      ingresosMes = dashboard?.ingresosMes || 0;
-      gastosMes = dashboard?.gastosMes || 0;
-    } else {
-      // Con filtros: sumar de las cuentas filtradas
-      ingresosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalIngresos || 0), 0);
-      gastosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalGastos || 0), 0);
-    }
+    // Always calculate from filtered accounts (not dashboard) to respect hidden accounts
+    const ingresosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalIngresos || 0), 0);
+    const gastosMes = filteredAccounts.reduce((sum, acc) => sum + (acc.totalGastos || 0), 0);
 
     return {
       ingresos: ingresosMes,
       gastos: gastosMes,
       flujoNeto: ingresosMes - Math.abs(gastosMes),
     };
-  }, [accounts, accountFilters, dashboard]);
+  }, [accounts, accountFilters]);
 
   const { ingresos, gastos, flujoNeto } = flowData;
 

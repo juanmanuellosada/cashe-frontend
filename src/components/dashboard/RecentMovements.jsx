@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatCurrency, formatDate } from '../../utils/format';
 import DateRangePicker from '../DateRangePicker';
 import FilterBar from '../FilterBar';
+import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
 function RecentMovements({
   movements,
@@ -17,6 +18,47 @@ function RecentMovements({
   currency = 'ARS'
 }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Helper to get account by name
+  const getAccount = (accountName) => {
+    return accounts?.find(a => a.nombre === accountName);
+  };
+
+  // Helper to check if account is USD
+  const isAccountUSD = (accountName) => {
+    const account = getAccount(accountName);
+    return account?.moneda === 'Dólar';
+  };
+
+  // Helper to get account icon
+  const getAccountIcon = (accountName) => {
+    const account = getAccount(accountName);
+    if (!account?.icon) return null;
+    return account.icon;
+  };
+
+  // Render small account icon
+  const renderAccountIcon = (accountName) => {
+    const icon = getAccountIcon(accountName);
+    if (!icon) return null;
+
+    if (isEmoji(icon)) {
+      return <span className="text-[10px] sm:text-xs">{icon}</span>;
+    }
+    return (
+      <img
+        src={resolveIconPath(icon)}
+        alt=""
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded object-cover"
+      />
+    );
+  };
+
+  // Determine if movement is in USD based on account currency
+  const isUSDMovement = (movement) => {
+    const accountName = movement.tipo === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
+    return isAccountUSD(accountName);
+  };
 
   const getTypeStyles = (tipo) => {
     switch (tipo) {
@@ -137,12 +179,12 @@ function RecentMovements({
           <DateRangePicker
             value={dateRange}
             onChange={onDateRangeChange}
-            defaultPreset="Esta semana"
+            defaultPreset="Este mes"
           />
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros - show all accounts (user can toggle hidden ones) */}
       <FilterBar
         accounts={accounts}
         categories={categories}
@@ -224,23 +266,48 @@ function RecentMovements({
                           : movement.categoria || ''}
                       </p>
                       <p
-                        className="text-[11px] sm:text-xs truncate"
+                        className="text-[11px] sm:text-xs truncate flex items-center gap-1"
                         style={{ color: 'var(--text-secondary)' }}
                       >
-                        {movement.tipo === 'transferencia'
-                          ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
-                          : movement.cuenta}
+                        {movement.tipo === 'transferencia' ? (
+                          <>
+                            {renderAccountIcon(movement.cuentaSaliente)}
+                            <span>{movement.cuentaSaliente}</span>
+                            <span>→</span>
+                            {renderAccountIcon(movement.cuentaEntrante)}
+                            <span>{movement.cuentaEntrante}</span>
+                          </>
+                        ) : (
+                          <>
+                            {renderAccountIcon(movement.cuenta)}
+                            <span>{movement.cuenta}</span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
 
                   {/* Amount and date - below on <400px, right on 400px+ */}
                   <div className="text-left min-[400px]:text-right flex-shrink-0 pl-11 min-[400px]:pl-0">
-                    <p className="font-bold text-sm sm:text-lg" style={{ color: styles.color }}>
-                      {movement.tipo === 'transferencia'
-                        ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
-                        : `${styles.prefix}${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
-                    </p>
+                    {(() => {
+                      // Determine currency based on the account's currency
+                      const isUSD = isUSDMovement(movement);
+                      const currencyCode = isUSD ? 'USD' : 'ARS';
+                      const amount = movement.monto || movement.montoSaliente;
+
+                      return (
+                        <div className="flex items-center gap-1.5 min-[400px]:justify-end">
+                          <img
+                            src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
+                            alt={currencyCode}
+                            className="w-4 h-4 rounded-sm"
+                          />
+                          <p className="font-bold text-sm sm:text-lg" style={{ color: styles.color }}>
+                            {styles.prefix}{formatCurrency(amount, currencyCode)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <p className="text-[11px] sm:text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
                     </p>

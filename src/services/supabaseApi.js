@@ -255,6 +255,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
         totalTransfEntrantes: balanceData.totalTransfEntrantes,
         totalTransfSalientes: balanceData.totalTransfSalientes,
         icon: account.icon || null,
+        ocultaDelBalance: account.hidden_from_balance || false,
         ...creditCardData,
         // Keep original fields too
         ...account
@@ -405,7 +406,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
   return { proximoResumenPesos: totalPesos, proximoResumenDolares: totalDolares, promedioMensual };
 };
 
-export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon }) => {
+export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon, ocultaDelBalance }) => {
   const userId = await getUserId();
 
   const { data, error } = await supabase
@@ -419,7 +420,8 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
-      icon: icon || null
+      icon: icon || null,
+      hidden_from_balance: ocultaDelBalance || false
     })
     .select()
     .single();
@@ -429,7 +431,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
   return { success: true, account: data };
 };
 
-export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon }) => {
+export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon, ocultaDelBalance }) => {
   const accountId = id || rowIndex;
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
@@ -444,7 +446,8 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
-      icon: icon || null
+      icon: icon || null,
+      hidden_from_balance: ocultaDelBalance || false
     })
     .eq('id', accountId)
     .select()
@@ -1992,7 +1995,13 @@ export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuent
     result = result.filter(m => tipos.includes(m.tipo));
   }
   if (cuentas && cuentas.length > 0) {
-    result = result.filter(m => cuentas.includes(m.cuenta));
+    result = result.filter(m => {
+      // For transfers, check both source and destination accounts
+      if (m.tipo === 'transferencia') {
+        return cuentas.includes(m.cuentaSaliente) || cuentas.includes(m.cuentaEntrante);
+      }
+      return cuentas.includes(m.cuenta);
+    });
   }
   if (categorias && categorias.length > 0) {
     result = result.filter(m => m.categoria && categorias.includes(m.categoria));

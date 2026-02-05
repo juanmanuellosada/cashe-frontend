@@ -30,6 +30,9 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
   // Get expense categories only
   const expenseCategories = categories.gastos || [];
 
+  // Filter out accounts hidden from balance
+  const visibleAccounts = (accounts || []).filter(acc => !acc.ocultaDelBalance);
+
   // Count active filters
   const activeFiltersCount = [
     filters.cuentas?.length > 0,
@@ -42,44 +45,43 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       return null;
     }
 
-    // Filter expenses only (movements already come filtered for current week from Home.jsx)
-    // No need to re-filter by date since fetchWeeklyMovements already does that
-    let weekExpenses = movements.filter(m => m.tipo === 'gasto');
+    // Get names of visible accounts (not hidden from balance)
+    const visibleAccountNames = visibleAccounts.map(acc => acc.nombre);
+
+    // Filter movements from visible accounts only
+    const visibleMovements = movements.filter(m => visibleAccountNames.includes(m.cuenta));
+
+    // Separate expenses and income
+    let weekExpenses = visibleMovements.filter(m => m.tipo === 'gasto');
+    let weekIncome = visibleMovements.filter(m => m.tipo === 'ingreso');
 
     // Apply account filter
     if (filters.cuentas?.length > 0) {
       weekExpenses = weekExpenses.filter(m => filters.cuentas.includes(m.cuenta));
+      weekIncome = weekIncome.filter(m => filters.cuentas.includes(m.cuenta));
     }
 
-    // Apply category filter
+    // Apply category filter (only to expenses since categories filter is for expenses)
     if (filters.categorias?.length > 0) {
       weekExpenses = weekExpenses.filter(m => filters.categorias.includes(m.categoria));
     }
 
-    if (weekExpenses.length === 0) {
-      return {
-        avgDaily: 0,
-        avgDailyDolares: 0,
-        maxDay: null,
-        topCategory: null,
-        totalWeek: 0,
-        totalWeekDolares: 0,
-        daysWithExpenses: 0
-      };
-    }
-
     // Total expenses this week (pesos and dollars)
-    const totalWeek = weekExpenses.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
-    const totalWeekDolares = weekExpenses.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
+    const totalExpenses = weekExpenses.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalExpensesDolares = weekExpenses.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
 
-    // Calculate days with expenses - usar fecha directamente si es yyyy-MM-dd
-    const daysWithExpenses = new Set(
-      weekExpenses.map(m => m.fecha)
-    ).size;
+    // Total income this week (pesos and dollars)
+    const totalIncome = weekIncome.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
+    const totalIncomeDolares = weekIncome.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
 
-    // Average daily expense
-    const avgDaily = totalWeek / 7;
-    const avgDailyDolares = totalWeekDolares / 7;
+    // Average daily expense and income
+    const avgDailyExpense = totalExpenses / 7;
+    const avgDailyExpenseDolares = totalExpensesDolares / 7;
+    const avgDailyIncome = totalIncome / 7;
+    const avgDailyIncomeDolares = totalIncomeDolares / 7;
+
+    // Calculate days with expenses
+    const daysWithExpenses = new Set(weekExpenses.map(m => m.fecha)).size;
 
     // Helper para obtener nombre del día desde fecha yyyy-MM-dd
     const getDayName = (fecha) => {
@@ -119,15 +121,19 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
     const topCategory = sortedCategories[0] || null;
 
     return {
-      avgDaily,
-      avgDailyDolares,
+      avgDailyExpense,
+      avgDailyExpenseDolares,
+      avgDailyIncome,
+      avgDailyIncomeDolares,
       maxDay,
       topCategory,
-      totalWeek,
-      totalWeekDolares,
+      totalExpenses,
+      totalExpensesDolares,
+      totalIncome,
+      totalIncomeDolares,
       daysWithExpenses
     };
-  }, [movements, filters]);
+  }, [movements, filters, visibleAccounts]);
 
   // Toggle filter value
   const toggleFilter = (key, value) => {
@@ -261,7 +267,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       {/* Filters Panel */}
       {showFilters && (
         <div className="p-4 rounded-lg min-[400px]:rounded-xl space-y-4 animate-scale-in card-glass">
-          {/* Cuentas */}
+          {/* Cuentas - show all accounts, indicate hidden ones */}
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
@@ -287,18 +293,26 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
             <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
               {accounts.map((account) => {
                 const selected = isSelected('cuentas', account.nombre);
+                const isHidden = account.ocultaDelBalance;
                 return (
                   <button
                     key={account.nombre}
                     onClick={() => toggleFilter('cuentas', account.nombre)}
-                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 flex items-center gap-1"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
                       boxShadow: selected ? '0 4px 16px var(--accent-primary-glow)' : 'none',
+                      opacity: isHidden && !selected ? 0.6 : 1,
                     }}
+                    title={isHidden ? 'Cuenta oculta del balance' : ''}
                   >
                     {account.nombre}
+                    {isHidden && (
+                      <svg className="w-3 h-3" style={{ color: selected ? 'white' : 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    )}
                   </button>
                 );
               })}
@@ -372,7 +386,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       )}
 
       {/* Stats Card */}
-      {(!stats || stats.totalWeek === 0) ? (
+      {(!stats || (stats.totalExpenses === 0 && stats.totalIncome === 0)) ? (
         <div className="card-glass p-4 sm:p-6 text-center rounded-lg min-[400px]:rounded-xl">
           <div
             className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-md min-[400px]:rounded-lg sm:rounded-xl flex items-center justify-center"
@@ -383,20 +397,30 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
             </svg>
           </div>
           <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            {activeFiltersCount > 0 ? 'Sin gastos con filtros' : 'Sin gastos esta semana'}
+            {activeFiltersCount > 0 ? 'Sin movimientos con filtros' : 'Sin movimientos esta semana'}
           </p>
         </div>
       ) : (
         <div className="card-glass p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl">
-          {/* Grid responsivo: 1 col <400px, 2 cols 400-640px, 3 cols 640px+ */}
-          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+          {/* Grid responsivo: 2 cols en móvil, 4 cols en desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            {/* Average daily income */}
+            <div className="group p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Prom. Ing.
+              </p>
+              <p className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--accent-green)' }}>
+                +{formatCurrency(currency === 'ARS' ? stats.avgDailyIncome : stats.avgDailyIncomeDolares, currency)}
+              </p>
+            </div>
+
             {/* Average daily expense */}
             <div className="group p-2.5 sm:p-3 rounded-md min-[400px]:rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]">
               <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
-                Promedio diario
+                Prom. Gasto
               </p>
-              <p className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--accent-blue)' }}>
-                {formatCurrency(currency === 'ARS' ? stats.avgDaily : stats.avgDailyDolares, currency)}
+              <p className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--accent-red)' }}>
+                -{formatCurrency(currency === 'ARS' ? stats.avgDailyExpense : stats.avgDailyExpenseDolares, currency)}
               </p>
             </div>
 

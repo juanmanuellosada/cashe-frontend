@@ -11,14 +11,31 @@ const PRESETS = [
   { label: 'Ultimos 3 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 2)), to: endOfMonth(new Date()) }) },
 ];
 
+// Helper to ensure date is a Date object
+const ensureDate = (date) => {
+  if (!date) return null;
+  if (date instanceof Date) return date;
+  return new Date(date);
+};
+
 function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = 'Este mes' }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [range, setRange] = useState(value || PRESETS.find(p => p.label === defaultPreset)?.getValue() || { from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
   const containerRef = useRef(null);
+
+  // Normalize value to ensure Date objects
+  const normalizeRange = (r) => {
+    if (!r) return PRESETS.find(p => p.label === defaultPreset)?.getValue() || { from: startOfMonth(new Date()), to: endOfMonth(new Date()) };
+    return {
+      from: ensureDate(r.from),
+      to: ensureDate(r.to)
+    };
+  };
+
+  const [range, setRange] = useState(() => normalizeRange(value));
 
   useEffect(() => {
     if (value) {
-      setRange(value);
+      setRange(normalizeRange(value));
     }
   }, [value]);
 
@@ -40,13 +57,17 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
 
   const formatDisplayDate = () => {
     if (!range?.from) return 'Fechas';
-    if (!range?.to) return format(range.from, 'd/M');
+    // Ensure dates are Date objects
+    const fromDate = range.from instanceof Date ? range.from : new Date(range.from);
+    const toDate = range.to ? (range.to instanceof Date ? range.to : new Date(range.to)) : null;
+
+    if (!toDate) return format(fromDate, 'd/M');
     // Formato ultra compacto: solo días si es mismo mes
-    const sameMonth = range.from.getMonth() === range.to.getMonth();
+    const sameMonth = fromDate.getMonth() === toDate.getMonth();
     if (sameMonth) {
-      return `${format(range.from, 'd')}-${format(range.to, 'd')}/${format(range.to, 'M')}`;
+      return `${format(fromDate, 'd')}-${format(toDate, 'd')}/${format(toDate, 'M')}`;
     }
-    return `${format(range.from, 'd/M')}-${format(range.to, 'd/M')}`;
+    return `${format(fromDate, 'd/M')}-${format(toDate, 'd/M')}`;
   };
 
   useEffect(() => {

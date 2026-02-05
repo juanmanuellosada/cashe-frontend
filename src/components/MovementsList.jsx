@@ -11,6 +11,7 @@ import SwipeableItem from './SwipeableItem';
 import { useError } from '../contexts/ErrorContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
+import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
 function MovementsList({
   title,
@@ -36,6 +37,41 @@ function MovementsList({
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [currency, setCurrency] = useState('ARS');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Helper to get account by name
+  const getAccount = (accountName) => {
+    return accounts?.find(a => a.nombre === accountName);
+  };
+
+  // Helper to check if account is USD
+  const isAccountUSD = (accountName) => {
+    const account = getAccount(accountName);
+    return account?.moneda === 'Dólar';
+  };
+
+  // Helper to get account icon
+  const getAccountIcon = (accountName) => {
+    const account = getAccount(accountName);
+    if (!account?.icon) return null;
+    return account.icon;
+  };
+
+  // Render small account icon
+  const renderAccountIcon = (accountName) => {
+    const icon = getAccountIcon(accountName);
+    if (!icon) return null;
+
+    if (isEmoji(icon)) {
+      return <span className="text-xs">{icon}</span>;
+    }
+    return (
+      <img
+        src={resolveIconPath(icon)}
+        alt=""
+        className="w-4 h-4 rounded object-cover"
+      />
+    );
+  };
 
   // Track window resize for mobile detection
   useEffect(() => {
@@ -92,7 +128,11 @@ function MovementsList({
         if (parsed.selectedAccounts) setSelectedAccounts(parsed.selectedAccounts);
         if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
         if (parsed.dateRange && (parsed.dateRange.from || parsed.dateRange.to)) {
-          setDateRange(parsed.dateRange);
+          // Convert string dates back to Date objects
+          setDateRange({
+            from: parsed.dateRange.from ? new Date(parsed.dateRange.from) : null,
+            to: parsed.dateRange.to ? new Date(parsed.dateRange.to) : null,
+          });
           hasDateRange = true;
         }
       } catch (e) {
@@ -1076,10 +1116,21 @@ function MovementsList({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-                      {type === 'transferencia'
-                        ? `${movement.cuentaSaliente} → ${movement.cuentaEntrante}`
-                        : movement.cuenta}
+                    <p className="text-xs truncate flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                      {type === 'transferencia' ? (
+                        <>
+                          {renderAccountIcon(movement.cuentaSaliente)}
+                          <span>{movement.cuentaSaliente}</span>
+                          <span>→</span>
+                          {renderAccountIcon(movement.cuentaEntrante)}
+                          <span>{movement.cuentaEntrante}</span>
+                        </>
+                      ) : (
+                        <>
+                          {renderAccountIcon(movement.cuenta)}
+                          <span>{movement.cuenta}</span>
+                        </>
+                      )}
                     </p>
                     {movement.nota && (
                       <p className="text-xs truncate mt-0.5 italic" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
@@ -1097,7 +1148,8 @@ function MovementsList({
 
                   {/* Desktop: Show account/category info */}
                   {type !== 'transferencia' && (
-                    <div className="hidden lg:block text-center flex-shrink-0 w-32">
+                    <div className="hidden lg:flex items-center justify-center gap-1.5 flex-shrink-0 w-32">
+                      {renderAccountIcon(movement.cuenta)}
                       <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>
                         {movement.cuenta}
                       </p>
@@ -1106,13 +1158,26 @@ function MovementsList({
 
                   {/* Amount and date */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-xl font-bold lg:text-lg" style={{ color: getTypeColor() }}>
-                      {type === 'transferencia'
-                        ? formatCurrency(currency === 'ARS' ? movement.montoSaliente : (movement.montoSalienteDolares || 0), currency)
-                        : type === 'ingreso'
-                          ? `+${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`
-                          : `-${formatCurrency(currency === 'ARS' ? (movement.montoPesos || movement.monto) : (movement.montoDolares || 0), currency)}`}
-                    </p>
+                    {(() => {
+                      // Determine currency based on the account's currency
+                      const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
+                      const isUSD = isAccountUSD(accountName);
+                      const currencyCode = isUSD ? 'USD' : 'ARS';
+                      const amount = movement.monto || movement.montoSaliente;
+
+                      return (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <img
+                            src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
+                            alt={currencyCode}
+                            className="w-4 h-4 rounded-sm"
+                          />
+                          <p className="text-xl font-bold lg:text-lg" style={{ color: getTypeColor() }}>
+                            {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <p className="text-xs lg:hidden" style={{ color: 'var(--text-secondary)' }}>
                       {formatDate(movement.fecha, 'short')}
                     </p>

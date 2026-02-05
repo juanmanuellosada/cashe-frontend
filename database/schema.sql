@@ -48,6 +48,7 @@ CREATE TABLE accounts (
     is_credit_card boolean DEFAULT false,
     closing_day integer,
     icon text,
+    hidden_from_balance boolean DEFAULT false, -- Ocultar cuenta del balance general
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );

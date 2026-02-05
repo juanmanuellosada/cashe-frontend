@@ -241,6 +241,7 @@ Cuentas del usuario (bancos, billeteras, tarjetas)
 | is_credit_card | boolean | YES | false |
 | closing_day | integer | YES | - |
 | icon | text | YES | - |
+| hidden_from_balance | boolean | YES | false |
 | created_at | timestamp | YES | now() |
 | updated_at | timestamp | YES | now() |
 

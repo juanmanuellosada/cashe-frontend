@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns';
-import { getDashboardFiltered, getMovementsFiltered, getAccounts, getCategories, updateMovement, deleteMovement } from '../services/supabaseApi';
+import { getDashboardFiltered, getMovementsFiltered, getAccounts, getCategories, updateMovement, deleteMovement, updateAccount } from '../services/supabaseApi';
 import BalanceCard from '../components/dashboard/BalanceCard';
 import PeriodFlowCard from '../components/dashboard/PeriodFlowCard';
 import QuickStats from '../components/dashboard/QuickStats';
@@ -9,6 +9,7 @@ import AccountBalances from '../components/dashboard/AccountBalances';
 import WeeklySummary from '../components/dashboard/WeeklySummary';
 import RecentMovements from '../components/dashboard/RecentMovements';
 import EditMovementModal from '../components/EditMovementModal';
+import AccountModal from '../components/AccountModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
@@ -47,23 +48,23 @@ function Home() {
     to: endOfMonth(new Date()),
   });
 
-  // Movements date range (default: current week) - load from localStorage
+  // Movements date range (default: current month) - load from localStorage
   const [movementDateRange, setMovementDateRange] = useState(() => {
     try {
       const saved = localStorage.getItem('cashe_home_movement_dates');
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          from: parsed.from ? new Date(parsed.from) : startOfWeek(new Date(), { weekStartsOn: 1 }),
-          to: parsed.to ? new Date(parsed.to) : endOfWeek(new Date(), { weekStartsOn: 1 }),
+          from: parsed.from ? new Date(parsed.from) : startOfMonth(new Date()),
+          to: parsed.to ? new Date(parsed.to) : endOfMonth(new Date()),
         };
       }
     } catch (e) {
       console.warn('Error loading saved date range:', e);
     }
     return {
-      from: startOfWeek(new Date(), { weekStartsOn: 1 }),
-      to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
     };
   });
 
@@ -126,6 +127,13 @@ function Home() {
   const [editingMovement, setEditingMovement] = useState(null);
   const [savingMovement, setSavingMovement] = useState(false);
 
+  // Account edit modal state
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [savingAccount, setSavingAccount] = useState(false);
+
+  // Track if movement filters have been initialized with visible accounts
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+
   // Fetch accounts and categories on mount
   useEffect(() => {
     async function fetchInitialData() {
@@ -144,6 +152,38 @@ function Home() {
     }
     fetchInitialData();
   }, []);
+
+  // Initialize movement filters with visible accounts (only on first load, no saved filters)
+  useEffect(() => {
+    if (accounts.length > 0 && !filtersInitialized) {
+      const currentCuentas = movementFilters.cuentas || [];
+      const allAccountNames = accounts.map(acc => acc.nombre);
+
+      // Validate current filters against existing accounts (remove deleted ones)
+      const validCurrentCuentas = currentCuentas.filter(name =>
+        allAccountNames.includes(name)
+      );
+
+      // Only set defaults if no valid accounts are currently selected (fresh state)
+      if (validCurrentCuentas.length === 0) {
+        // Default to visible (non-hidden) accounts only
+        const visibleAccountNames = accounts
+          .filter(acc => !acc.ocultaDelBalance)
+          .map(acc => acc.nombre);
+        setMovementFilters(prev => ({
+          ...prev,
+          cuentas: visibleAccountNames
+        }));
+      } else if (validCurrentCuentas.length !== currentCuentas.length) {
+        // Clean up any deleted accounts from the filter, but keep hidden ones if user selected them
+        setMovementFilters(prev => ({
+          ...prev,
+          cuentas: validCurrentCuentas
+        }));
+      }
+      setFiltersInitialized(true);
+    }
+  }, [accounts, filtersInitialized, movementFilters.cuentas]);
 
   // Fetch dashboard when date range changes
   const fetchDashboard = useCallback(async () => {
@@ -242,6 +282,24 @@ function Home() {
       showError('No se pudo guardar el movimiento', err.message);
     } finally {
       setSavingMovement(false);
+    }
+  };
+
+  // Handle account edit save
+  const handleSaveAccount = async (updatedAccount) => {
+    try {
+      setSavingAccount(true);
+      await updateAccount(updatedAccount);
+      setEditingAccount(null);
+      emit(DataEvents.ACCOUNTS_CHANGED);
+      // Refresh accounts data
+      const accountsData = await getAccounts();
+      setAccounts(accountsData.accounts || []);
+    } catch (err) {
+      console.error('Error updating account:', err);
+      showError('No se pudo guardar la cuenta', err.message);
+    } finally {
+      setSavingAccount(false);
     }
   };
 
@@ -357,7 +415,7 @@ function Home() {
         accounts={accounts}
         loading={loadingInitial}
         onAccountClick={(account) => {
-          setAccountFilters([account.nombre]);
+          setEditingAccount(account);
         }}
       />
 
@@ -384,7 +442,7 @@ function Home() {
         currency={currency}
       />
 
-      {/* Edit Modal */}
+      {/* Edit Movement Modal */}
       {editingMovement && (
         <EditMovementModal
           movement={editingMovement}
@@ -396,6 +454,16 @@ function Home() {
           onClose={() => setEditingMovement(null)}
           onConvertedToRecurring={handleRefresh}
           loading={savingMovement}
+        />
+      )}
+
+      {/* Edit Account Modal */}
+      {editingAccount && (
+        <AccountModal
+          account={editingAccount}
+          onSave={handleSaveAccount}
+          onClose={() => setEditingAccount(null)}
+          loading={savingAccount}
         />
       )}
     </div>

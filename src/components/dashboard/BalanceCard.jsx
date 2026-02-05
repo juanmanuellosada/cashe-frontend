@@ -13,9 +13,13 @@ function BalanceCard({
 
   // Calculate filtered balance from accounts
   const filteredData = useMemo(() => {
+    // Exclude accounts marked as hidden from balance
+    const visibleAccounts = accounts.filter(acc => !acc.ocultaDelBalance);
+
+    // Apply user filters on visible accounts
     const filteredAccounts = accountFilters.length > 0
-      ? accounts.filter(acc => accountFilters.includes(acc.nombre))
-      : accounts;
+      ? visibleAccounts.filter(acc => accountFilters.includes(acc.nombre))
+      : visibleAccounts;
 
     const tipoCambio = dashboard?.tipoCambio || 1000;
 
@@ -68,10 +72,13 @@ function BalanceCard({
     return accountFilters.length === 0 || accountFilters.includes(accountName);
   };
 
+  // Get visible accounts (not hidden from balance)
+  const visibleAccountsList = accounts.filter(acc => !acc.ocultaDelBalance);
+
   // Select all accounts
   const selectAll = () => {
     if (!onAccountFiltersChange) return;
-    const allAccountNames = accounts.map(a => a.nombre);
+    const allAccountNames = visibleAccountsList.map(a => a.nombre);
     const allSelected = allAccountNames.length > 0 && allAccountNames.every(name => accountFilters.includes(name));
     onAccountFiltersChange(allSelected ? [] : allAccountNames);
   };
@@ -216,13 +223,13 @@ function BalanceCard({
                 className="text-xs font-semibold transition-colors hover:opacity-80"
                 style={{ color: 'var(--accent-primary)' }}
               >
-                {accounts.length > 0 && accounts.every(a => accountFilters.includes(a.nombre))
+                {visibleAccountsList.length > 0 && visibleAccountsList.every(a => accountFilters.includes(a.nombre))
                   ? 'Deseleccionar'
                   : 'Seleccionar todos'}
               </button>
             </div>
             <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
-              {accounts.map((account) => {
+              {visibleAccountsList.map((account) => {
                 const selected = isSelected(account.nombre);
                 return (
                   <button
