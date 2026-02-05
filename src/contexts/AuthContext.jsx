@@ -103,11 +103,6 @@ export const AuthProvider = ({ children }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        // Handle specific auth events
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully');
-        }
-
         setUser(session?.user ?? null);
         if (session?.user) {
           // Fetch profile in background, don't block

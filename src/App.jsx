@@ -43,6 +43,28 @@ const PageLoader = () => (
   </div>
 )
 
+// Protected routes configuration
+const protectedRoutes = [
+  { path: '/home', component: Home },
+  { path: '/nuevo', component: NewMovement },
+  { path: '/cuentas', component: Accounts },
+  { path: '/categorias', component: Categories },
+  { path: '/gastos', component: Expenses },
+  { path: '/ingresos', component: Income },
+  { path: '/transferencias', component: Transfers },
+  { path: '/estadisticas', component: Statistics },
+  { path: '/comparador', component: Comparador },
+  { path: '/resumen-categorias', component: CategorySummary },
+  { path: '/tarjetas', component: CreditCards },
+  { path: '/adjuntos', component: Attachments },
+  { path: '/integraciones', component: Integrations },
+  { path: '/presupuestos', component: Budgets },
+  { path: '/metas', component: Goals },
+  { path: '/recurrentes', component: Recurring },
+  { path: '/programadas', component: ScheduledTransactions },
+  { path: '/calendario', component: Calendar },
+]
+
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode')
@@ -64,6 +86,17 @@ function App() {
     ? '/'
     : import.meta.env.BASE_URL.replace(/\/$/, '')
 
+  // Helper component for protected pages
+  const ProtectedPage = ({ children }) => (
+    <ProtectedRoute>
+      <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+        <Suspense fallback={<PageLoader />}>
+          {children}
+        </Suspense>
+      </Layout>
+    </ProtectedRoute>
+  )
+
   return (
     <ErrorProvider>
       <AuthProvider>
@@ -79,176 +112,23 @@ function App() {
             <Route path="/privacidad" element={<Privacy />} />
 
             {/* Protected routes - lazy loaded */}
-            <Route path="/home" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Home />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/nuevo" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <NewMovement />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/cuentas" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Accounts />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/categorias" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Categories />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/gastos" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Expenses />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/ingresos" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Income />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/transferencias" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Transfers />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/estadisticas" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Statistics />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/comparador" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Comparador />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/resumen-categorias" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <CategorySummary />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/tarjetas" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <CreditCards />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/adjuntos" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Attachments />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/integraciones" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Integrations />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/presupuestos" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Budgets />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/metas" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Goals />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/recurrentes" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Recurring />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/programadas" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <ScheduledTransactions />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/calendario" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Calendar />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+            {protectedRoutes.map(({ path, component: Component }) => (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <ProtectedPage>
+                    <Component />
+                  </ProtectedPage>
+                }
+              />
+            ))}
+
+            {/* Settings page - special case with additional props */}
             <Route path="/configuracion" element={
-              <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Settings darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
+              <ProtectedPage>
+                <Settings darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+              </ProtectedPage>
             } />
 
             {/* Catch all - redirect to landing */}

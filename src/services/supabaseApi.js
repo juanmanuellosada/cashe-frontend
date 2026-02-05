@@ -208,14 +208,19 @@ const accountTypeFromDb = (type) => {
 // ============================================
 export const getAccounts = () => withDeduplication('accounts', async () => {
   const userId = await getUserId();
-  
-  const { data: accounts, error } = await supabase
-    .from('accounts')
-    .select('*')
-    .eq('user_id', userId)
-    .order('name');
 
-  if (error) throw error;
+  // Fetch accounts and balances in parallel (2 queries instead of 4*N)
+  const [{ data: accounts, error: accountsError }, { data: balances, error: balancesError }] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name'),
+    supabase.rpc('get_account_balances', { p_user_id: userId })
+  ]);
+
+  if (accountsError) throw accountsError;
+  if (balancesError) throw balancesError;
 
   // If no accounts, return empty immediately
   if (!accounts || accounts.length === 0) {
@@ -224,102 +229,75 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
     return result;
   }
 
-  // Get balances for each account
-  const accountsWithBalances = await Promise.all(
-    accounts.map(async (account) => {
-      const balanceData = await calculateAccountBalance(account.id, account.initial_balance);
+  // Create a map of balances by account_id for O(1) lookup
+  const balanceMap = new Map();
+  (balances || []).forEach(b => {
+    balanceMap.set(b.account_id, {
+      balance: parseFloat(b.balance) || 0,
+      totalIngresos: parseFloat(b.total_incomes) || 0,
+      totalGastos: parseFloat(b.total_expenses) || 0,
+      totalTransfEntrantes: parseFloat(b.total_transfers_in) || 0,
+      totalTransfSalientes: parseFloat(b.total_transfers_out) || 0,
+    });
+  });
 
-      // For credit cards, also calculate next statement balance
-      let creditCardData = {};
-      if (account.is_credit_card) {
-        const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day);
-        creditCardData = {
-          proximoResumenPesos: nextStatement.proximoResumenPesos,
-          proximoResumenDolares: nextStatement.proximoResumenDolares,
-          promedioMensual: nextStatement.promedioMensual,
-        };
-      }
+  // Get credit card data for accounts that need it (parallel)
+  const creditCardAccounts = accounts.filter(a => a.is_credit_card);
+  const creditCardDataMap = new Map();
 
-      return {
-        id: account.id,
-        nombre: account.name,
-        moneda: account.currency === 'ARS' ? 'Peso' : 'Dólar',
-        balanceInicial: account.initial_balance,
-        numeroCuenta: account.account_number || '',
-        tipo: accountTypeFromDb(account.account_type),
-        esTarjetaCredito: account.is_credit_card,
-        diaCierre: account.closing_day,
-        diaVencimiento: account.due_day,
-        balanceActual: balanceData.balance,
-        totalIngresos: balanceData.totalIngresos,
-        totalGastos: balanceData.totalGastos,
-        totalTransfEntrantes: balanceData.totalTransfEntrantes,
-        totalTransfSalientes: balanceData.totalTransfSalientes,
-        icon: account.icon || null,
-        ocultaDelBalance: account.hidden_from_balance || false,
-        ...creditCardData,
-        // Keep original fields too
-        ...account
-      };
-    })
-  );
+  if (creditCardAccounts.length > 0) {
+    const creditCardPromises = creditCardAccounts.map(async (account) => {
+      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day);
+      return { accountId: account.id, data: nextStatement };
+    });
+    const creditCardResults = await Promise.all(creditCardPromises);
+    creditCardResults.forEach(({ accountId, data }) => {
+      creditCardDataMap.set(accountId, {
+        proximoResumenPesos: data.proximoResumenPesos,
+        proximoResumenDolares: data.proximoResumenDolares,
+        promedioMensual: data.promedioMensual,
+      });
+    });
+  }
+
+  // Map accounts with their balances
+  const accountsWithBalances = accounts.map((account) => {
+    const balanceData = balanceMap.get(account.id) || {
+      balance: parseFloat(account.initial_balance) || 0,
+      totalIngresos: 0,
+      totalGastos: 0,
+      totalTransfEntrantes: 0,
+      totalTransfSalientes: 0,
+    };
+    const creditCardData = creditCardDataMap.get(account.id) || {};
+
+    return {
+      id: account.id,
+      nombre: account.name,
+      moneda: account.currency === 'ARS' ? 'Peso' : 'Dólar',
+      balanceInicial: account.initial_balance,
+      numeroCuenta: account.account_number || '',
+      tipo: accountTypeFromDb(account.account_type),
+      esTarjetaCredito: account.is_credit_card,
+      diaCierre: account.closing_day,
+      diaVencimiento: account.due_day,
+      balanceActual: balanceData.balance,
+      totalIngresos: balanceData.totalIngresos,
+      totalGastos: balanceData.totalGastos,
+      totalTransfEntrantes: balanceData.totalTransfEntrantes,
+      totalTransfSalientes: balanceData.totalTransfSalientes,
+      icon: account.icon || null,
+      ocultaDelBalance: account.hidden_from_balance || false,
+      ...creditCardData,
+      // Keep original fields too
+      ...account
+    };
+  });
 
   const result = { accounts: accountsWithBalances };
   setCachedData('accounts', result);
   return result;
 });
-
-const calculateAccountBalance = async (accountId, initialBalance) => {
-  const userId = await getUserId();
-
-  // Sum incomes
-  const { data: incomes } = await supabase
-    .from('movements')
-    .select('amount')
-    .eq('user_id', userId)
-    .eq('account_id', accountId)
-    .eq('type', 'income');
-
-  const totalIncomes = (incomes || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
-
-  // Sum expenses
-  const { data: expenses } = await supabase
-    .from('movements')
-    .select('amount')
-    .eq('user_id', userId)
-    .eq('account_id', accountId)
-    .eq('type', 'expense');
-
-  const totalExpenses = (expenses || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
-
-  // Sum transfers in
-  const { data: transfersIn } = await supabase
-    .from('transfers')
-    .select('to_amount')
-    .eq('user_id', userId)
-    .eq('to_account_id', accountId);
-
-  const totalTransfersIn = (transfersIn || []).reduce((sum, t) => sum + parseFloat(t.to_amount), 0);
-
-  // Sum transfers out
-  const { data: transfersOut } = await supabase
-    .from('transfers')
-    .select('from_amount')
-    .eq('user_id', userId)
-    .eq('from_account_id', accountId);
-
-  const totalTransfersOut = (transfersOut || []).reduce((sum, t) => sum + parseFloat(t.from_amount), 0);
-
-  const balance = parseFloat(initialBalance) + totalIncomes - totalExpenses + totalTransfersIn - totalTransfersOut;
-
-  return {
-    balance,
-    totalIngresos: totalIncomes,
-    totalGastos: totalExpenses,
-    totalTransfEntrantes: totalTransfersIn,
-    totalTransfSalientes: totalTransfersOut,
-  };
-};
 
 // Calculate next statement balance for credit cards (separated by currency)
 const calculateCreditCardNextStatement = async (accountId, closingDay) => {
@@ -884,7 +862,6 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
     categoryData = exactMatch;
   } else {
     // Fallback: buscar con ilike para manejar diferencias de espacios o case
-    console.log('Category exact match failed for:', categoria, 'Error:', exactError?.message);
     const { data: fuzzyMatch } = await supabase
       .from('categories')
       .select('id, name')
@@ -894,7 +871,6 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
       .single();
 
     if (fuzzyMatch) {
-      console.log('Category fuzzy match found:', fuzzyMatch.name);
       categoryData = fuzzyMatch;
     } else {
       console.warn('No category found for:', categoria);
@@ -961,7 +937,6 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
     categoryData = exactMatch;
   } else {
     // Fallback: buscar con ilike para manejar diferencias de espacios o case
-    console.log('Category exact match failed for:', categoria, 'Error:', exactError?.message);
     const { data: fuzzyMatch } = await supabase
       .from('categories')
       .select('id, name')
@@ -971,7 +946,6 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
       .single();
 
     if (fuzzyMatch) {
-      console.log('Category fuzzy match found:', fuzzyMatch.name);
       categoryData = fuzzyMatch;
     } else {
       console.warn('No category found for:', categoria);
@@ -1016,35 +990,31 @@ export const addIncome = async ({ fecha, monto, cuenta, categoria, nota, attachm
 };
 
 export const updateMovement = async (movement) => {
-  console.log('updateMovement called with:', movement);
-
   const userId = await getUserId();
 
-  // Buscar cuenta
-  const { data: accounts } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', movement.cuenta);
+  // Usar accountId directamente si está disponible, fallback a búsqueda por nombre
+  let accountId = movement.accountId;
+  if (!accountId && movement.cuenta) {
+    const { data: accounts } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', movement.cuenta);
+    accountId = accounts?.[0]?.id;
+  }
 
-  const account = accounts?.[0];
-  console.log('Found account:', account);
-
-  // Buscar categoría (solo si no es transferencia)
-  let categoryId = null;
-  if (movement.categoria) {
+  // Usar categoryId directamente si está disponible, fallback a búsqueda por nombre
+  let categoryId = movement.categoryId;
+  if (!categoryId && movement.categoria) {
     const { data: categories } = await supabase
       .from('categories')
       .select('id')
       .eq('user_id', userId)
       .eq('name', movement.categoria);
-
     categoryId = categories?.[0]?.id || null;
-    console.log('Found category:', categories?.[0]);
   }
 
   const id = movement.id || movement.rowIndex;
-  console.log('Movement ID to update:', id);
 
   // Manejar adjuntos
   let attachmentUrl = movement.attachmentUrl;
@@ -1073,13 +1043,12 @@ export const updateMovement = async (movement) => {
   const updatePayload = {
     date: movement.fecha,
     amount: movement.monto,
-    account_id: account?.id,
+    account_id: accountId,
     category_id: categoryId,
     note: movement.nota || null,
     attachment_url: attachmentUrl,
     attachment_name: attachmentName,
   };
-  console.log('Update payload:', updatePayload);
 
   const { data, error } = await supabase
     .from('movements')
@@ -1088,10 +1057,8 @@ export const updateMovement = async (movement) => {
     .select()
     .single();
 
-  console.log('Update result:', { data, error });
-
   if (error) throw error;
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true, movement: data };
 };
 
@@ -1109,7 +1076,7 @@ export const deleteMovement = async (movement) => {
     .eq('id', id);
 
   if (error) throw error;
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true };
 };
 
@@ -1129,7 +1096,7 @@ export const deleteMultipleMovements = async (movements) => {
     .in('id', ids);
 
   if (error) throw error;
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true };
 };
 
@@ -1167,7 +1134,7 @@ export const updateMultipleMovements = async (movements, field, value) => {
     .in('id', ids);
 
   if (error) throw error;
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true };
 };
 
@@ -1212,8 +1179,10 @@ export const updateSubsequentInstallments = async (movement) => {
   // Build update payload with the same fields as the original movement
   let updateData = {};
 
-  // Handle account
-  if (movement.cuenta) {
+  // Handle account - usar accountId directamente si está disponible
+  if (movement.accountId) {
+    updateData.account_id = movement.accountId;
+  } else if (movement.cuenta) {
     const { data: account } = await supabase
       .from('accounts')
       .select('id')
@@ -1223,8 +1192,10 @@ export const updateSubsequentInstallments = async (movement) => {
     if (account) updateData.account_id = account.id;
   }
 
-  // Handle category
-  if (movement.categoria) {
+  // Handle category - usar categoryId directamente si está disponible
+  if (movement.categoryId) {
+    updateData.category_id = movement.categoryId;
+  } else if (movement.categoria) {
     const { data: category } = await supabase
       .from('categories')
       .select('id')
@@ -1255,7 +1226,7 @@ export const updateSubsequentInstallments = async (movement) => {
     .in('id', ids);
 
   if (updateError) throw updateError;
-  invalidateCache('');
+  invalidateCache('movements');
 
   return { success: true, updated: ids.length };
 };
@@ -1291,6 +1262,8 @@ export const getTransfers = async (forceRefresh = false) => {
         fecha: t.date,
         cuentaSaliente: fromAccount?.name || '',
         cuentaEntrante: toAccount?.name || '',
+        fromAccountId: t.from_account_id,
+        toAccountId: t.to_account_id,
         montoSaliente: parseFloat(t.from_amount),
         montoEntrante: parseFloat(t.to_amount),
         nota: t.note || '',
@@ -1366,19 +1339,29 @@ export const addTransfer = async ({ fecha, cuentaSaliente, cuentaEntrante, monto
 export const updateTransfer = async (transfer) => {
   const userId = await getUserId();
 
-  const { data: fromAccount } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', transfer.cuentaSaliente)
-    .single();
+  // Usar fromAccountId directamente si está disponible, fallback a búsqueda por nombre
+  let fromAccountId = transfer.fromAccountId;
+  if (!fromAccountId && transfer.cuentaSaliente) {
+    const { data: fromAccount } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', transfer.cuentaSaliente)
+      .single();
+    fromAccountId = fromAccount?.id;
+  }
 
-  const { data: toAccount } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', transfer.cuentaEntrante)
-    .single();
+  // Usar toAccountId directamente si está disponible, fallback a búsqueda por nombre
+  let toAccountId = transfer.toAccountId;
+  if (!toAccountId && transfer.cuentaEntrante) {
+    const { data: toAccount } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', transfer.cuentaEntrante)
+      .single();
+    toAccountId = toAccount?.id;
+  }
 
   const id = transfer.id || transfer.rowIndex;
 
@@ -1410,8 +1393,8 @@ export const updateTransfer = async (transfer) => {
     .from('transfers')
     .update({
       date: transfer.fecha,
-      from_account_id: fromAccount?.id,
-      to_account_id: toAccount?.id,
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
       from_amount: transfer.montoSaliente,
       to_amount: transfer.montoEntrante,
       note: transfer.nota || null,
@@ -1900,7 +1883,7 @@ export const deleteInstallmentPurchase = async (purchaseId) => {
 
   if (purchaseError) throw purchaseError;
 
-  invalidateCache('');
+  invalidateCache('expense');
   return { success: true };
 };
 
@@ -3484,7 +3467,7 @@ export const confirmOccurrence = async (occurrenceId, actualAmount = null) => {
 
   if (updateError) throw updateError;
 
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true };
 };
 
@@ -3790,7 +3773,7 @@ export const convertToRecurring = async (movementId, frequency, accountName = nu
   // Update the movement to reference the occurrence
   // (We'd need to get the occurrence ID, but for simplicity we'll skip this)
 
-  invalidateCache('');
+  invalidateCache('movements');
   return { success: true, recurring };
 };
 
