@@ -1,19 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { getRecentMovements } from '../services/supabaseApi';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency } from '../utils/format';
-import DateRangePicker from '../components/DateRangePicker';
+import StatisticsFilterBar from '../components/StatisticsFilterBar';
 import LoadingSpinner from '../components/LoadingSpinner';
-
-// Presets para el selector de fechas
-const PERIOD_PRESETS = [
-  { label: 'Este mes', getValue: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
-  { label: 'Mes anterior', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) }) },
-  { label: '3 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 2)), to: endOfMonth(new Date()) }) },
-];
 
 // Tipos de movimiento para tabs
 const MOVEMENT_TABS = [
@@ -29,53 +19,13 @@ const PIE_COLORS = [
 ];
 
 function CategorySummary() {
-  const [movements, setMovements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { filteredMovements: allFiltered, currency, loading } = useStatistics();
   const [activeTab, setActiveTab] = useState('gasto');
-  const [currency, setCurrency] = useState('ARS');
-  const [dateRange, setDateRange] = useState({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
 
-  // Cargar movimientos
-  const loadMovements = useCallback(async (showLoading = true) => {
-    try {
-      if (showLoading) setLoading(true);
-      setError(null);
-      const data = await getRecentMovements(5000);
-      setMovements(data.movimientos || []);
-    } catch (err) {
-      console.error('Error loading movements:', err);
-      setError('Error al cargar los movimientos');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadMovements();
-  }, [loadMovements]);
-
-  // Subscribe to data changes for automatic refresh
-  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => loadMovements(false));
-
-  // Filtrar movimientos por tipo y rango de fechas
+  // Filtrar movimientos por tipo
   const filteredMovements = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return [];
-
-    const startDate = new Date(dateRange.from);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(dateRange.to);
-    endDate.setHours(23, 59, 59, 999);
-
-    return movements.filter(m => {
-      if (m.tipo !== activeTab) return false;
-      const fecha = new Date(m.fecha);
-      return fecha >= startDate && fecha <= endDate;
-    });
-  }, [movements, activeTab, dateRange]);
+    return allFiltered.filter(m => m.tipo === activeTab);
+  }, [allFiltered, activeTab]);
 
   // Agrupar por categoria y calcular totales
   const categoryData = useMemo(() => {
@@ -98,7 +48,6 @@ function CategorySummary() {
       byCategory[cat].dolares += dolares;
     });
 
-    // Convertir a array y calcular porcentajes
     const categories = Object.entries(byCategory)
       .map(([name, data]) => ({
         name,
@@ -108,14 +57,10 @@ function CategorySummary() {
       }))
       .sort((a, b) => b.pesos - a.pesos);
 
-    return {
-      categories,
-      totalPesos,
-      totalDolares,
-    };
+    return { categories, totalPesos, totalDolares };
   }, [filteredMovements]);
 
-  // Datos para el gráfico de barras
+  // Datos para el grafico de barras
   const chartData = useMemo(() => {
     const total = currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
     return categoryData.categories.slice(0, 8).map(cat => {
@@ -123,7 +68,7 @@ function CategorySummary() {
       return {
         name: cat.name.length > 12 ? cat.name.substring(0, 12) + '...' : cat.name,
         fullName: cat.name,
-        value: value,
+        value,
         pesos: cat.pesos,
         dolares: cat.dolares,
         percentage: total > 0 ? (value / total) * 100 : 0,
@@ -131,14 +76,14 @@ function CategorySummary() {
     });
   }, [categoryData, currency]);
 
-  // Datos para el gráfico de torta
+  // Datos para el grafico de torta
   const pieChartData = useMemo(() => {
     const total = currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares;
     return categoryData.categories.map(cat => {
       const value = currency === 'ARS' ? cat.pesos : cat.dolares;
       return {
         name: cat.name,
-        value: value,
+        value,
         percentage: total > 0 ? (value / total) * 100 : 0,
         pesos: cat.pesos,
         dolares: cat.dolares,
@@ -146,7 +91,6 @@ function CategorySummary() {
     });
   }, [categoryData, currency]);
 
-  // Tooltip personalizado para el gráfico de barras
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -155,25 +99,18 @@ function CategorySummary() {
           className="px-3 py-2 rounded-lg shadow-lg"
           style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
         >
-          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-            {data.fullName}
-          </p>
+          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{data.fullName}</p>
           <p className="text-sm" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
             {formatCurrency(data.pesos, 'ARS')}
           </p>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {formatCurrency(data.dolares, 'USD')}
-          </p>
-          <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
-            {data.percentage.toFixed(1)}%
-          </p>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{formatCurrency(data.dolares, 'USD')}</p>
+          <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>{data.percentage.toFixed(1)}%</p>
         </div>
       );
     }
     return null;
   };
 
-  // Tooltip personalizado para el gráfico de torta
   const PieTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -182,32 +119,24 @@ function CategorySummary() {
           className="px-3 py-2 rounded-lg shadow-lg"
           style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
         >
-          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-            {data.name}
-          </p>
+          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{data.name}</p>
           <p className="text-sm" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
             {formatCurrency(data.pesos, 'ARS')}
           </p>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {formatCurrency(data.dolares, 'USD')}
-          </p>
-          <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
-            {data.percentage.toFixed(1)}% del total
-          </p>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{formatCurrency(data.dolares, 'USD')}</p>
+          <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>{data.percentage.toFixed(1)}% del total</p>
         </div>
       );
     }
     return null;
   };
 
-  // Copiar datos al portapapeles
   const handleCopyData = () => {
     const header = 'Categoria\tPesos\tDolares\t%\n';
     const rows = categoryData.categories
       .map(cat => `${cat.name}\t${cat.pesos.toFixed(2)}\t${cat.dolares.toFixed(2)}\t${cat.percentage.toFixed(1)}%`)
       .join('\n');
     const total = `TOTAL\t${categoryData.totalPesos.toFixed(2)}\t${categoryData.totalDolares.toFixed(2)}\t100%`;
-
     navigator.clipboard.writeText(header + rows + '\n' + total);
     alert('Datos copiados al portapapeles');
   };
@@ -222,80 +151,14 @@ function CategorySummary() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p style={{ color: 'var(--accent-red)' }}>{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 rounded-lg"
-          style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
-        >
-          Reintentar
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          Resumen por categoría
+          Resumen por categoria
         </h2>
-        <div className="flex items-center gap-3">
-          {/* Currency Selector - Premium design */}
-          <div
-            className="inline-flex rounded-xl p-1"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
-            <button
-              onClick={() => setCurrency('ARS')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
-              style={{
-                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
-                boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
-              ARS
-            </button>
-            <button
-              onClick={() => setCurrency('USD')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
-              style={{
-                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
-                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
-                boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
-              USD
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            <DateRangePicker
-              value={dateRange}
-              onChange={setDateRange}
-              presets={PERIOD_PRESETS}
-              defaultPreset="Este mes"
-            />
-            {(dateRange.from || dateRange.to) && (
-              <button
-                onClick={() => setDateRange({ from: null, to: null })}
-                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-                title="Limpiar fechas"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
+        <StatisticsFilterBar />
       </div>
 
       {/* Tabs */}
@@ -309,9 +172,7 @@ function CategorySummary() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isActive ? 'shadow-md' : 'hover:opacity-80'
-              }`}
+              className={`relative px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'shadow-md' : 'hover:opacity-80'}`}
               style={{
                 backgroundColor: isActive ? tab.color : 'transparent',
                 color: isActive ? 'white' : 'var(--text-secondary)',
@@ -333,42 +194,24 @@ function CategorySummary() {
       />
 
       {/* Resumen Card */}
-      <div
-        className="rounded-2xl p-4"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
-      >
+      <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
           Total {activeTab === 'gasto' ? 'Gastos' : 'Ingresos'}
         </p>
-        <p
-          className="text-2xl font-bold"
-          style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-        >
-          {formatCurrency(
-            currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares,
-            currency
-          )}
+        <p className="text-2xl font-bold" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+          {formatCurrency(currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares, currency)}
         </p>
         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-          {categoryData.categories.length} categorías
+          {categoryData.categories.length} categorias
         </p>
       </div>
 
-      {/* Gráfico de barras horizontales */}
+      {/* Grafico de barras horizontales */}
       {chartData.length > 0 && (
-        <div
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
-          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Distribucion por Categoria
-          </h3>
+        <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Distribucion por Categoria</h3>
           <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 40)}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-            >
+            <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
               <XAxis
                 type="number"
                 tickFormatter={(value) => {
@@ -380,21 +223,11 @@ function CategorySummary() {
                 axisLine={{ stroke: 'var(--border-subtle)' }}
                 tickLine={false}
               />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={90}
-                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
+              <YAxis type="category" dataKey="name" width={90} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.5 }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
                 {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)'}
-                  />
+                  <Cell key={`cell-${index}`} fill={activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)'} />
                 ))}
               </Bar>
             </BarChart>
@@ -402,58 +235,31 @@ function CategorySummary() {
         </div>
       )}
 
-      {/* Gráfico de torta */}
+      {/* Grafico de torta */}
       {pieChartData.length > 0 && (
-        <div
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: 'var(--bg-secondary)' }}
-        >
+        <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
           <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
             {activeTab === 'gasto' ? 'Gastos' : 'Ingresos'} por Categoria
           </h3>
-
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Pie Chart */}
             <div className="md:col-span-2">
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={85}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                  >
+                  <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={2} dataKey="value" nameKey="name">
                     {pieChartData.map((entry, index) => (
-                      <Cell
-                        key={`pie-cell-${index}`}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                        stroke="transparent"
-                      />
+                      <Cell key={`pie-cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} stroke="transparent" />
                     ))}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Total en el centro (visual) */}
               <div className="text-center -mt-4">
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Total</p>
-                <p
-                  className="font-bold"
-                  style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-                >
-                  {formatCurrency(
-                    currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares,
-                    currency
-                  )}
+                <p className="font-bold" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+                  {formatCurrency(currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares, currency)}
                 </p>
               </div>
             </div>
-
-            {/* Leyenda con detalles */}
             <div className="md:col-span-3 flex flex-col justify-center gap-1.5 max-h-64 overflow-y-auto">
               {pieChartData.slice(0, 10).map((entry, index) => (
                 <div
@@ -461,50 +267,29 @@ function CategorySummary() {
                   className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
-                    />
-                    <span
-                      className="text-sm truncate"
-                      style={{ color: 'var(--text-primary)' }}
-                      title={entry.name}
-                    >
-                      {entry.name}
-                    </span>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
+                    <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }} title={entry.name}>{entry.name}</span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {entry.percentage.toFixed(1)}%
-                    </span>
-                    <span
-                      className="text-sm font-medium min-w-[80px] text-right"
-                      style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-                    >
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{entry.percentage.toFixed(1)}%</span>
+                    <span className="text-sm font-medium min-w-[80px] text-right" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                       {formatCurrency(entry.value, currency)}
                     </span>
                   </div>
                 </div>
               ))}
               {pieChartData.length > 10 && (
-                <p className="text-xs text-center py-1" style={{ color: 'var(--text-secondary)' }}>
-                  +{pieChartData.length - 10} categorias mas
-                </p>
+                <p className="text-xs text-center py-1" style={{ color: 'var(--text-secondary)' }}>+{pieChartData.length - 10} categorias mas</p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabla de categorías */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
-      >
+      {/* Tabla de categorias */}
+      <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="p-4 flex items-center justify-between border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Detalle por Categoria
-          </h3>
+          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Detalle por Categoria</h3>
           <button
             onClick={handleCopyData}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-80"
@@ -526,15 +311,9 @@ function CategorySummary() {
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                    Categoria
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                    Monto
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                    %
-                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Categoria</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Monto</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>%</th>
                 </tr>
               </thead>
               <tbody>
@@ -542,52 +321,27 @@ function CategorySummary() {
                   <tr
                     key={cat.name}
                     className="transition-colors hover:bg-[var(--bg-tertiary)]"
-                    style={{
-                      backgroundColor: index % 2 === 0 ? 'transparent' : 'var(--bg-tertiary)',
-                      opacity: index % 2 === 0 ? 1 : 0.7,
-                    }}
+                    style={{ backgroundColor: index % 2 === 0 ? 'transparent' : 'var(--bg-tertiary)', opacity: index % 2 === 0 ? 1 : 0.7 }}
                   >
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                        {cat.name}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3"><span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{cat.name}</span></td>
                     <td className="px-4 py-3 text-right">
-                      <span
-                        className="font-medium text-sm"
-                        style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-                      >
+                      <span className="font-medium text-sm" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                         {formatCurrency(currency === 'ARS' ? cat.pesos : cat.dolares, currency)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {cat.percentage.toFixed(1)}%
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 text-right"><span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{cat.percentage.toFixed(1)}%</span></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr style={{ backgroundColor: 'var(--bg-tertiary)', borderTop: '2px solid var(--border-subtle)' }}>
-                  <td className="px-4 py-3">
-                    <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
-                      TOTAL
-                    </span>
-                  </td>
+                  <td className="px-4 py-3"><span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>TOTAL</span></td>
                   <td className="px-4 py-3 text-right">
-                    <span
-                      className="font-bold text-sm"
-                      style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}
-                    >
+                    <span className="font-bold text-sm" style={{ color: activeTab === 'gasto' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                       {formatCurrency(currency === 'ARS' ? categoryData.totalPesos : categoryData.totalDolares, currency)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="font-bold text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      100%
-                    </span>
-                  </td>
+                  <td className="px-4 py-3 text-right"><span className="font-bold text-sm" style={{ color: 'var(--text-secondary)' }}>100%</span></td>
                 </tr>
               </tfoot>
             </table>

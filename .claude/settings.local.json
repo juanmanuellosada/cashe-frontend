@@ -61,7 +61,8 @@
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_install",
       "mcp__puppeteer__puppeteer_navigate",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "mcp__puppeteer__puppeteer_screenshot"
     ]
   },
   "enableAllProjectMcpServers": true,

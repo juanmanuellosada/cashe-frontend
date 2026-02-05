@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, Suspense, lazy } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorProvider } from './contexts/ErrorContext'
+import { StatisticsProvider } from './contexts/StatisticsContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorModal from './components/ErrorModal'
 import UpdatePrompt from './components/UpdatePrompt'
@@ -53,9 +54,6 @@ const protectedRoutes = [
   { path: '/gastos', component: Expenses },
   { path: '/ingresos', component: Income },
   { path: '/transferencias', component: Transfers },
-  { path: '/estadisticas', component: Statistics },
-  { path: '/comparador', component: Comparador },
-  { path: '/resumen-categorias', component: CategorySummary },
   { path: '/tarjetas', component: CreditCards },
   { path: '/adjuntos', component: Attachments },
   { path: '/integraciones', component: Integrations },
@@ -121,6 +119,25 @@ function App() {
                 element={
                   <ProtectedPage>
                     <Component />
+                  </ProtectedPage>
+                }
+              />
+            ))}
+
+            {/* Analysis routes - wrapped with StatisticsProvider */}
+            {[
+              { path: '/estadisticas', component: Statistics },
+              { path: '/comparador', component: Comparador },
+              { path: '/resumen-categorias', component: CategorySummary },
+            ].map(({ path, component: Component }) => (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <ProtectedPage>
+                    <StatisticsProvider>
+                      <Component />
+                    </StatisticsProvider>
                   </ProtectedPage>
                 }
               />

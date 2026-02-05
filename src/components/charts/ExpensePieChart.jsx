@@ -1,12 +1,28 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { formatCurrency } from '../../utils/format';
+import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
 const COLORS = [
   '#f43f5e', '#f97316', '#eab308', '#10b981', '#14b8a6',
   '#0ea5e9', '#14b8a6', '#ec4899', '#6366f1', '#84cc16'
 ];
 
-function ExpensePieChart({ data, loading, currency = 'ARS' }) {
+const CategoryIcon = ({ icon, size = 14 }) => {
+  if (!icon) return null;
+  if (isEmoji(icon)) {
+    return <span style={{ fontSize: `${size}px`, lineHeight: 1 }}>{icon}</span>;
+  }
+  return (
+    <img
+      src={resolveIconPath(icon)}
+      alt=""
+      style={{ width: `${size}px`, height: `${size}px`, borderRadius: '3px' }}
+      className="flex-shrink-0"
+    />
+  );
+};
+
+function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
   if (loading) {
     return (
       <div
@@ -37,8 +53,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS' }) {
     );
   }
 
-
-
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -47,9 +61,12 @@ function ExpensePieChart({ data, loading, currency = 'ARS' }) {
           className="px-3 py-2 rounded-lg shadow-lg"
           style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
         >
-          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-            {data.name}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <CategoryIcon icon={data.icon} size={16} />
+            <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+              {data.name}
+            </p>
+          </div>
           <p style={{ color: 'var(--accent-red)' }}>
             {formatCurrency(data.value)}
           </p>
@@ -66,21 +83,28 @@ function ExpensePieChart({ data, loading, currency = 'ARS' }) {
     const { payload } = props;
     return (
       <div className="flex flex-wrap gap-2 justify-center mt-4">
-        {payload.slice(0, 6).map((entry, index) => (
-          <div
-            key={`legend-${index}`}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
+        {payload.slice(0, 6).map((entry, index) => {
+          const item = data.find(d => d.name === entry.value);
+          return (
             <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span style={{ color: 'var(--text-secondary)' }}>
-              {entry.value.length > 12 ? entry.value.substring(0, 12) + '...' : entry.value}
-            </span>
-          </div>
-        ))}
+              key={`legend-${index}`}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              {item?.icon ? (
+                <CategoryIcon icon={item.icon} size={12} />
+              ) : (
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: entry.color }}
+                />
+              )}
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {entry.value.length > 12 ? entry.value.substring(0, 12) + '...' : entry.value}
+              </span>
+            </div>
+          );
+        })}
         {payload.length > 6 && (
           <div
             className="px-2 py-1 rounded-lg text-xs"
@@ -118,6 +142,8 @@ function ExpensePieChart({ data, loading, currency = 'ARS' }) {
                 key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}
                 stroke="transparent"
+                style={{ cursor: onSliceClick ? 'pointer' : 'default' }}
+                onClick={() => onSliceClick?.(entry.name)}
               />
             ))}
           </Pie>
