@@ -61,6 +61,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'M', ctrl: false, alt: true, label: 'Metas', action: () => navigate('/metas') },
     { key: 'L', ctrl: false, alt: true, label: 'Calendario', action: () => navigate('/calendario') },
     { key: 'W', ctrl: false, alt: true, label: 'Recurrentes', action: () => navigate('/recurrentes') },
+    { key: 'O', ctrl: false, alt: true, label: 'Reglas', action: () => navigate('/reglas') },
     { key: 'B', ctrl: false, alt: true, label: 'Colapsar menú', action: () => setSidebarCollapsed(prev => !prev) },
     { key: 'S', ctrl: false, alt: true, label: 'Configuración', action: () => navigate('/configuracion') },
     { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); setNewMovementOpen(false); } },
@@ -207,6 +208,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { path: '/categorias', label: 'Categorias', icon: 'categories', color: 'var(--accent-primary)' },
     { path: '/adjuntos', label: 'Adjuntos', icon: 'attachments', color: 'var(--accent-primary)' },
     { path: '/integraciones', label: 'Integraciones', icon: 'integrations', color: 'var(--accent-primary)' },
+    { path: '/reglas', label: 'Reglas', icon: 'rules', color: 'var(--accent-primary)' },
   ];
 
   const renderIcon = (icon) => {
@@ -306,6 +308,12 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         return (
           <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'rules':
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         );
       default:

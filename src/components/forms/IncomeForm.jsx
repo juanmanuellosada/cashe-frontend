@@ -1,11 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
 import BudgetGoalImpact from '../common/BudgetGoalImpact';
+import RuleSuggestionBanner from '../rules/RuleSuggestionBanner';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
+import { useDebounce } from '../../hooks/useDebounce';
+import { evaluateAutoRules } from '../../services/supabaseApi';
 
 function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
   const today = new Date().toISOString().split('T')[0];
@@ -32,6 +35,12 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [ruleSuggestion, setRuleSuggestion] = useState(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+
+  // Debounce para evaluación de reglas
+  const debouncedNota = useDebounce(formData.nota, 400);
+  const debouncedMonto = useDebounce(formData.monto, 400);
 
   // Obtener el ID de la categoría seleccionada
   const selectedCategoryId = useMemo(() => {
@@ -48,9 +57,74 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
     return accounts.find(a => a.nombre === formData.cuenta) || null;
   }, [formData.cuenta, accounts]);
 
+  // Evaluar reglas automáticas cuando cambia nota o monto (debounced)
+  useEffect(() => {
+    const checkRules = async () => {
+      // No evaluar si ya seleccionó categoría o si descartó sugerencia
+      if (formData.categoria || suggestionDismissed) {
+        setRuleSuggestion(null);
+        return;
+      }
+
+      // No evaluar si no hay datos suficientes
+      if (!debouncedNota && !debouncedMonto) {
+        setRuleSuggestion(null);
+        return;
+      }
+
+      try {
+        const suggestion = await evaluateAutoRules({
+          type: 'income',
+          note: debouncedNota,
+          amount: parseFloat(debouncedMonto) || 0,
+          accountId: selectedAccount?.id || '',
+        });
+        setRuleSuggestion(suggestion);
+      } catch (err) {
+        console.error('Error evaluating rules:', err);
+      }
+    };
+
+    checkRules();
+  }, [debouncedNota, debouncedMonto, selectedAccount?.id, formData.categoria, suggestionDismissed]);
+
+  // Reset dismissed state cuando se limpia el formulario
+  useEffect(() => {
+    if (!formData.nota && !formData.monto) {
+      setSuggestionDismissed(false);
+    }
+  }, [formData.nota, formData.monto]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handler para aplicar sugerencia de regla
+  const handleApplyRuleSuggestion = () => {
+    if (!ruleSuggestion?.actions) return;
+
+    const updates = {};
+
+    if (ruleSuggestion.actions.category_id) {
+      const cat = categoriesWithId?.find(c => c.id === ruleSuggestion.actions.category_id);
+      if (cat) {
+        updates.categoria = cat.nombre || cat.name;
+      }
+    }
+
+    if (ruleSuggestion.actions.account_id) {
+      const acc = accounts.find(a => a.id === ruleSuggestion.actions.account_id);
+      if (acc) {
+        updates.cuenta = acc.nombre;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+    }
+
+    setRuleSuggestion(null);
   };
 
   const handleSubmit = async (e) => {
@@ -246,6 +320,17 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           currency={selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS'}
           budgets={budgets || []}
           goals={goals || []}
+        />
+      )}
+
+      {/* Sugerencia de regla automática */}
+      {ruleSuggestion && !suggestionDismissed && (
+        <RuleSuggestionBanner
+          suggestion={ruleSuggestion}
+          onApply={handleApplyRuleSuggestion}
+          onDismiss={() => setSuggestionDismissed(true)}
+          categories={categoriesWithId || []}
+          accounts={accounts}
         />
       )}
 

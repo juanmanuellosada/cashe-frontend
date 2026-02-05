@@ -4105,3 +4105,322 @@ export const deleteAllPushSubscriptions = async () => {
   if (error) throw error;
   return { success: true };
 };
+
+// ============================================
+// AUTO RULES (Reglas automáticas de categorización)
+// ============================================
+
+/**
+ * Obtener todas las reglas del usuario con sus condiciones y acciones
+ * Ordenadas por prioridad descendente (mayor prioridad primero)
+ */
+export const getAutoRules = () => withDeduplication('autoRules', async () => {
+  const userId = await getUserId();
+
+  const { data: rules, error } = await supabase
+    .from('auto_rules')
+    .select(`
+      *,
+      conditions:auto_rule_conditions(*),
+      actions:auto_rule_actions(*)
+    `)
+    .eq('user_id', userId)
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const result = { rules: rules || [] };
+  setCachedData('autoRules', result);
+  return result;
+});
+
+/**
+ * Crear una nueva regla automática con sus condiciones y acciones
+ */
+export const createAutoRule = async ({ name, logicOperator = 'AND', priority = 0, conditions = [], actions = [] }) => {
+  const userId = await getUserId();
+
+  // Insertar la regla principal
+  const { data: rule, error: ruleError } = await supabase
+    .from('auto_rules')
+    .insert({
+      user_id: userId,
+      name,
+      logic_operator: logicOperator,
+      priority,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (ruleError) throw ruleError;
+
+  // Insertar condiciones
+  if (conditions.length > 0) {
+    const conditionsToInsert = conditions.map(c => ({
+      rule_id: rule.id,
+      field: c.field,
+      operator: c.operator,
+      value: c.value,
+    }));
+
+    const { error: condError } = await supabase
+      .from('auto_rule_conditions')
+      .insert(conditionsToInsert);
+
+    if (condError) throw condError;
+  }
+
+  // Insertar acciones
+  if (actions.length > 0) {
+    const actionsToInsert = actions.map(a => ({
+      rule_id: rule.id,
+      field: a.field,
+      value: a.value,
+    }));
+
+    const { error: actError } = await supabase
+      .from('auto_rule_actions')
+      .insert(actionsToInsert);
+
+    if (actError) throw actError;
+  }
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true, rule };
+};
+
+/**
+ * Actualizar una regla existente (reemplaza condiciones y acciones)
+ */
+export const updateAutoRule = async (id, { name, logicOperator, priority, isActive, conditions, actions }) => {
+  // Actualizar la regla principal
+  const updateData = { updated_at: new Date().toISOString() };
+  if (name !== undefined) updateData.name = name;
+  if (logicOperator !== undefined) updateData.logic_operator = logicOperator;
+  if (priority !== undefined) updateData.priority = priority;
+  if (isActive !== undefined) updateData.is_active = isActive;
+
+  const { data: rule, error: ruleError } = await supabase
+    .from('auto_rules')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (ruleError) throw ruleError;
+
+  // Si se proporcionan condiciones, reemplazar las existentes
+  if (conditions !== undefined) {
+    await supabase.from('auto_rule_conditions').delete().eq('rule_id', id);
+
+    if (conditions.length > 0) {
+      const conditionsToInsert = conditions.map(c => ({
+        rule_id: id,
+        field: c.field,
+        operator: c.operator,
+        value: c.value,
+      }));
+
+      const { error: condError } = await supabase
+        .from('auto_rule_conditions')
+        .insert(conditionsToInsert);
+
+      if (condError) throw condError;
+    }
+  }
+
+  // Si se proporcionan acciones, reemplazar las existentes
+  if (actions !== undefined) {
+    await supabase.from('auto_rule_actions').delete().eq('rule_id', id);
+
+    if (actions.length > 0) {
+      const actionsToInsert = actions.map(a => ({
+        rule_id: id,
+        field: a.field,
+        value: a.value,
+      }));
+
+      const { error: actError } = await supabase
+        .from('auto_rule_actions')
+        .insert(actionsToInsert);
+
+      if (actError) throw actError;
+    }
+  }
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true, rule };
+};
+
+/**
+ * Eliminar una regla (CASCADE elimina condiciones y acciones)
+ */
+export const deleteAutoRule = async (id) => {
+  const { error } = await supabase
+    .from('auto_rules')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true };
+};
+
+/**
+ * Activar/desactivar una regla
+ */
+export const toggleAutoRule = async (id, isActive) => {
+  const { data, error } = await supabase
+    .from('auto_rules')
+    .update({
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true, rule: data };
+};
+
+/**
+ * Reordenar prioridades de reglas
+ * @param {Array<{id: string, priority: number}>} rules - Array de reglas con nuevas prioridades
+ */
+export const reorderAutoRules = async (rules) => {
+  const updates = rules.map(({ id, priority }) =>
+    supabase
+      .from('auto_rules')
+      .update({ priority, updated_at: new Date().toISOString() })
+      .eq('id', id)
+  );
+
+  await Promise.all(updates);
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true };
+};
+
+/**
+ * Evaluar reglas automáticas contra datos de un movimiento
+ * Retorna la primera regla que matchea (por prioridad) o null
+ *
+ * @param {Object} params
+ * @param {string} params.note - Nota/descripción del movimiento
+ * @param {number} params.amount - Monto del movimiento
+ * @param {string} params.accountId - ID de la cuenta seleccionada
+ * @param {string} params.type - Tipo de movimiento ('income' | 'expense')
+ * @returns {Object|null} - { ruleId, ruleName, actions: { category_id?, account_id? } } o null
+ */
+export const evaluateAutoRules = async ({ note = '', amount = 0, accountId = '', type = 'expense' }) => {
+  const userId = await getUserId();
+
+  // Obtener reglas activas ordenadas por prioridad
+  const { data: rules, error } = await supabase
+    .from('auto_rules')
+    .select(`
+      *,
+      conditions:auto_rule_conditions(*),
+      actions:auto_rule_actions(*)
+    `)
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('priority', { ascending: false });
+
+  if (error) throw error;
+  if (!rules || rules.length === 0) return null;
+
+  // Helper para evaluar una condición individual
+  const evaluateCondition = (condition) => {
+    const { field, operator, value } = condition;
+
+    switch (field) {
+      case 'note': {
+        const noteLC = (note || '').toLowerCase();
+        const valueLC = value.toLowerCase();
+
+        switch (operator) {
+          case 'contains':
+            return noteLC.includes(valueLC);
+          case 'equals':
+            return noteLC === valueLC;
+          case 'starts_with':
+            return noteLC.startsWith(valueLC);
+          case 'ends_with':
+            return noteLC.endsWith(valueLC);
+          default:
+            return false;
+        }
+      }
+
+      case 'amount': {
+        const numAmount = parseFloat(amount) || 0;
+        const numValue = parseFloat(value) || 0;
+
+        switch (operator) {
+          case 'equals':
+            return numAmount === numValue;
+          case 'greater_than':
+            return numAmount > numValue;
+          case 'less_than':
+            return numAmount < numValue;
+          case 'between': {
+            // value format: "min|max"
+            const [min, max] = value.split('|').map(Number);
+            return numAmount >= min && numAmount <= max;
+          }
+          default:
+            return false;
+        }
+      }
+
+      case 'account_id':
+        return accountId === value;
+
+      case 'type':
+        return type === value;
+
+      default:
+        return false;
+    }
+  };
+
+  // Buscar la primera regla que matchea
+  for (const rule of rules) {
+    if (!rule.conditions || rule.conditions.length === 0) continue;
+
+    const conditionResults = rule.conditions.map(evaluateCondition);
+    const logicOp = rule.logic_operator || 'AND';
+
+    const ruleMatches = logicOp === 'AND'
+      ? conditionResults.every(Boolean)
+      : conditionResults.some(Boolean);
+
+    if (ruleMatches) {
+      // Construir objeto de acciones
+      const actionsObj = {};
+      for (const action of rule.actions || []) {
+        actionsObj[action.field] = action.value;
+      }
+
+      return {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        actions: actionsObj,
+      };
+    }
+  }
+
+  return null;
+};

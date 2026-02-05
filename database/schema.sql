@@ -245,3 +245,55 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================
+-- AUTO RULES - Reglas automáticas de categorización
+-- ============================================
+
+-- Tabla principal de reglas
+CREATE TABLE auto_rules (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    name text NOT NULL,
+    is_active boolean DEFAULT true,
+    priority integer NOT NULL DEFAULT 0,
+    logic_operator text NOT NULL DEFAULT 'AND',
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- Tabla de condiciones
+CREATE TABLE auto_rule_conditions (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    rule_id uuid NOT NULL REFERENCES auto_rules(id) ON DELETE CASCADE,
+    field text NOT NULL,        -- 'note' | 'amount' | 'account_id' | 'type'
+    operator text NOT NULL,     -- 'contains' | 'starts_with' | 'ends_with' | 'equals' | 'greater_than' | 'less_than' | 'between'
+    value text NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- Tabla de acciones
+CREATE TABLE auto_rule_actions (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    rule_id uuid NOT NULL REFERENCES auto_rules(id) ON DELETE CASCADE,
+    field text NOT NULL,        -- 'category_id' | 'account_id'
+    value text NOT NULL,        -- UUID de categoría o cuenta
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- Indices
+CREATE INDEX idx_auto_rules_user_id ON auto_rules(user_id);
+CREATE INDEX idx_auto_rules_priority ON auto_rules(user_id, priority);
+CREATE INDEX idx_auto_rule_conditions_rule_id ON auto_rule_conditions(rule_id);
+CREATE INDEX idx_auto_rule_actions_rule_id ON auto_rule_actions(rule_id);
+
+-- RLS
+ALTER TABLE auto_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auto_rule_conditions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auto_rule_actions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own rules" ON auto_rules FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users manage own conditions" ON auto_rule_conditions FOR ALL
+    USING (EXISTS (SELECT 1 FROM auto_rules WHERE id = rule_id AND user_id = auth.uid()));
+CREATE POLICY "Users manage own actions" ON auto_rule_actions FOR ALL
+    USING (EXISTS (SELECT 1 FROM auto_rules WHERE id = rule_id AND user_id = auth.uid()));

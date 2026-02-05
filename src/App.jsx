@@ -35,6 +35,7 @@ const Recurring = lazy(() => import('./pages/Recurring'))
 const ScheduledTransactions = lazy(() => import('./pages/ScheduledTransactions'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 const Settings = lazy(() => import('./pages/Settings'))
+const AutoRules = lazy(() => import('./pages/AutoRules'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -63,6 +64,7 @@ const protectedRoutes = [
   { path: '/recurrentes', component: Recurring },
   { path: '/programadas', component: ScheduledTransactions },
   { path: '/calendario', component: Calendar },
+  { path: '/reglas', component: AutoRules },
 ]
 
 function App() {

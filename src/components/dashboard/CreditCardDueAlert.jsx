@@ -57,7 +57,7 @@ function CreditCardDueAlert({ accounts }) {
         <button
           key={card.id}
           onClick={() => navigate('/tarjetas')}
-          className="w-full rounded-xl p-4 transition-all hover:opacity-90"
+          className="w-full rounded-xl p-3 sm:p-4 transition-all hover:opacity-90"
           style={{
             backgroundColor: card.isDueToday
               ? 'var(--accent-red-dim)'
@@ -65,52 +65,52 @@ function CreditCardDueAlert({ accounts }) {
             border: `1px solid ${card.isDueToday ? 'var(--accent-red)' : 'var(--accent-yellow)'}`,
           }}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Icon */}
             <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{
                 backgroundColor: card.isDueToday
                   ? 'rgba(239, 68, 68, 0.2)'
                   : 'rgba(234, 179, 8, 0.2)',
               }}
             >
-              <span className="text-xl">{card.isDueToday ? '⚠️' : '💳'}</span>
+              <span className="text-base sm:text-xl">{card.isDueToday ? '⚠️' : '💳'}</span>
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0 text-left">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <p
-                  className="text-sm font-semibold truncate"
+                  className="text-xs sm:text-sm font-semibold truncate"
                   style={{
                     color: card.isDueToday ? 'var(--accent-red)' : 'var(--accent-yellow)',
                   }}
                 >
                   {card.isDueToday ? 'Vence HOY' : 'Vence mañana'}
                 </p>
+                <span className="text-xs sm:text-sm font-medium truncate" style={{ color: 'var(--text-secondary)' }}>
+                  · {card.nombre}
+                </span>
               </div>
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                {card.nombre}
-              </p>
 
               {/* Amounts */}
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-2 sm:gap-3 mt-0.5">
                 {(card.proximoResumenPesos > 0 || card.proximoResumenDolares > 0) ? (
                   <>
                     {card.proximoResumenPesos > 0 && (
-                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <span className="text-sm sm:text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                         ${formatNumberAR(card.proximoResumenPesos)}
                       </span>
                     )}
                     {card.proximoResumenDolares > 0 && (
-                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-green)' }}>
+                      <span className="text-xs sm:text-sm font-semibold" style={{ color: 'var(--accent-green)' }}>
                         USD ${formatNumberAR(card.proximoResumenDolares)}
                       </span>
                     )}
                   </>
                 ) : (
-                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Sin gastos este período
                   </span>
                 )}
@@ -119,7 +119,7 @@ function CreditCardDueAlert({ accounts }) {
 
             {/* Arrow */}
             <svg
-              className="w-5 h-5 flex-shrink-0 mt-2"
+              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
               style={{ color: 'var(--text-muted)' }}
               fill="none"
               stroke="currentColor"

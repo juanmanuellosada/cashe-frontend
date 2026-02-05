@@ -520,6 +520,102 @@ La app incluye iconos SVG de entidades financieras argentinas en `/public/icons/
 
 ---
 
+## Reglas Automáticas de Categorización
+
+### Descripción
+Sistema de reglas que sugiere automáticamente categorías y cuentas al crear movimientos, basándose en condiciones definidas por el usuario (nota, monto, cuenta, tipo).
+
+### Base de Datos
+
+**`auto_rules`** - Reglas principales
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| user_id | uuid | FK a profiles |
+| name | text | Nombre descriptivo |
+| is_active | boolean | Activar/desactivar |
+| priority | integer | Orden de evaluación (mayor = más prioritario) |
+| logic_operator | text | 'AND' \| 'OR' para combinar condiciones |
+
+**`auto_rule_conditions`** - Condiciones de las reglas
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| rule_id | uuid | FK a auto_rules |
+| field | text | 'note' \| 'amount' \| 'account_id' \| 'type' |
+| operator | text | 'contains' \| 'equals' \| 'starts_with' \| 'ends_with' \| 'greater_than' \| 'less_than' \| 'between' |
+| value | text | Valor a comparar |
+
+**`auto_rule_actions`** - Acciones a ejecutar
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | uuid | PK |
+| rule_id | uuid | FK a auto_rules |
+| field | text | 'category_id' \| 'account_id' |
+| value | text | UUID de la categoría o cuenta a asignar |
+
+### Componentes
+
+**Página**: `/reglas` - Editor visual con React Flow (`@xyflow/react`)
+- Vista desktop: Grafo con nodos (Trigger → Condiciones → Acciones)
+- Vista mobile: Lista de cards expandibles
+- Modal para crear/editar reglas
+
+**Archivos**:
+```
+src/
+├── pages/AutoRules.jsx
+├── hooks/
+│   ├── useAutoRules.js
+│   └── useDebounce.js
+├── components/rules/
+│   ├── RuleFlowEditor.jsx      # Canvas React Flow
+│   ├── RuleFlowNode.jsx        # Nodos custom
+│   ├── RuleFormModal.jsx       # Modal crear/editar
+│   ├── RuleConditionForm.jsx   # Formulario condición
+│   ├── RuleActionForm.jsx      # Formulario acción
+│   ├── RuleSuggestionBanner.jsx # Banner en forms
+│   └── RuleMobileCard.jsx      # Card mobile
+```
+
+### API Functions (supabaseApi.js)
+
+```javascript
+// Obtener reglas con condiciones y acciones
+export const getAutoRules = () => ...
+
+// CRUD
+export const createAutoRule = async ({ name, logicOperator, priority, conditions, actions }) => ...
+export const updateAutoRule = async (id, data) => ...
+export const deleteAutoRule = async (id) => ...
+export const toggleAutoRule = async (id, isActive) => ...
+export const reorderAutoRules = async (rules) => ...
+
+// Evaluación (usado en forms)
+export const evaluateAutoRules = async ({ note, amount, accountId, type }) => ...
+```
+
+### Integración en Formularios
+
+Los formularios `ExpenseForm.jsx` e `IncomeForm.jsx` evalúan reglas automáticamente:
+1. Debounce de 400ms en nota y monto
+2. Llama `evaluateAutoRules()` con datos actuales
+3. Si matchea, muestra `RuleSuggestionBanner`
+4. Usuario puede aplicar o ignorar la sugerencia
+
+### Ejemplo de Uso
+
+1. Usuario crea regla: "Si nota contiene 'netflix' → Categoría: Servicios"
+2. Al escribir "Pago netflix" en un nuevo gasto
+3. Aparece banner: "Regla detectada: Netflix mensual"
+4. Click en "Aplicar" → categoría se autocompleta
+
+### Cache
+- Key: `'autoRules'`
+- Evento: `DataEvents.RULES_CHANGED`
+
+---
+
 ## Bot de WhatsApp
 
 ### Descripción

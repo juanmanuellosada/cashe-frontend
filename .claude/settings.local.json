@@ -60,7 +60,8 @@
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_install",
-      "mcp__puppeteer__puppeteer_navigate"
+      "mcp__puppeteer__puppeteer_navigate",
+      "Bash(npm uninstall:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

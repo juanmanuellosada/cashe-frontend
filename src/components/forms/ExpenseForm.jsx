@@ -6,9 +6,12 @@ import Combobox from '../Combobox';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
 import BudgetGoalImpact from '../common/BudgetGoalImpact';
+import RuleSuggestionBanner from '../rules/RuleSuggestionBanner';
 import { formatCurrency } from '../../utils/format';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
+import { useDebounce } from '../../hooks/useDebounce';
+import { evaluateAutoRules } from '../../services/supabaseApi';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
 
@@ -108,6 +111,12 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
   const [periodoResumen, setPeriodoResumen] = useState(''); // Período para tarjetas de crédito
+  const [ruleSuggestion, setRuleSuggestion] = useState(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+
+  // Debounce para evaluación de reglas
+  const debouncedNota = useDebounce(formData.nota, 400);
+  const debouncedMonto = useDebounce(formData.monto, 400);
 
   // Encontrar la cuenta seleccionada y verificar si es tarjeta de crédito
   const selectedAccount = useMemo(() => {
@@ -172,6 +181,44 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     }
   }, [periodoResumen, diaCierre, esTarjetaCredito]);
 
+  // Evaluar reglas automáticas cuando cambia nota o monto (debounced)
+  useEffect(() => {
+    const checkRules = async () => {
+      // No evaluar si ya seleccionó categoría o si descartó sugerencia
+      if (formData.categoria || suggestionDismissed) {
+        setRuleSuggestion(null);
+        return;
+      }
+
+      // No evaluar si no hay datos suficientes
+      if (!debouncedNota && !debouncedMonto) {
+        setRuleSuggestion(null);
+        return;
+      }
+
+      try {
+        const suggestion = await evaluateAutoRules({
+          type: 'expense',
+          note: debouncedNota,
+          amount: parseFloat(debouncedMonto) || 0,
+          accountId: selectedAccount?.id || '',
+        });
+        setRuleSuggestion(suggestion);
+      } catch (err) {
+        console.error('Error evaluating rules:', err);
+      }
+    };
+
+    checkRules();
+  }, [debouncedNota, debouncedMonto, selectedAccount?.id, formData.categoria, suggestionDismissed]);
+
+  // Reset dismissed state cuando se limpia el formulario
+  useEffect(() => {
+    if (!formData.nota && !formData.monto) {
+      setSuggestionDismissed(false);
+    }
+  }, [formData.nota, formData.monto]);
+
   // Encontrar el ID de la categoría seleccionada
   const selectedCategoryId = useMemo(() => {
     if (!formData.categoria || !categoriesWithId) return null;
@@ -205,6 +252,33 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       }
       setMonedaGasto('ARS'); // Reset a pesos al cambiar de cuenta
     }
+  };
+
+  // Handler para aplicar sugerencia de regla
+  const handleApplyRuleSuggestion = () => {
+    if (!ruleSuggestion?.actions) return;
+
+    const updates = {};
+
+    if (ruleSuggestion.actions.category_id) {
+      const cat = categoriesWithId?.find(c => c.id === ruleSuggestion.actions.category_id);
+      if (cat) {
+        updates.categoria = cat.nombre || cat.name;
+      }
+    }
+
+    if (ruleSuggestion.actions.account_id) {
+      const acc = accounts.find(a => a.id === ruleSuggestion.actions.account_id);
+      if (acc) {
+        updates.cuenta = acc.nombre;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+    }
+
+    setRuleSuggestion(null);
   };
 
   const handleSubmit = async (e) => {
@@ -630,6 +704,17 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
           currency={esTarjetaCredito ? monedaGasto : (selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS')}
           budgets={budgets || []}
           goals={goals || []}
+        />
+      )}
+
+      {/* Sugerencia de regla automática */}
+      {ruleSuggestion && !suggestionDismissed && (
+        <RuleSuggestionBanner
+          suggestion={ruleSuggestion}
+          onApply={handleApplyRuleSuggestion}
+          onDismiss={() => setSuggestionDismissed(true)}
+          categories={categoriesWithId || []}
+          accounts={accounts}
         />
       )}
 
