@@ -14,9 +14,11 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     tipo: account?.tipo || '',
     esTarjetaCredito: account?.esTarjetaCredito || false,
     diaCierre: account?.diaCierre?.toString() || '1',
+    diaVencimiento: account?.diaVencimiento?.toString() || '',
     icon: account?.icon || null,
     ocultaDelBalance: account?.ocultaDelBalance || false,
   });
+  const [validationError, setValidationError] = useState('');
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   // Drag to dismiss state
@@ -51,10 +53,23 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Validate that closing day and due day are different for credit cards
+    if (formData.esTarjetaCredito) {
+      const cierre = parseInt(formData.diaCierre) || 1;
+      const vencimiento = parseInt(formData.diaVencimiento) || null;
+      if (vencimiento && cierre === vencimiento) {
+        setValidationError('El día de cierre y vencimiento no pueden ser iguales');
+        return;
+      }
+    }
+
+    setValidationError('');
     onSave({
       ...formData,
       balanceInicial: parseFloat(formData.balanceInicial) || 0,
       diaCierre: formData.esTarjetaCredito ? parseInt(formData.diaCierre) || 1 : null,
+      diaVencimiento: formData.esTarjetaCredito ? parseInt(formData.diaVencimiento) || null : null,
       icon: formData.icon,
       ocultaDelBalance: formData.ocultaDelBalance,
     });
@@ -266,21 +281,46 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
             </div>
           </div>
 
-          {/* Día de cierre - solo visible si es tarjeta de crédito */}
+          {/* Días de cierre y vencimiento - solo visible si es tarjeta de crédito */}
           {formData.esTarjetaCredito && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-dim)' }}>
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Cierre día</span>
-              <input
-                type="number"
-                name="diaCierre"
-                value={formData.diaCierre}
-                onChange={handleChange}
-                min="1"
-                max="31"
-                className="w-14 px-2 py-1 rounded-md text-sm text-center font-semibold border border-transparent focus:border-[var(--accent-purple)]"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-              />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>de cada mes</span>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-dim)' }}>
+                {/* Día de cierre */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Cierre día</span>
+                  <input
+                    type="number"
+                    name="diaCierre"
+                    value={formData.diaCierre}
+                    onChange={handleChange}
+                    min="1"
+                    max="31"
+                    className="w-16 px-2 py-1.5 rounded-md text-sm text-center font-semibold border border-transparent focus:border-[var(--accent-purple)]"
+                    style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                {/* Día de vencimiento */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Vence día</span>
+                  <input
+                    type="number"
+                    name="diaVencimiento"
+                    value={formData.diaVencimiento}
+                    onChange={handleChange}
+                    min="1"
+                    max="31"
+                    placeholder="—"
+                    className="w-16 px-2 py-1.5 rounded-md text-sm text-center font-semibold border border-transparent focus:border-[var(--accent-purple)]"
+                    style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+              </div>
+              {/* Validation error */}
+              {validationError && (
+                <p className="text-xs px-1" style={{ color: 'var(--accent-red)' }}>
+                  {validationError}
+                </p>
+              )}
             </div>
           )}
 

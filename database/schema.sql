@@ -1,7 +1,7 @@
 -- ============================================
 -- CASHE - SUPABASE DATABASE SCHEMA
 -- ============================================
--- Última actualización: 2026-01-26
+-- Última actualización: 2026-02-05
 -- Proyecto: Cashe - Finanzas Personales
 -- ============================================
 
@@ -46,7 +46,8 @@ CREATE TABLE accounts (
     account_number text,
     account_type text DEFAULT 'Caja de ahorro'::text,
     is_credit_card boolean DEFAULT false,
-    closing_day integer,
+    closing_day integer, -- Día de cierre del resumen (1-31)
+    due_day integer, -- Día de vencimiento del pago (1-31)
     icon text,
     hidden_from_balance boolean DEFAULT false, -- Ocultar cuenta del balance general
     created_at timestamp with time zone DEFAULT now(),
@@ -144,6 +145,36 @@ CREATE TABLE card_statement_attachments (
 );
 
 -- ============================================
+-- TABLA: notification_preferences
+-- Preferencias de notificación de vencimiento de tarjetas
+-- ============================================
+CREATE TABLE notification_preferences (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    notify_push boolean DEFAULT true,
+    notify_telegram boolean DEFAULT false,
+    notify_whatsapp boolean DEFAULT false,
+    notification_hour integer DEFAULT 9, -- Hora en formato 24h, hora Argentina (UTC-3)
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id)
+);
+
+-- ============================================
+-- TABLA: notification_log
+-- Historial de notificaciones enviadas (evita duplicados)
+-- ============================================
+CREATE TABLE notification_log (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    notification_type text NOT NULL, -- 'push' | 'telegram' | 'whatsapp'
+    message text,
+    sent_at timestamp with time zone DEFAULT now(),
+    due_date date NOT NULL -- Fecha de vencimiento para la que se envió
+);
+
+-- ============================================
 -- ÍNDICES RECOMENDADOS
 -- ============================================
 CREATE INDEX idx_movements_user_id ON movements(user_id);
@@ -157,6 +188,10 @@ CREATE INDEX idx_transfers_date ON transfers(date);
 CREATE INDEX idx_card_statement_attachments_user ON card_statement_attachments(user_id);
 CREATE INDEX idx_card_statement_attachments_account ON card_statement_attachments(account_id);
 CREATE INDEX idx_card_statement_attachments_period ON card_statement_attachments(period);
+CREATE INDEX idx_notification_preferences_user ON notification_preferences(user_id);
+CREATE INDEX idx_notification_log_user ON notification_log(user_id);
+CREATE INDEX idx_notification_log_account ON notification_log(account_id);
+CREATE INDEX idx_notification_log_due_date ON notification_log(due_date);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
@@ -170,6 +205,8 @@ ALTER TABLE installment_purchases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE card_statement_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: Usuarios solo ven sus propios datos
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -182,6 +219,9 @@ CREATE POLICY "Users can manage own purchases" ON installment_purchases FOR ALL 
 CREATE POLICY "Users can manage own movements" ON movements FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage own transfers" ON transfers FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage own statement attachments" ON card_statement_attachments FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own notification_preferences" ON notification_preferences FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own notification_log" ON notification_log FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service can insert notification_log" ON notification_log FOR INSERT WITH CHECK (true);
 
 -- ============================================
 -- TRIGGER: Crear perfil automáticamente al registrarse
@@ -191,10 +231,13 @@ RETURNS trigger AS $$
 BEGIN
     INSERT INTO public.profiles (id, email, full_name)
     VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
-    
+
     INSERT INTO public.user_settings (user_id)
     VALUES (new.id);
-    
+
+    INSERT INTO public.notification_preferences (user_id)
+    VALUES (new.id);
+
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

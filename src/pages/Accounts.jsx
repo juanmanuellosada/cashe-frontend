@@ -1000,20 +1000,31 @@ function Accounts() {
 
 export default Accounts;
 
-// Componente para editar rápidamente el día de cierre
+// Componente para mostrar/editar días de cierre y vencimiento
 function ClosingDayEditor({ account, onSave, loading }) {
   const [isEditing, setIsEditing] = useState(false);
   const [diaCierre, setDiaCierre] = useState(account.diaCierre?.toString() || '1');
+  const [diaVencimiento, setDiaVencimiento] = useState(account.diaVencimiento?.toString() || '');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSave = async () => {
-    const newDia = parseInt(diaCierre) || 1;
-    if (newDia === account.diaCierre) {
+    const newCierre = parseInt(diaCierre) || 1;
+    const newVencimiento = parseInt(diaVencimiento) || null;
+
+    // Validate that closing and due days are different
+    if (newVencimiento && newCierre === newVencimiento) {
+      setError('El día de cierre y vencimiento no pueden ser iguales');
+      return;
+    }
+
+    if (newCierre === account.diaCierre && newVencimiento === account.diaVencimiento) {
       setIsEditing(false);
       return;
     }
-    
+
     setSaving(true);
+    setError('');
     try {
       await onSave({
         id: account.id,
@@ -1024,11 +1035,14 @@ function ClosingDayEditor({ account, onSave, loading }) {
         numeroCuenta: account.numeroCuenta,
         tipo: account.tipo,
         esTarjetaCredito: account.esTarjetaCredito,
-        diaCierre: newDia,
+        diaCierre: newCierre,
+        diaVencimiento: newVencimiento,
+        icon: account.icon,
+        ocultaDelBalance: account.ocultaDelBalance,
       });
       setIsEditing(false);
     } catch (err) {
-      console.error('Error updating closing day:', err);
+      console.error('Error updating card dates:', err);
     } finally {
       setSaving(false);
     }
@@ -1054,10 +1068,21 @@ function ClosingDayEditor({ account, onSave, loading }) {
             </svg>
           </div>
           <div className="text-left">
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Día de cierre</p>
-            <p className="font-semibold" style={{ color: 'var(--accent-purple)' }}>
-              {account.diaCierre || 1} de cada mes
-            </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Cierre</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--accent-purple)' }}>
+                  Día {account.diaCierre || 1}
+                </p>
+              </div>
+              <div className="w-px h-6" style={{ backgroundColor: 'var(--border-subtle)' }} />
+              <div>
+                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Vencimiento</p>
+                <p className="text-sm font-semibold" style={{ color: account.diaVencimiento ? 'var(--accent-purple)' : 'var(--text-muted)' }}>
+                  {account.diaVencimiento ? `Día ${account.diaVencimiento}` : 'Sin definir'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
         <svg className="w-5 h-5" style={{ color: 'var(--accent-purple)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1074,25 +1099,45 @@ function ClosingDayEditor({ account, onSave, loading }) {
       onClick={(e) => e.stopPropagation()}
     >
       <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
-        Día de cierre del resumen
+        Fechas de la tarjeta
       </p>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          value={diaCierre}
-          onChange={(e) => setDiaCierre(e.target.value)}
-          min="1"
-          max="31"
-          className="flex-1 px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
-          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-          autoFocus
-        />
-        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>de cada mes</span>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Día de cierre</label>
+          <input
+            type="number"
+            value={diaCierre}
+            onChange={(e) => setDiaCierre(e.target.value)}
+            min="1"
+            max="31"
+            className="w-full px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Día de vencimiento</label>
+          <input
+            type="number"
+            value={diaVencimiento}
+            onChange={(e) => setDiaVencimiento(e.target.value)}
+            min="1"
+            max="31"
+            placeholder="—"
+            className="w-full px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+          />
+        </div>
       </div>
+      {error && (
+        <p className="text-xs mt-2" style={{ color: 'var(--accent-red)' }}>{error}</p>
+      )}
       <div className="flex gap-2 mt-3">
         <button
           onClick={() => {
             setDiaCierre(account.diaCierre?.toString() || '1');
+            setDiaVencimiento(account.diaVencimiento?.toString() || '');
+            setError('');
             setIsEditing(false);
           }}
           className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"

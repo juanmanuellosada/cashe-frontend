@@ -66,6 +66,19 @@ export function formatNumber(amount) {
 }
 
 /**
+ * Formatea un numero sin decimales en formato argentino
+ * @param {number} amount - El monto a formatear
+ * @returns {string} - Numero formateado sin decimales (ej: "1.234")
+ */
+export function formatNumberAR(amount) {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '-';
+  }
+
+  return Math.round(amount).toLocaleString('es-AR');
+}
+
+/**
  * Parsea un string de fecha en formato yyyy-MM-dd a un Date object local
  * Evita problemas de timezone al no usar new Date(string) directamente
  * @param {string} dateStr - La fecha en formato yyyy-MM-dd

@@ -1,6 +1,7 @@
 import WhatsAppLinkSection from '../components/integrations/WhatsAppLinkSection';
 import TelegramLinkSection from '../components/integrations/TelegramLinkSection';
 import PushNotificationSection from '../components/integrations/PushNotificationSection';
+import NotificationPreferencesSection from '../components/integrations/NotificationPreferencesSection';
 
 function Integrations() {
   return (
@@ -62,6 +63,9 @@ function Integrations() {
           </div>
         </div>
       </div>
+
+      {/* Card Due Date Notifications */}
+      <NotificationPreferencesSection />
 
       {/* Integrations list */}
       <div className="space-y-4">

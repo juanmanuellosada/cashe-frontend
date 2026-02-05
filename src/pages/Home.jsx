@@ -8,6 +8,7 @@ import QuickStats from '../components/dashboard/QuickStats';
 import AccountBalances from '../components/dashboard/AccountBalances';
 import WeeklySummary from '../components/dashboard/WeeklySummary';
 import RecentMovements from '../components/dashboard/RecentMovements';
+import CreditCardDueAlert from '../components/dashboard/CreditCardDueAlert';
 import EditMovementModal from '../components/EditMovementModal';
 import AccountModal from '../components/AccountModal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -292,9 +293,10 @@ function Home() {
       await updateAccount(updatedAccount);
       setEditingAccount(null);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      // Refresh accounts data
+      // Refresh accounts and dashboard data (balance cards depend on accounts)
       const accountsData = await getAccounts();
       setAccounts(accountsData.accounts || []);
+      await fetchDashboard();
     } catch (err) {
       console.error('Error updating account:', err);
       showError('No se pudo guardar la cuenta', err.message);
@@ -374,6 +376,9 @@ function Home() {
       <h1 className="text-base sm:text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
         Dashboard
       </h1>
+
+      {/* Credit Card Due Date Alerts */}
+      <CreditCardDueAlert accounts={accounts} />
 
       {/* Balance and Flow Cards - side by side on desktop, stacked on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

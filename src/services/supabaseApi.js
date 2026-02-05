@@ -249,6 +249,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
         tipo: accountTypeFromDb(account.account_type),
         esTarjetaCredito: account.is_credit_card,
         diaCierre: account.closing_day,
+        diaVencimiento: account.due_day,
         balanceActual: balanceData.balance,
         totalIngresos: balanceData.totalIngresos,
         totalGastos: balanceData.totalGastos,
@@ -406,7 +407,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
   return { proximoResumenPesos: totalPesos, proximoResumenDolares: totalDolares, promedioMensual };
 };
 
-export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon, ocultaDelBalance }) => {
+export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, icon, ocultaDelBalance }) => {
   const userId = await getUserId();
 
   const { data, error } = await supabase
@@ -420,6 +421,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
+      due_day: diaVencimiento || null,
       icon: icon || null,
       hidden_from_balance: ocultaDelBalance || false
     })
@@ -431,7 +433,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
   return { success: true, account: data };
 };
 
-export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, icon, ocultaDelBalance }) => {
+export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, icon, ocultaDelBalance }) => {
   const accountId = id || rowIndex;
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
@@ -446,6 +448,7 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
+      due_day: diaVencimiento || null,
       icon: icon || null,
       hidden_from_balance: ocultaDelBalance || false
     })
@@ -544,6 +547,62 @@ export const bulkDeleteAccounts = async (accounts) => {
   if (error) throw error;
   invalidateCache('accounts');
   return { success: true };
+};
+
+// ============================================
+// NOTIFICATION PREFERENCES
+// ============================================
+
+export const getNotificationPreferences = async () => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    // If no preferences exist yet, return defaults
+    if (error.code === 'PGRST116') {
+      return {
+        notifyPush: true,
+        notifyTelegram: false,
+        notifyWhatsapp: false,
+        notificationHour: 9,
+      };
+    }
+    throw error;
+  }
+
+  return {
+    notifyPush: data.notify_push ?? true,
+    notifyTelegram: data.notify_telegram ?? false,
+    notifyWhatsapp: data.notify_whatsapp ?? false,
+    notificationHour: data.notification_hour ?? 9,
+  };
+};
+
+export const updateNotificationPreferences = async ({ notifyPush, notifyTelegram, notifyWhatsapp, notificationHour }) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .upsert({
+      user_id: userId,
+      notify_push: notifyPush ?? true,
+      notify_telegram: notifyTelegram ?? false,
+      notify_whatsapp: notifyWhatsapp ?? false,
+      notification_hour: notificationHour ?? 9,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id'
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { success: true, preferences: data };
 };
 
 // ============================================
