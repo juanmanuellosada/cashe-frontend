@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import SearchButton from './SearchButton';
+import ZoomControls from './ZoomControls';
+import { useZoom } from '../contexts/ZoomContext';
 import SearchModal from './SearchModal';
 import EditMovementModal from './EditMovementModal';
 import NewMovementModal from './NewMovementModal';
@@ -16,6 +18,7 @@ import { useHaptics } from '../hooks/useHaptics';
 function Layout({ children, darkMode, toggleDarkMode }) {
   const { user, profile, signOut } = useAuth();
   const { showError } = useError();
+  const { zoom } = useZoom();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [newMovementOpen, setNewMovementOpen] = useState(false);
@@ -543,7 +546,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         {/* Mobile Header */}
         {!isDesktop && (
           <header
-            className="sticky top-0 z-50 px-4 pt-2.5 pb-2.5 safe-top flex items-center justify-between"
+            className="sticky top-0 z-50 safe-top overflow-hidden"
             style={{
               backgroundColor: 'var(--bg-glass)',
               borderBottom: '1px solid var(--border-subtle)',
@@ -551,21 +554,31 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               WebkitBackdropFilter: 'blur(16px)'
             }}
           >
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 active:scale-95 transition-transform duration-150"
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            <div
+              className="px-4 pt-2.5 pb-2.5 flex items-center justify-between"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+                width: `${100 / zoom}%`,
+              }}
             >
-              <img
-                src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
-                alt="Cashé"
-                className="w-8 h-8 rounded-lg"
-              />
-              <span className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Cashé</span>
-            </button>
-            <div className="flex items-center gap-1">
-              <SearchButton onClick={() => setSearchOpen(true)} />
-              <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 active:scale-95 transition-transform duration-150"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <img
+                  src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
+                  alt="Cashé"
+                  className="w-8 h-8 rounded-lg"
+                />
+                <span className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Cashé</span>
+              </button>
+              <div className="flex items-center gap-1">
+                <ZoomControls compact />
+                <SearchButton onClick={() => setSearchOpen(true)} />
+                <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+              </div>
             </div>
           </header>
         )}
@@ -573,55 +586,73 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         {/* Desktop Header - Minimal */}
         {isDesktop && (
           <header
-            className="sticky top-0 z-30 px-6 py-3 flex items-center justify-between"
+            className="sticky top-0 z-30 overflow-hidden"
             style={{
               backgroundColor: 'var(--bg-primary)',
               borderBottom: '1px solid var(--border-subtle)',
             }}
           >
-            <div />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
-                style={{
-                  color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)'
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-sm">Buscar...</span>
-                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-                  Alt+K
-                </kbd>
-              </button>
-              <button
-                onClick={() => setShortcutsOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
-                style={{
-                  color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)'
-                }}
-                title="Atajos de teclado"
-              >
-                <span className="text-sm">Atajos</span>
-                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-                  Shift+?
-                </kbd>
-              </button>
+            <div
+              className="px-6 py-3 flex items-center justify-between"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+                width: `${100 / zoom}%`,
+              }}
+            >
+              <div />
+              <div className="flex items-center gap-2">
+                <ZoomControls />
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                  style={{
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span className="text-sm">Buscar...</span>
+                  <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                    Alt+K
+                  </kbd>
+                </button>
+                <button
+                  onClick={() => setShortcutsOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
+                  style={{
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                  title="Atajos de teclado"
+                >
+                  <span className="text-sm">Atajos</span>
+                  <kbd className="ml-2 px-1.5 py-0.5 text-[10px] rounded font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                    Shift+?
+                  </kbd>
+                </button>
+              </div>
             </div>
           </header>
         )}
 
         {/* Main Content */}
-        <main
-          key={location.pathname}
-          className={`flex-1 animate-fade-in overflow-x-hidden ${isDesktop ? 'px-8 py-6' : 'px-2 xs:px-3 sm:px-4 py-3 sm:py-4 pb-24'}`}
-        >
-          {children}
-        </main>
+        <div className="flex-1 overflow-x-hidden overflow-y-auto">
+          <main
+            key={location.pathname}
+            className={`animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-2 xs:px-3 sm:px-4 py-3 sm:py-4 pb-24'}`}
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
+              width: `${100 / zoom}%`,
+              minHeight: zoom < 1 ? `${100 / zoom}%` : 'auto',
+            }}
+          >
+            {children}
+          </main>
+        </div>
       </div>
 
       {/* Bottom Navigation - Mobile Only */}

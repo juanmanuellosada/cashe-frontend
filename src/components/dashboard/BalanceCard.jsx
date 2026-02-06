@@ -107,18 +107,18 @@ function BalanceCard({
       }}
     >
       {/* Header with currency selector - stacks on <400px */}
-      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2 mb-2 sm:mb-3">
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2 mb-2 sm:mb-3 min-w-0">
+        <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
           Saldo actual
         </span>
         {/* Currency Selector */}
         <div
-          className="inline-flex p-0.5 rounded-lg self-start min-[400px]:self-auto"
+          className="inline-flex p-0.5 rounded-lg self-start min-[400px]:self-auto flex-shrink-0"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           <button
             onClick={() => onCurrencyChange?.('ARS')}
-            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
+            className="px-2 sm:px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1"
             style={{
               backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
               color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -129,7 +129,7 @@ function BalanceCard({
           </button>
           <button
             onClick={() => onCurrencyChange?.('USD')}
-            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1.5"
+            className="px-2 sm:px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center gap-1"
             style={{
               backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
               color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -173,21 +173,23 @@ function BalanceCard({
       {/* Exchange rate - stacks on <400px */}
       {filteredData.tipoCambio && (
         <div
-          className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-1 min-[400px]:gap-0 py-2"
+          className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-1 min-[400px]:gap-2 py-2 min-w-0"
           style={{ borderTop: '1px solid var(--border-subtle)' }}
         >
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Tipo de cambio
+          <div className="flex items-center gap-1.5 flex-shrink min-w-0">
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+              Tipo de cambio
+            </span>
             {dashboard?.tipoUsado && (
               <span
-                className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0"
                 style={{ backgroundColor: 'var(--accent-primary-dim)', color: 'var(--accent-primary)' }}
               >
                 {DOLLAR_TYPE_NAMES[dashboard.tipoUsado] || dashboard.tipoUsado}
               </span>
             )}
-          </span>
-          <span className="text-sm min-[400px]:text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+          </div>
+          <span className="text-sm min-[400px]:text-xs font-medium whitespace-nowrap flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>
             {formatCurrency(filteredData.tipoCambio)} / USD
           </span>
         </div>

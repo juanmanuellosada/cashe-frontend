@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense, lazy } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorProvider } from './contexts/ErrorContext'
 import { StatisticsProvider } from './contexts/StatisticsContext'
+import { ZoomProvider } from './contexts/ZoomContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorModal from './components/ErrorModal'
 import UpdatePrompt from './components/UpdatePrompt'
@@ -99,8 +100,9 @@ function App() {
 
   return (
     <ErrorProvider>
-      <AuthProvider>
-        <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ZoomProvider>
+        <AuthProvider>
+          <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ErrorModal />
           <UpdatePrompt />
           <Routes>
@@ -153,8 +155,9 @@ function App() {
             {/* Catch all - redirect to landing */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+          </BrowserRouter>
+        </AuthProvider>
+      </ZoomProvider>
     </ErrorProvider>
   )
 }
