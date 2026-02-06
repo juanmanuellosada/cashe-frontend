@@ -10,7 +10,7 @@ import { sortByRecency } from '../../utils/sortByRecency';
 import { useDebounce } from '../../hooks/useDebounce';
 import { evaluateAutoRules } from '../../services/supabaseApi';
 
-function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
+function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated, sharedAmount, onAmountChange }) {
   const today = new Date().toISOString().split('T')[0];
 
   // Ordenar cuentas y categorías por uso reciente
@@ -26,7 +26,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
 
   const [formData, setFormData] = useState({
     fecha: prefillData?.fecha || today,
-    monto: prefillData?.monto?.toString() || '',
+    monto: prefillData?.monto?.toString() || sharedAmount || '',
     cuenta: prefillData?.cuenta || '',
     categoria: prefillData?.categoria || '',
     nota: prefillData?.nota || '',
@@ -98,6 +98,11 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Sincronizar monto con el estado compartido
+    if (name === 'monto' && onAmountChange) {
+      onAmountChange(value);
+    }
   };
 
   // Handler para aplicar sugerencia de regla

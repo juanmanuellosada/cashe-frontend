@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import IncomeForm from './IncomeForm';
 import ExpenseForm from './ExpenseForm';
 import TransferForm from './TransferForm';
@@ -35,6 +35,14 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
 
   const [movementType, setMovementType] = useState(getInitialType());
 
+  // Shared amount state that persists across tab changes
+  const [sharedAmount, setSharedAmount] = useState(prefillData?.monto?.toString() || '');
+
+  // Callback to update shared amount from child forms
+  const handleAmountChange = useCallback((newAmount) => {
+    setSharedAmount(newAmount);
+  }, []);
+
   const renderForm = () => {
     const formProps = {
       accounts,
@@ -44,6 +52,8 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
       onSubmit,
       loading,
       onCategoryCreated,
+      sharedAmount,
+      onAmountChange: handleAmountChange,
     };
 
     // Only pass prefillData to matching form type

@@ -83,7 +83,7 @@ function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
   return fecha;
 }
 
-function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated }) {
+function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated, sharedAmount, onAmountChange }) {
   const today = new Date().toISOString().split('T')[0];
 
   // Ordenar cuentas y categorías por uso reciente
@@ -99,7 +99,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   const [formData, setFormData] = useState({
     fecha: prefillData?.fecha || today,
-    monto: prefillData?.monto?.toString() || '',
+    monto: prefillData?.monto?.toString() || sharedAmount || '',
     cuenta: prefillData?.cuenta || '',
     categoria: prefillData?.categoria || '',
     nota: prefillData?.nota || '',
@@ -243,6 +243,11 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Sync amount with parent for tab persistence
+    if (name === 'monto' && onAmountChange) {
+      onAmountChange(value);
+    }
 
     // Reset cuotas y moneda si cambia la cuenta
     if (name === 'cuenta') {

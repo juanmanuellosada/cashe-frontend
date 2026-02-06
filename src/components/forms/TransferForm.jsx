@@ -5,7 +5,7 @@ import AttachmentInput from '../AttachmentInput';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
 
-function TransferForm({ accounts, onSubmit, loading, prefillData }) {
+function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, onAmountChange }) {
   const today = new Date().toISOString().split('T')[0];
 
   // Ordenar cuentas por uso reciente
@@ -19,8 +19,8 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
     fecha: prefillData?.fecha || today,
     cuentaSaliente: prefillData?.cuentaSaliente || '',
     cuentaEntrante: prefillData?.cuentaEntrante || '',
-    montoSaliente: prefillData?.montoSaliente?.toString() || '',
-    montoEntrante: prefillData?.montoEntrante?.toString() || '',
+    montoSaliente: prefillData?.montoSaliente?.toString() || sharedAmount || '',
+    montoEntrante: prefillData?.montoEntrante?.toString() || sharedAmount || '',
     nota: prefillData?.nota || '',
   });
 
@@ -45,6 +45,11 @@ function TransferForm({ accounts, onSubmit, loading, prefillData }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Sincronizar monto saliente con el estado compartido
+    if (name === 'montoSaliente' && onAmountChange) {
+      onAmountChange(value);
+    }
   };
 
   const handleSubmit = async (e) => {
