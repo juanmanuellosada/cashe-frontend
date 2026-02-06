@@ -101,7 +101,6 @@ export function extractEntities(
     // Usar la nota refinada si existe, sino usar el mensaje original completo
     // Esto asegura que las reglas automáticas siempre tengan contexto
     entities.note = remainingNote || originalText;
-    }
   }
 
   // Para consultas, extraer límite
