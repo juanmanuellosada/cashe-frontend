@@ -512,3 +512,54 @@ export function getDefaultCategory(
   );
   return otros || filtered[0];
 }
+
+/**
+ * Filtra cuentas para mostrar solo las más relevantes al usuario
+ * - Excluye cuentas ocultas (hidden_from_balance = true)
+ * - Excluye tarjetas de crédito si no se mencionan explícitamente
+ * - Limita a máximo 7 opciones
+ * - Prioriza por saldo > 0
+ */
+export function filterRelevantAccounts(
+  accounts: UserAccount[],
+  query?: string,
+  intent?: string
+): UserAccount[] {
+  // Detectar si se mencionó alguna tarjeta en el query
+  const mentionedCreditCard = query
+    ? /\b(visa|mastercard|master|amex|cabal|naranja|nativa|tarjeta|tc)\b/i.test(query)
+    : false;
+
+  let filtered = accounts.filter((account) => {
+    // Excluir cuentas ocultas
+    if (account.hidden_from_balance) return false;
+
+    // Si no se mencionó tarjeta y es un gasto/ingreso simple, excluir tarjetas de crédito
+    if (!mentionedCreditCard && account.is_credit_card) {
+      const isSimpleTransaction =
+        intent === "REGISTRAR_GASTO" ||
+        intent === "REGISTRAR_INGRESO";
+      if (isSimpleTransaction) return false;
+    }
+
+    return true;
+  });
+
+  // Ordenar por relevancia:
+  // 1. Saldo > 0 primero
+  // 2. Por nombre alfabético
+  filtered = filtered.sort((a, b) => {
+    const balanceA = a.balance || 0;
+    const balanceB = b.balance || 0;
+
+    // Priorizar cuentas con saldo positivo
+    if (balanceA > 0 && balanceB <= 0) return -1;
+    if (balanceA <= 0 && balanceB > 0) return 1;
+
+    // Si ambos tienen o no tienen saldo, ordenar alfabéticamente
+    return a.name.localeCompare(b.name);
+  });
+
+  // Limitar a máximo 7 opciones para no saturar al usuario
+  return filtered.slice(0, 7);
+}

@@ -32,6 +32,11 @@ export function extractEntities(
   const normalized = normalizeText(text);
   const entities: ParsedEntities = {};
 
+  // IMPORTANTE: Guardar el mensaje original completo como nota preliminar
+  // Esto permite que las reglas automáticas evalúen contra el mensaje completo
+  // Más adelante se puede refinar con extractNote() o extractRemainingAsNote()
+  entities.note = text.trim();
+
   // Extraer monto
   const amount = extractAmount(text);
   if (amount !== null) {

@@ -621,6 +621,12 @@ Los formularios `ExpenseForm.jsx` e `IncomeForm.jsx` evalúan reglas automática
 ### Descripción
 Permite a los usuarios crear gastos, ingresos, transferencias y hacer consultas usando lenguaje natural a través de WhatsApp.
 
+**✨ Mejoras recientes:**
+- **Integración con reglas automáticas**: El bot ahora evalúa las reglas del usuario para auto-sugerir categorías y cuentas
+- **Filtrado inteligente de cuentas**: Muestra solo 5-7 cuentas relevantes en vez de todas
+- **Excluye tarjetas de crédito** para gastos simples (a menos que se mencionen)
+- **Prioriza cuentas con saldo positivo**
+
 ### Componentes
 
 #### Base de Datos (Nuevas tablas)

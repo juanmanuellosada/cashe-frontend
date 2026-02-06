@@ -30,6 +30,7 @@ import {
   createCategorySelectionState,
 } from "./stateManager.ts";
 import { getExpectedCategoryType } from "./intentClassifier.ts";
+import { filterRelevantAccounts } from "./fuzzyMatcher.ts";
 
 /**
  * Genera el mensaje de preview para confirmación
@@ -284,7 +285,9 @@ export function processEditFieldSelection(
 export function buildEditValueMessage(
   field: EditableField,
   context: UserContext,
-  categoryType?: "income" | "expense"
+  categoryType?: "income" | "expense",
+  intent?: Intent,
+  originalQuery?: string
 ): { message: string; buttons?: MessageButton[]; options?: DisambiguationOption[] } {
   switch (field) {
     case "amount":
@@ -325,15 +328,23 @@ export function buildEditValueMessage(
     case "account":
     case "from_account":
     case "to_account": {
-      const options = context.accounts.map((a) => ({
+      // Filtrar cuentas relevantes usando la nueva función
+      const filteredAccounts = filterRelevantAccounts(
+        context.accounts,
+        originalQuery,
+        intent
+      );
+
+      const options = filteredAccounts.map((a) => ({
         id: a.id,
         name: a.name,
         displayName: a.name,
         icon: a.icon,
         currency: a.currency,
+        balance: a.balance,
       }));
 
-      const buttons = options.slice(0, 10).map((opt, i) => ({
+      const buttons = options.map((opt, i) => ({
         text: opt.displayName,
         callbackData: `acc_${opt.id}`,
         id: `acc_${opt.id}`,
@@ -347,7 +358,7 @@ export function buildEditValueMessage(
             : RESPONSES.SELECCIONAR_CUENTA;
 
       let message = `${headerMessage}\n\n`;
-      options.slice(0, 10).forEach((opt, i) => {
+      options.forEach((opt, i) => {
         message += `${i + 1}. ${opt.displayName}\n`;
       });
 
@@ -596,7 +607,9 @@ export function getMissingRequiredFields(
 export function buildMissingFieldMessage(
   field: string,
   context: UserContext,
-  categoryType?: "income" | "expense"
+  categoryType?: "income" | "expense",
+  intent?: Intent,
+  originalQuery?: string
 ): { message: string; buttons?: MessageButton[]; options?: DisambiguationOption[] } {
   switch (field) {
     case "amount":
@@ -605,10 +618,10 @@ export function buildMissingFieldMessage(
     case "account":
     case "from_account":
     case "to_account":
-      return buildEditValueMessage(field as EditableField, context);
+      return buildEditValueMessage(field as EditableField, context, undefined, intent, originalQuery);
 
     case "category":
-      return buildEditValueMessage("category", context, categoryType);
+      return buildEditValueMessage("category", context, categoryType, intent, originalQuery);
 
     default:
       return { message: `¿Cuál es el valor de ${field}?` };

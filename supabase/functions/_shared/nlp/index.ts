@@ -41,6 +41,7 @@ import {
 } from "./confirmationFlow.ts";
 import { parseWithGroq, shouldUseGroqFallback, mergeResults } from "./groqFallback.ts";
 import { executeWriteAction, executeReadAction } from "./commandExecutor.ts";
+import { evaluateAutoRules } from "./autoRulesEvaluator.ts";
 import type {
   Platform,
   Intent,
@@ -303,7 +304,9 @@ async function handleEditFieldSelection(
   const { message, buttons, options } = buildEditValueMessage(
     field,
     context,
-    categoryType || undefined
+    categoryType || undefined,
+    state.intent,
+    state.parsedData?.note
   );
 
   const newState: ConversationStateData = {
@@ -534,6 +537,41 @@ async function processNewMessage(
   console.log(`[NLP] Resolved entities:`, JSON.stringify(resolved));
   console.log(`[NLP] Needs disambiguation: ${needsDisambiguation}, field: ${disambiguationField}`);
 
+  // 6.5. Evaluar reglas automáticas si faltan campos (categoría o cuenta)
+  // Solo evaluar si es un intent de escritura y hay nota extraída
+  if (isWriteIntent(finalIntent) && (resolved.note || entities.note)) {
+    const ruleSuggestion = await evaluateAutoRules(
+      supabase,
+      userId,
+      { ...resolved, note: resolved.note || entities.note || "" },
+      finalIntent
+    );
+
+    if (ruleSuggestion) {
+      console.log(`[NLP] Auto-rule suggestion from "${ruleSuggestion.ruleName}":`, ruleSuggestion);
+
+      // Aplicar sugerencia de categoría si no está resuelta
+      if (ruleSuggestion.categoryId && !resolved.categoryId) {
+        const category = context.categories.find(c => c.id === ruleSuggestion.categoryId);
+        if (category) {
+          resolved.categoryId = category.id;
+          resolved.category = category.name;
+          console.log(`[NLP] Applied category from rule: ${category.name}`);
+        }
+      }
+
+      // Aplicar sugerencia de cuenta si no está resuelta
+      if (ruleSuggestion.accountId && !resolved.accountId) {
+        const account = context.accounts.find(a => a.id === ruleSuggestion.accountId);
+        if (account) {
+          resolved.accountId = account.id;
+          resolved.account = account.name;
+          console.log(`[NLP] Applied account from rule: ${account.name}`);
+        }
+      }
+    }
+  }
+
   // 7. Si necesita desambiguación, solicitar
   if (needsDisambiguation && disambiguationOptions && disambiguationField) {
     const state = createDisambiguationState(
@@ -610,7 +648,9 @@ async function processNewMessage(
       const { message, buttons, options } = buildMissingFieldMessage(
         field,
         context,
-        categoryType || undefined
+        categoryType || undefined,
+        finalIntent,
+        text
       );
 
       const state: ConversationStateData = {
