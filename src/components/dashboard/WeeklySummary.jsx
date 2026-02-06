@@ -186,7 +186,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
   };
 
   return (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-2 sm:space-y-3 overflow-hidden">
       {/* Header - stacks on <400px */}
       <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2">
         <div className="flex items-center gap-2">

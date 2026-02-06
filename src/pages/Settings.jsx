@@ -1,14 +1,100 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Avatar from '../components/Avatar';
+import { getExchangeRate, fetchAllDollarRates, updateExchangeRateType } from '../services/supabaseApi';
+import { formatNumberAR } from '../utils/format';
 
 const APP_VERSION = '2026.01.31-e';
+
+// Tipos de dólar disponibles
+const DOLLAR_TYPES = {
+  oficial: { nombre: 'Oficial', descripcion: 'Banco Nación' },
+  blue: { nombre: 'Blue', descripcion: 'Informal' },
+  bolsa: { nombre: 'MEP', descripcion: 'Bolsa/MEP' },
+  contadoconliqui: { nombre: 'CCL', descripcion: 'Contado con liquidación' },
+};
 
 function Settings({ darkMode, toggleDarkMode }) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [clearing, setClearing] = useState(false);
+
+  // Exchange rate state
+  const [selectedRateType, setSelectedRateType] = useState('oficial');
+  const [dollarRates, setDollarRates] = useState(null);
+  const [loadingRates, setLoadingRates] = useState(true);
+  const [updatingRate, setUpdatingRate] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Cargar tipo de cambio actual y cotizaciones
+  useEffect(() => {
+    const loadExchangeData = async () => {
+      setLoadingRates(true);
+      try {
+        const [exchangeData, rates] = await Promise.all([
+          getExchangeRate(),
+          fetchAllDollarRates(),
+        ]);
+        setSelectedRateType(exchangeData.tipoUsado || 'oficial');
+        setDollarRates(rates);
+        if (exchangeData.fechaActualizacion) {
+          setLastUpdated(new Date(exchangeData.fechaActualizacion));
+        }
+      } catch (err) {
+        console.error('Error loading exchange data:', err);
+      } finally {
+        setLoadingRates(false);
+      }
+    };
+    loadExchangeData();
+  }, []);
+
+  // Cambiar tipo de dólar
+  const handleRateTypeChange = async (tipo) => {
+    if (tipo === selectedRateType || updatingRate) return;
+
+    setUpdatingRate(true);
+    try {
+      const result = await updateExchangeRateType(tipo);
+      setSelectedRateType(tipo);
+      if (result.fechaActualizacion) {
+        setLastUpdated(new Date(result.fechaActualizacion));
+      }
+    } catch (err) {
+      console.error('Error updating exchange rate type:', err);
+    } finally {
+      setUpdatingRate(false);
+    }
+  };
+
+  // Refrescar cotizaciones
+  const handleRefreshRates = async () => {
+    setLoadingRates(true);
+    try {
+      const rates = await fetchAllDollarRates();
+      setDollarRates(rates);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Error refreshing rates:', err);
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  // Formatear "hace X tiempo"
+  const formatTimeAgo = (date) => {
+    if (!date) return null;
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'hace un momento';
+    if (diffMins < 60) return `hace ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `hace ${diffHours}h`;
+    return `hace ${Math.floor(diffHours / 24)}d`;
+  };
 
   const handleForceUpdate = async () => {
     setClearing(true);
@@ -160,6 +246,112 @@ function Settings({ darkMode, toggleDarkMode }) {
                 <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
               </svg>
             )}
+          </button>
+        </div>
+      </div>
+
+      {/* Exchange Rate Section */}
+      <div
+        className="rounded-2xl p-6"
+        style={{ backgroundColor: 'var(--bg-secondary)' }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <span className="text-xl">💱</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Tipo de cambio
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Elegí qué cotización del dólar usar para las conversiones
+            </p>
+          </div>
+        </div>
+
+        {/* Radio buttons para tipos de dólar */}
+        <div className="space-y-2">
+          {Object.entries(DOLLAR_TYPES).map(([key, { nombre, descripcion }]) => {
+            const rate = dollarRates?.find(r => r.casa === key);
+            const isSelected = key === selectedRateType;
+
+            return (
+              <button
+                key={key}
+                onClick={() => handleRateTypeChange(key)}
+                disabled={updatingRate || loadingRates}
+                className="w-full flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
+                style={{
+                  backgroundColor: isSelected ? 'var(--accent-primary-dim)' : 'transparent',
+                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                }}
+              >
+                {/* Radio circle */}
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                  style={{
+                    border: isSelected ? '2px solid var(--accent-primary)' : '2px solid var(--text-muted)',
+                  }}
+                >
+                  {isSelected && (
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: 'var(--accent-primary)' }}
+                    />
+                  )}
+                </div>
+
+                {/* Label */}
+                <div className="flex-1 text-left">
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}
+                  >
+                    {nombre}
+                  </p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                    {descripcion}
+                  </p>
+                </div>
+
+                {/* Rate */}
+                {rate && !loadingRates ? (
+                  <span className="text-sm tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                    ${formatNumberAR(rate.compra, 0)} / ${formatNumberAR(rate.venta, 0)}
+                  </span>
+                ) : loadingRates ? (
+                  <div className="w-20 h-4 rounded animate-pulse" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer con última actualización y botón refresh */}
+        <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          {lastUpdated && (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Última actualización: {formatTimeAgo(lastUpdated)}
+            </p>
+          )}
+          <button
+            onClick={handleRefreshRates}
+            disabled={loadingRates}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+          >
+            <svg
+              className={`w-4 h-4 ${loadingRates ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Actualizar cotizaciones
           </button>
         </div>
       </div>

@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Validate session when user returns to tab
+  // Validate and refresh session proactively
   const validateSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -26,12 +26,13 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
 
-      // Check if token is about to expire (within 5 minutes)
+      // Always try to refresh the token to extend the refresh token lifetime
+      // This keeps the session alive as long as the user is using the app
       const expiresAt = session.expires_at;
       if (expiresAt) {
         const expiresIn = expiresAt * 1000 - Date.now();
-        if (expiresIn < 5 * 60 * 1000) {
-          // Try to refresh the token
+        // Refresh if token expires within 30 minutes (more aggressive refresh)
+        if (expiresIn < 30 * 60 * 1000) {
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error('Failed to refresh session:', refreshError);
@@ -61,6 +62,24 @@ export const AuthProvider = ({ children }) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, validateSession]);
+
+  // Periodically refresh session to keep it alive (every 30 minutes)
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.warn('Periodic session refresh failed:', error.message);
+        }
+      } catch (err) {
+        console.warn('Error in periodic session refresh:', err);
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;

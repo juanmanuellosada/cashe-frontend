@@ -39,7 +39,7 @@ function PeriodFlowCard({
 
   return (
     <div
-      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl"
+      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl overflow-hidden"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)'

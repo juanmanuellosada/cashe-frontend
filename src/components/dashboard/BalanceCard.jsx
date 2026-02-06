@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { formatCurrency } from '../../utils/format';
 
+// Mapeo de tipos de dólar para mostrar
+const DOLLAR_TYPE_NAMES = {
+  oficial: 'Oficial',
+  blue: 'Blue',
+  bolsa: 'MEP',
+  contadoconliqui: 'CCL',
+};
+
 function BalanceCard({
   accounts = [],
   dashboard,
@@ -92,7 +100,7 @@ function BalanceCard({
 
   return (
     <div
-      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl"
+      className="p-3 sm:p-4 rounded-lg min-[400px]:rounded-xl overflow-hidden"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)'
@@ -170,6 +178,14 @@ function BalanceCard({
         >
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Tipo de cambio
+            {dashboard?.tipoUsado && (
+              <span
+                className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{ backgroundColor: 'var(--accent-primary-dim)', color: 'var(--accent-primary)' }}
+              >
+                {DOLLAR_TYPE_NAMES[dashboard.tipoUsado] || dashboard.tipoUsado}
+              </span>
+            )}
           </span>
           <span className="text-sm min-[400px]:text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
             {formatCurrency(filteredData.tipoCambio)} / USD

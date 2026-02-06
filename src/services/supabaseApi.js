@@ -1662,6 +1662,7 @@ export const getFilteredDashboard = async ({ startDate, endDate }) => {
     balanceMes: ingresosMes - gastosMes,
     balanceMesDolares: ingresosMesDolares - gastosMesDolares,
     tipoCambio,
+    tipoUsado: exchangeData.tipoUsado || 'oficial',
     // Total general needs account balances
     totalPesos: ingresosMes - gastosMes,
     totalDolares: ingresosMesDolares - gastosMesDolares,
@@ -1758,10 +1759,9 @@ export const fetchAllDollarRates = async () => {
 export const getExchangeRate = async () => {
   const userId = await getUserId();
 
-  // Request only existing columns to avoid 400s if the table is missing optional fields
   const { data, error } = await supabase
     .from('user_settings')
-    .select('exchange_rate')
+    .select('exchange_rate, exchange_rate_type')
     .eq('user_id', userId)
     .single();
 
@@ -1769,18 +1769,19 @@ export const getExchangeRate = async () => {
     console.warn('Could not fetch user_settings (exchange rate)', error.message);
   }
 
-  // If no rate, refresh; otherwise keep existing value (timestamps not present in schema)
+  const tipoPreferido = data?.exchange_rate_type || 'oficial';
   const needsRefresh = !data?.exchange_rate;
 
   if (needsRefresh) {
-    const liveRate = await fetchLiveExchangeRate('oficial');
+    const liveRate = await fetchLiveExchangeRate(tipoPreferido);
 
-    if (liveRate?.compra) {
+    if (liveRate?.venta) {
       const { error: upsertError } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
-          exchange_rate: liveRate.compra
+          exchange_rate: liveRate.venta,
+          exchange_rate_type: tipoPreferido
         }, { onConflict: 'user_id' });
 
       if (upsertError) {
@@ -1788,8 +1789,8 @@ export const getExchangeRate = async () => {
       }
 
       return {
-        tipoCambio: liveRate.compra,
-        tipoUsado: 'oficial',
+        tipoCambio: liveRate.venta,
+        tipoUsado: tipoPreferido,
         fechaActualizacion: liveRate.fecha,
         autoUpdated: true
       };
@@ -1798,7 +1799,7 @@ export const getExchangeRate = async () => {
 
   return {
     tipoCambio: data?.exchange_rate || 1000,
-    tipoUsado: 'oficial',
+    tipoUsado: tipoPreferido,
     fechaActualizacion: null,
     autoUpdated: false
   };
@@ -1819,11 +1820,22 @@ export const updateExchangeRate = async (rate) => {
 };
 
 // Force refresh exchange rate from API
-export const refreshExchangeRate = async (tipo = 'oficial') => {
+export const refreshExchangeRate = async (tipo = null) => {
   const userId = await getUserId();
+
+  // Si no se pasa tipo, leer el preferido del usuario
+  if (!tipo) {
+    const { data } = await supabase
+      .from('user_settings')
+      .select('exchange_rate_type')
+      .eq('user_id', userId)
+      .single();
+    tipo = data?.exchange_rate_type || 'oficial';
+  }
+
   const liveRate = await fetchLiveExchangeRate(tipo);
 
-  if (!liveRate?.compra) {
+  if (!liveRate?.venta) {
     throw new Error('No se pudo obtener el tipo de cambio');
   }
 
@@ -1831,16 +1843,127 @@ export const refreshExchangeRate = async (tipo = 'oficial') => {
     .from('user_settings')
     .upsert({
       user_id: userId,
-      exchange_rate: liveRate.compra
+      exchange_rate: liveRate.venta,
+      exchange_rate_type: tipo
     }, { onConflict: 'user_id' });
 
   if (error) throw error;
 
   return {
-    tipoCambio: liveRate.compra,
-    tipoUsado: 'oficial',
+    tipoCambio: liveRate.venta,
+    tipoUsado: tipo,
     fechaActualizacion: liveRate.fecha
   };
+};
+
+// Update user's preferred exchange rate type and fetch its current value
+export const updateExchangeRateType = async (tipo) => {
+  const userId = await getUserId();
+
+  // Traer la cotización del nuevo tipo
+  const liveRate = await fetchLiveExchangeRate(tipo);
+
+  const updateData = {
+    user_id: userId,
+    exchange_rate_type: tipo
+  };
+
+  // Si se pudo obtener cotización, actualizar también el valor
+  if (liveRate?.venta) {
+    updateData.exchange_rate = liveRate.venta;
+  }
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert(updateData, { onConflict: 'user_id' });
+
+  if (error) throw error;
+
+  // Emitir evento para que otros componentes se actualicen
+  emit(DataEvents.ACCOUNTS_CHANGED);
+
+  return {
+    tipoCambio: liveRate?.venta || null,
+    tipoUsado: tipo,
+    fechaActualizacion: liveRate?.fecha || null
+  };
+};
+
+// Fetch inflation data from Argentina Datos API
+export const fetchInflationData = async () => {
+  try {
+    const [mensualRes, interanualRes] = await Promise.all([
+      fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacion/'),
+      fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacionInteranual/'),
+    ]);
+
+    if (!mensualRes.ok || !interanualRes.ok) throw new Error('API error');
+
+    const mensualData = await mensualRes.json();
+    const interanualData = await interanualRes.json();
+
+    // Obtener último dato de cada uno
+    const ultimoMensual = mensualData[mensualData.length - 1];
+    const ultimoInteranual = interanualData[interanualData.length - 1];
+
+    // Calcular acumulado del año actual
+    const añoActual = new Date().getFullYear();
+    const datosMensualAño = mensualData.filter(d =>
+      new Date(d.fecha).getFullYear() === añoActual
+    );
+
+    // Acumulado compuesto: (1 + r1/100) * (1 + r2/100) * ... - 1
+    const acumulado = datosMensualAño.reduce((acc, d) =>
+      acc * (1 + d.valor / 100), 1
+    ) - 1;
+
+    return {
+      mensual: {
+        valor: ultimoMensual?.valor,
+        fecha: ultimoMensual?.fecha,
+      },
+      interanual: {
+        valor: ultimoInteranual?.valor,
+        fecha: ultimoInteranual?.fecha,
+      },
+      acumuladoAnual: {
+        valor: acumulado * 100, // como porcentaje
+        meses: datosMensualAño.length,
+      },
+      // Dato anterior para comparar tendencia
+      mensualAnterior: mensualData.length >= 2
+        ? mensualData[mensualData.length - 2]?.valor
+        : null,
+    };
+  } catch (error) {
+    console.error('Error fetching inflation data:', error);
+    return null;
+  }
+};
+
+// Fetch country risk (riesgo país) from Argentina Datos API
+export const fetchRiesgoPais = async () => {
+  try {
+    const response = await fetch('https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais/');
+    if (!response.ok) throw new Error('API error');
+
+    const data = await response.json();
+
+    // Obtener últimos datos para tendencia
+    const ultimo = data[data.length - 1];
+    const anterior = data.length >= 2 ? data[data.length - 2] : null;
+    const hace7Dias = data.length >= 7 ? data[data.length - 7] : null;
+
+    return {
+      valor: ultimo?.valor,
+      fecha: ultimo?.fecha,
+      valorAnterior: anterior?.valor,
+      valorHace7Dias: hace7Dias?.valor,
+    };
+  } catch (error) {
+    console.error('Error fetching riesgo país:', error);
+    return null;
+  }
 };
 
 // ============================================

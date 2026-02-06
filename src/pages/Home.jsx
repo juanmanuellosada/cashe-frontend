@@ -9,6 +9,7 @@ import AccountBalances from '../components/dashboard/AccountBalances';
 import WeeklySummary from '../components/dashboard/WeeklySummary';
 import RecentMovements from '../components/dashboard/RecentMovements';
 import CreditCardDueAlert from '../components/dashboard/CreditCardDueAlert';
+import EconomicIndicatorsCard from '../components/dashboard/EconomicIndicatorsCard';
 import EditMovementModal from '../components/EditMovementModal';
 import AccountModal from '../components/AccountModal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -371,7 +372,7 @@ function Home() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={loadingDashboard && loadingMovements}>
-    <div className="space-y-3 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header - simplified */}
       <h1 className="text-base sm:text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
         Dashboard
@@ -414,6 +415,14 @@ function Home() {
           />
         )}
       </div>
+
+      {/* Economic Indicators - Full width */}
+      <EconomicIndicatorsCard
+        onExchangeRateChange={async () => {
+          // Refrescar dashboard para que BalanceCard tome el nuevo tipo de cambio
+          await fetchDashboard();
+        }}
+      />
 
       {/* Account Balances - Full width */}
       <AccountBalances

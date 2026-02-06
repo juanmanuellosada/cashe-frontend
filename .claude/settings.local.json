@@ -62,7 +62,9 @@
       "mcp__playwright__browser_install",
       "mcp__puppeteer__puppeteer_navigate",
       "Bash(npm uninstall:*)",
-      "mcp__puppeteer__puppeteer_screenshot"
+      "mcp__puppeteer__puppeteer_screenshot",
+      "Bash(curl:*)",
+      "WebFetch(domain:argentinadatos.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

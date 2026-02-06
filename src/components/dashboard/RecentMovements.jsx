@@ -156,7 +156,7 @@ function RecentMovements({
   );
 
   return (
-    <div className="space-y-2 sm:space-y-4">
+    <div className="space-y-2 sm:space-y-4 overflow-hidden">
       {/* Header con titulo y selector de fechas - stacks on <400px */}
       <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between gap-2">
         <div className="flex items-center gap-2 flex-shrink-0">
