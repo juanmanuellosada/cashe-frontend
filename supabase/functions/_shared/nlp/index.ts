@@ -550,23 +550,23 @@ async function processNewMessage(
     if (ruleSuggestion) {
       console.log(`[NLP] Auto-rule suggestion from "${ruleSuggestion.ruleName}":`, ruleSuggestion);
 
-      // Aplicar sugerencia de categoría si no está resuelta
-      if (ruleSuggestion.categoryId && !resolved.categoryId) {
+      // Aplicar sugerencia de categoría (las auto-reglas tienen prioridad sobre fuzzy matching)
+      if (ruleSuggestion.categoryId) {
         const category = context.categories.find(c => c.id === ruleSuggestion.categoryId);
         if (category) {
           resolved.categoryId = category.id;
           resolved.category = category.name;
-          console.log(`[NLP] Applied category from rule: ${category.name}`);
+          console.log(`[NLP] Applied category from rule (overriding fuzzy match): ${category.name}`);
         }
       }
 
-      // Aplicar sugerencia de cuenta si no está resuelta
-      if (ruleSuggestion.accountId && !resolved.accountId) {
+      // Aplicar sugerencia de cuenta (las auto-reglas tienen prioridad sobre fuzzy matching)
+      if (ruleSuggestion.accountId) {
         const account = context.accounts.find(a => a.id === ruleSuggestion.accountId);
         if (account) {
           resolved.accountId = account.id;
           resolved.account = account.name;
-          console.log(`[NLP] Applied account from rule: ${account.name}`);
+          console.log(`[NLP] Applied account from rule (overriding fuzzy match): ${account.name}`);
         }
       }
     }

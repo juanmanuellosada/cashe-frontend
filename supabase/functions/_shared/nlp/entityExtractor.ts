@@ -89,18 +89,10 @@ export function extractEntities(
   if (explicitNote) {
     entities.note = explicitNote;
   } else {
-    // Si no hay nota explícita, extraer lo que sobra como nota
-    const remainingNote = extractRemainingAsNote(text, {
-      amount: entities.amount,
-      account: entities.account,
-      category: entities.category,
-      installments: entities.installments,
-      firstInstallmentDate: entities.firstInstallmentDate,
-      date: entities.date,
-    });
-    // Usar la nota refinada si existe, sino usar el mensaje original completo
-    // Esto asegura que las reglas automáticas siempre tengan contexto
-    entities.note = remainingNote || originalText;
+    // SIMPLIFICADO: Usar siempre el mensaje original completo como nota
+    // Esto garantiza que las auto-reglas tengan el máximo contexto para evaluar
+    // El mensaje original contiene toda la información necesaria (monto, categoría, cuenta, etc.)
+    entities.note = originalText;
   }
 
   // Para consultas, extraer límite
