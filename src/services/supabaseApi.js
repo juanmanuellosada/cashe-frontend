@@ -247,7 +247,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
 
   if (creditCardAccounts.length > 0) {
     const creditCardPromises = creditCardAccounts.map(async (account) => {
-      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day);
+      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day, account.due_day);
       return { accountId: account.id, data: nextStatement };
     });
     const creditCardResults = await Promise.all(creditCardPromises);
@@ -256,6 +256,11 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
         proximoResumenPesos: data.proximoResumenPesos,
         proximoResumenDolares: data.proximoResumenDolares,
         promedioMensual: data.promedioMensual,
+        // Data for due date alerts
+        resumenVencePesos: data.resumenVencePesos,
+        resumenVenceDolares: data.resumenVenceDolares,
+        resumenVencePagado: data.resumenVencePagado,
+        resumenVencePeriodo: data.resumenVencePeriodo,
       });
     });
   }
@@ -300,7 +305,11 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
 });
 
 // Calculate next statement balance for credit cards (separated by currency)
-const calculateCreditCardNextStatement = async (accountId, closingDay) => {
+// Returns:
+// - proximoResumenPesos/Dolares: first UNPAID statement amounts
+// - resumenVencePesos/Dolares: amounts for the statement that's due now (for due alerts)
+// - resumenVencePagado: whether the due statement is fully paid
+const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) => {
   const userId = await getUserId();
   const diaCierre = closingDay || 1;
 
@@ -313,10 +322,30 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
     .eq('type', 'expense');
 
   if (!expenses || expenses.length === 0) {
-    return { proximoResumenPesos: 0, proximoResumenDolares: 0, promedioMensual: 0 };
+    return {
+      proximoResumenPesos: 0,
+      proximoResumenDolares: 0,
+      promedioMensual: 0,
+      resumenVencePesos: 0,
+      resumenVenceDolares: 0,
+      resumenVencePagado: false,
+    };
   }
 
-  // Calculate current statement period
+  // Get existing payments for this credit card
+  const { data: payments } = await supabase
+    .from('statement_payments')
+    .select('statement_period, currency')
+    .eq('user_id', userId)
+    .eq('account_id', accountId);
+
+  // Create a set of paid period+currency combos for fast lookup
+  const paidSet = new Set();
+  (payments || []).forEach(p => {
+    paidSet.add(`${p.statement_period}_${p.currency}`);
+  });
+
+  // Calculate current statement period (the one we're accumulating now)
   const today = new Date();
   const currentDay = today.getDate();
   let statementYear = today.getFullYear();
@@ -332,6 +361,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
   }
 
   // Function to get statement period for a date
+  // Format: "YYYY-MM" (1-indexed month with zero padding) to match CreditCards.jsx
   const getStatementPeriod = (dateStr) => {
     const d = new Date(dateStr);
     const day = d.getDate();
@@ -345,28 +375,24 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
         year += 1;
       }
     }
-    return `${year}-${month}`;
+    // Convert to 1-indexed and pad with zero
+    return `${year}-${String(month + 1).padStart(2, '0')}`;
   };
 
-  const currentPeriod = `${statementYear}-${statementMonth}`;
-
-  // Sum expenses for current statement period and group by month for average
-  let totalPesos = 0;
-  let totalDolares = 0;
+  // Group expenses by period
+  const expensesByPeriod = {};
   const expensesByMonth = {};
 
   expenses.forEach(expense => {
     const period = getStatementPeriod(expense.date);
     const amount = parseFloat(expense.amount);
+    const currency = expense.original_currency === 'USD' ? 'USD' : 'ARS';
 
-    // For next statement calculation
-    if (period === currentPeriod) {
-      if (expense.original_currency === 'USD') {
-        totalDolares += amount;
-      } else {
-        totalPesos += amount;
-      }
+    // Group by period and currency
+    if (!expensesByPeriod[period]) {
+      expensesByPeriod[period] = { ARS: 0, USD: 0 };
     }
+    expensesByPeriod[period][currency] += amount;
 
     // For monthly average (group by month)
     const expenseDate = new Date(expense.date);
@@ -382,7 +408,75 @@ const calculateCreditCardNextStatement = async (accountId, closingDay) => {
   const totalAllMonths = Object.values(expensesByMonth).reduce((sum, val) => sum + val, 0);
   const promedioMensual = months.length > 0 ? totalAllMonths / months.length : 0;
 
-  return { proximoResumenPesos: totalPesos, proximoResumenDolares: totalDolares, promedioMensual };
+  // Calculate the "due" period (the one that's due now/soon, previous to current)
+  // This is the statement that closed and is now due for payment
+  let dueYear = statementYear;
+  let dueMonth = statementMonth - 1;
+  if (dueMonth < 0) {
+    dueMonth = 11;
+    dueYear -= 1;
+  }
+  const duePeriod = `${dueYear}-${String(dueMonth + 1).padStart(2, '0')}`;
+
+  // Get due period data
+  const dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
+  const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);
+  const dueUsdPaid = paidSet.has(`${duePeriod}_USD`);
+  const resumenVencePagado = (dueExpenses.ARS === 0 || dueArsPaid) && (dueExpenses.USD === 0 || dueUsdPaid);
+
+  // Sort periods chronologically
+  const sortedPeriods = Object.keys(expensesByPeriod).sort((a, b) => {
+    const [yearA, monthA] = a.split('-').map(Number);
+    const [yearB, monthB] = b.split('-').map(Number);
+    if (yearA !== yearB) return yearA - yearB;
+    return monthA - monthB;
+  });
+
+  // Find first period that has unpaid amounts (for "próximo resumen" display)
+  let proximoResumenPesos = 0;
+  let proximoResumenDolares = 0;
+  let statementPeriod = null;
+
+  for (const period of sortedPeriods) {
+    const periodExpenses = expensesByPeriod[period];
+    const arsTotal = periodExpenses.ARS || 0;
+    const usdTotal = periodExpenses.USD || 0;
+
+    const arsPaid = paidSet.has(`${period}_ARS`);
+    const usdPaid = paidSet.has(`${period}_USD`);
+
+    // If this period has any unpaid amount, use it
+    const unpaidARS = arsPaid ? 0 : arsTotal;
+    const unpaidUSD = usdPaid ? 0 : usdTotal;
+
+    if (unpaidARS > 0 || unpaidUSD > 0) {
+      proximoResumenPesos = unpaidARS;
+      proximoResumenDolares = unpaidUSD;
+      statementPeriod = period;
+      break;
+    }
+  }
+
+  // If no unpaid period found, use current period
+  if (!statementPeriod) {
+    const currentPeriod = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`;
+    const currentExpenses = expensesByPeriod[currentPeriod] || { ARS: 0, USD: 0 };
+    proximoResumenPesos = currentExpenses.ARS || 0;
+    proximoResumenDolares = currentExpenses.USD || 0;
+    statementPeriod = currentPeriod;
+  }
+
+  return {
+    proximoResumenPesos,
+    proximoResumenDolares,
+    promedioMensual,
+    statementPeriod,
+    // Data for the statement that's due now (for due alerts)
+    resumenVencePesos: dueExpenses.ARS || 0,
+    resumenVenceDolares: dueExpenses.USD || 0,
+    resumenVencePagado,
+    resumenVencePeriodo: duePeriod,
+  };
 };
 
 export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, icon, ocultaDelBalance }) => {
@@ -700,6 +794,7 @@ export const addCategory = async ({ nombre, tipo, icon, icon_catalog_id }) => {
 
   if (error) throw error;
   invalidateCache('categories');
+  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -719,6 +814,7 @@ export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_ca
 
   if (error) throw error;
   invalidateCache('categories');
+  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -730,6 +826,7 @@ export const deleteCategory = async (idOrRowIndex) => {
 
   if (error) throw error;
   invalidateCache('categories');
+  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -741,6 +838,7 @@ export const bulkDeleteCategories = async (categoryIds) => {
 
   if (error) throw error;
   invalidateCache('categories');
+  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -838,7 +936,7 @@ export const getIncomes = async (forceRefresh = false) => {
   return result;
 };
 
-export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment }) => {
+export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment, moneda }) => {
   const userId = await getUserId();
 
   // Get account and category IDs - include is_credit_card to check for future transactions
@@ -892,6 +990,10 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
   const today = new Date().toISOString().split('T')[0];
   const isFuture = fecha > today && !account?.is_credit_card;
 
+  // Determinar la moneda original del gasto
+  // Solo guardar si es tarjeta de crédito y se especificó moneda
+  const originalCurrency = account?.is_credit_card && moneda ? moneda : null;
+
   const { data, error } = await supabase
     .from('movements')
     .insert({
@@ -905,6 +1007,7 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
       attachment_url: attachmentUrl,
       attachment_name: attachmentName,
       is_future: isFuture,
+      original_currency: originalCurrency,
     })
     .select()
     .single();
@@ -1040,14 +1143,21 @@ export const updateMovement = async (movement) => {
     attachmentName = null;
   }
 
+  // Redondear monto a 2 decimales para evitar errores de precisión de punto flotante
+  const roundedAmount = typeof movement.monto === 'number'
+    ? Math.round(movement.monto * 100) / 100
+    : movement.monto;
+
   const updatePayload = {
     date: movement.fecha,
-    amount: movement.monto,
+    amount: roundedAmount,
     account_id: accountId,
     category_id: categoryId,
     note: movement.nota || null,
     attachment_url: attachmentUrl,
     attachment_name: attachmentName,
+    // Guardar moneda original si se especifica (para tarjetas de crédito)
+    ...(movement.moneda && { original_currency: movement.moneda }),
   };
 
   const { data, error } = await supabase
@@ -1058,6 +1168,21 @@ export const updateMovement = async (movement) => {
     .single();
 
   if (error) throw error;
+
+  // Si se pidió aplicar a cuotas siguientes
+  if (movement.applyToSubsequent) {
+    try {
+      await updateSubsequentInstallments({
+        ...movement,
+        accountId,
+        categoryId,
+      });
+    } catch (err) {
+      console.error('Error updating subsequent installments:', err);
+      // No lanzar error, el movimiento principal ya se actualizó
+    }
+  }
+
   invalidateCache('movements');
   return { success: true, movement: data };
 };
@@ -1205,9 +1330,11 @@ export const updateSubsequentInstallments = async (movement) => {
     if (category) updateData.category_id = category.id;
   }
 
-  // Handle amount (only if specified)
+  // Handle amount (only if specified) - redondear a 2 decimales
   if (movement.monto !== undefined && movement.monto !== null) {
-    updateData.amount = movement.monto;
+    updateData.amount = typeof movement.monto === 'number'
+      ? Math.round(movement.monto * 100) / 100
+      : movement.monto;
   }
 
   // Handle note
@@ -1765,9 +1892,9 @@ export const getFilteredMovements = async ({ type, startDate, endDate, account, 
 // ============================================
 // INSTALLMENTS (Cuotas)
 // ============================================
-export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, cuenta, categoria, fechaInicio }) => {
+export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, cuenta, categoria, fechaInicio, moneda }) => {
   const userId = await getUserId();
-  
+
   const { data: account } = await supabase
     .from('accounts')
     .select('id')
@@ -1802,11 +1929,11 @@ export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, 
   // Create individual movements for each installment
   const installmentAmount = montoTotal / cuotas;
   const movements = [];
-  
+
   for (let i = 0; i < cuotas; i++) {
     const date = new Date(fechaInicio);
     date.setMonth(date.getMonth() + i);
-    
+
     movements.push({
       user_id: userId,
       type: 'expense',
@@ -1817,7 +1944,9 @@ export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, 
       note: `${descripcion} - Cuota ${i + 1}/${cuotas}`,
       installment_purchase_id: purchase.id,
       installment_number: i + 1,
-      total_installments: cuotas
+      total_installments: cuotas,
+      // Guardar moneda original para tarjetas de crédito
+      original_currency: moneda || null,
     });
   }
 
@@ -2179,6 +2308,92 @@ export const deleteCardStatementAttachment = async ({ accountId, period, field }
       .update(updateData)
       .eq('id', current.id);
   }
+
+  return { success: true };
+};
+
+// ============================================
+// STATEMENT PAYMENTS (Pagos de resúmenes)
+// ============================================
+export const getStatementPayments = async (accountId) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('statement_payments')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('account_id', accountId);
+
+  if (error) throw error;
+
+  // Devolver mapa por período y moneda para acceso rápido
+  // Key: "YYYY-MM_ARS" o "YYYY-MM_USD"
+  const byPeriodCurrency = {};
+  (data || []).forEach(row => {
+    const key = `${row.statement_period}_${row.currency}`;
+    byPeriodCurrency[key] = {
+      id: row.id,
+      amount: parseFloat(row.amount),
+      paymentAccountId: row.payment_account_id,
+      transferId: row.transfer_id,
+      paidAt: row.paid_at,
+    };
+  });
+
+  return byPeriodCurrency;
+};
+
+export const registerStatementPayment = async ({ accountId, statementPeriod, currency, amount, paymentAccountId, transferId }) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('statement_payments')
+    .insert({
+      user_id: userId,
+      account_id: accountId,
+      statement_period: statementPeriod,
+      currency,
+      amount,
+      payment_account_id: paymentAccountId,
+      transfer_id: transferId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Invalidar cache para que próximo resumen se recalcule
+  invalidateCache('accounts');
+  emit(DataEvents.ACCOUNTS_CHANGED);
+
+  return data;
+};
+
+export const cancelStatementPayment = async (paymentId, transferId) => {
+  const userId = await getUserId();
+
+  // Eliminar la transferencia asociada si existe
+  if (transferId) {
+    await supabase
+      .from('transfers')
+      .delete()
+      .eq('id', transferId)
+      .eq('user_id', userId);
+  }
+
+  // Eliminar el registro de pago
+  const { error } = await supabase
+    .from('statement_payments')
+    .delete()
+    .eq('id', paymentId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  invalidateCache('transfers');
+  invalidateCache('accounts');
+  emit(DataEvents.TRANSFERS_CHANGED);
+  emit(DataEvents.ACCOUNTS_CHANGED);
 
   return { success: true };
 };

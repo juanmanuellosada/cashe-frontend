@@ -28,6 +28,7 @@ function EditMovementModal({
     cuenta: '',
     categoria: '',
     nota: '',
+    moneda: 'ARS', // Moneda original del gasto (para tarjetas de crédito)
   });
 
   // Form data for transfer
@@ -96,6 +97,7 @@ function EditMovementModal({
           cuenta: movement.cuenta || '',
           categoria: movement.categoria || '',
           nota: movement.nota || '',
+          moneda: movement.monedaOriginal || 'ARS', // Cargar moneda original del movimiento
         });
       }
       // Reset attachment states
@@ -269,6 +271,13 @@ function EditMovementModal({
   const sortedCategories = useMemo(() => {
     return sortByRecency(currentCategories, recentCategoryIds, 'id');
   }, [currentCategories, recentCategoryIds]);
+
+  // Check if selected account is a credit card
+  const selectedAccount = useMemo(() => {
+    return accounts.find(a => a.nombre === formData.cuenta);
+  }, [accounts, formData.cuenta]);
+
+  const isCreditCard = selectedAccount?.esTarjetaCredito || false;
 
   const isValidIncomeExpense = formData.monto && formData.cuenta && formData.categoria;
   const isValidTransfer = transferData.montoSaliente && transferData.montoEntrante &&
@@ -519,7 +528,7 @@ function EditMovementModal({
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-lg"
                     style={{ color: 'var(--text-secondary)' }}
                   >
-                    $
+                    {formData.moneda === 'USD' ? 'US$' : '$'}
                   </span>
                   <input
                     type="number"
@@ -529,11 +538,40 @@ function EditMovementModal({
                     placeholder="0"
                     min="0"
                     step="0.01"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl text-lg"
+                    className="w-full pl-12 pr-4 py-3 rounded-xl text-lg"
                     style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                   />
                 </div>
               </div>
+
+              {/* Selector de moneda - Solo para tarjetas de crédito y gastos */}
+              {isCreditCard && movement?.tipo === 'gasto' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Moneda
+                  </label>
+                  <div className="flex w-full p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                    {[
+                      { id: 'ARS', label: 'ARS', icon: `${import.meta.env.BASE_URL}icons/catalog/ARS.svg` },
+                      { id: 'USD', label: 'USD', icon: `${import.meta.env.BASE_URL}icons/catalog/USD.svg` },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, moneda: opt.id }))}
+                        className="flex-1 py-2 rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+                        style={{
+                          backgroundColor: formData.moneda === opt.id ? 'var(--bg-elevated)' : 'transparent',
+                          color: formData.moneda === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                        }}
+                      >
+                        <img src={opt.icon} alt={opt.label} className="w-4 h-4 rounded-sm" />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Cuenta */}
               <div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, updateSubsequentInstallments, deleteMovement } from '../services/supabaseApi';
+import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, deleteMovement, getStatementPayments, registerStatementPayment, cancelStatementPayment } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
@@ -28,8 +28,8 @@ function CreditCards() {
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedStatement, setSelectedStatement] = useState(null);
   const [taxAmount, setTaxAmount] = useState('');
-  const [paymentAccount, setPaymentAccount] = useState('');
-  const [paymentCurrency, setPaymentCurrency] = useState('ARS'); // Moneda a pagar
+  const [paymentAccountARS, setPaymentAccountARS] = useState(''); // Cuenta para pagar pesos
+  const [paymentAccountUSD, setPaymentAccountUSD] = useState(''); // Cuenta para pagar dólares
   const [saving, setSaving] = useState(false);
   const [viewingStatement, setViewingStatement] = useState(null); // Para ver detalle de un resumen
 
@@ -38,6 +38,9 @@ function CreditCards() {
   const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
   const [selectedStatementForAttachments, setSelectedStatementForAttachments] = useState(null);
   const [savingAttachment, setSavingAttachment] = useState(false);
+
+  // Estado para pagos de resúmenes
+  const [statementPayments, setStatementPayments] = useState({});
 
   // Estado para editar movimiento
   const [editingMovement, setEditingMovement] = useState(null);
@@ -86,9 +89,20 @@ function CreditCards() {
       setAllExpenses(expenses);
       setAllCategories(categories);
 
-      // Seleccionar primera tarjeta por defecto
-      if (cards.length > 0 && !selectedCard) {
-        setSelectedCard(cards[0]);
+      // Mantener la tarjeta seleccionada actual si existe, sino seleccionar la primera
+      if (cards.length > 0) {
+        if (selectedCard) {
+          // Buscar la tarjeta actual en la nueva lista y actualizarla
+          const currentCard = cards.find(c => c.id === selectedCard.id || c.nombre === selectedCard.nombre);
+          if (currentCard) {
+            setSelectedCard(currentCard);
+          } else {
+            // La tarjeta ya no existe, seleccionar la primera
+            setSelectedCard(cards[0]);
+          }
+        } else {
+          setSelectedCard(cards[0]);
+        }
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -97,14 +111,18 @@ function CreditCards() {
     }
   };
 
-  // Cargar adjuntos cuando cambia la tarjeta seleccionada
+  // Cargar adjuntos y pagos cuando cambia la tarjeta seleccionada
   useEffect(() => {
     if (selectedCard?.id) {
       getCardStatementAttachments(selectedCard.id)
         .then(setStatementAttachments)
         .catch(err => console.error('Error loading statement attachments:', err));
+      getStatementPayments(selectedCard.id)
+        .then(setStatementPayments)
+        .catch(err => console.error('Error loading statement payments:', err));
     } else {
       setStatementAttachments({});
+      setStatementPayments({});
     }
   }, [selectedCard?.id]);
 
@@ -256,6 +274,19 @@ function CreditCards() {
     }
   }, [pendingStatementRefresh, statements]);
 
+  // Actualizar viewingStatement cuando cambian los statements (ej: al agregar un gasto)
+  useEffect(() => {
+    if (viewingStatement && statements.length > 0) {
+      const freshStatement = statements.find(s => s.id === viewingStatement.id);
+      if (freshStatement) {
+        // Solo actualizar si cambió el contenido
+        if (JSON.stringify(freshStatement.items) !== JSON.stringify(viewingStatement.items)) {
+          setViewingStatement(freshStatement);
+        }
+      }
+    }
+  }, [statements]);
+
   // Manejar agregar impuesto de sellos
   const handleAddTax = async () => {
     if (!selectedStatement || !taxAmount || !selectedCard) return;
@@ -292,45 +323,128 @@ function CreditCards() {
 
   // Manejar pago de resumen
   const handlePayStatement = async () => {
-    if (!selectedStatement || !paymentAccount || !selectedCard) return;
-    
-    // El total depende de qué parte estamos pagando
-    const total = paymentCurrency === 'ARS' 
-      ? selectedStatement.totalPesos 
-      : selectedStatement.totalDolares;
-    
-    if (total <= 0) {
-      showError('No se puede realizar el pago', `No hay monto en ${paymentCurrency === 'ARS' ? 'pesos' : 'dólares'} para pagar`);
+    if (!selectedStatement || !selectedCard) return;
+
+    const hasPesos = selectedStatement.totalPesos > 0;
+    const hasDolares = selectedStatement.totalDolares > 0;
+    const hasBoth = hasPesos && hasDolares;
+
+    // Verificar si ya está pagado
+    const isPesosPaid = statementPayments[`${selectedStatement.id}_ARS`];
+    const isDolaresPaid = statementPayments[`${selectedStatement.id}_USD`];
+
+    // Solo pagar lo que no está pagado
+    const needsPayPesos = hasPesos && !isPesosPaid;
+    const needsPayDolares = hasDolares && !isDolaresPaid;
+
+    // Validar que se hayan seleccionado las cuentas necesarias
+    if (needsPayPesos && needsPayDolares) {
+      if (!paymentAccountARS || !paymentAccountUSD) {
+        showError('Seleccionar cuentas', 'Debés seleccionar una cuenta para pesos y otra para dólares');
+        return;
+      }
+    } else if (needsPayPesos && !paymentAccountARS) {
+      showError('Seleccionar cuenta', 'Debés seleccionar una cuenta para pagar');
+      return;
+    } else if (needsPayDolares && !paymentAccountUSD) {
+      showError('Seleccionar cuenta', 'Debés seleccionar una cuenta para pagar');
       return;
     }
-    
+
     try {
       setSaving(true);
-      
-      // Crear transferencia desde la cuenta de pago hacia la tarjeta
       const fecha = format(new Date(), 'yyyy-MM-dd');
-      const notaMoneda = paymentCurrency === 'ARS' ? '(Pesos)' : '(Dólares)';
-      
-      await addTransfer({
-        fecha,
-        cuentaSaliente: paymentAccount,
-        cuentaEntrante: selectedCard.nombre,
-        montoSaliente: total,
-        montoEntrante: total,
-        nota: `Pago resumen ${selectedStatement.monthName} ${notaMoneda}`,
-      });
+
+      // Obtener IDs de cuentas de pago
+      const paymentAccARS = paymentAccountARS ? allAccounts.find(a => a.nombre === paymentAccountARS) : null;
+      const paymentAccUSD = paymentAccountUSD ? allAccounts.find(a => a.nombre === paymentAccountUSD) : null;
+
+      // Crear transferencia de pesos si corresponde
+      if (needsPayPesos && paymentAccountARS) {
+        const transferResult = await addTransfer({
+          fecha,
+          cuentaSaliente: paymentAccountARS,
+          cuentaEntrante: selectedCard.nombre,
+          montoSaliente: selectedStatement.totalPesos,
+          montoEntrante: selectedStatement.totalPesos,
+          nota: `Pago resumen ${selectedStatement.monthName} (Pesos)`,
+        });
+
+        // Registrar el pago
+        await registerStatementPayment({
+          accountId: selectedCard.id,
+          statementPeriod: selectedStatement.id,
+          currency: 'ARS',
+          amount: selectedStatement.totalPesos,
+          paymentAccountId: paymentAccARS?.id,
+          transferId: transferResult?.transfer?.id || null,
+        });
+      }
+
+      // Crear transferencia de dólares si corresponde
+      if (needsPayDolares && paymentAccountUSD) {
+        const transferResult = await addTransfer({
+          fecha,
+          cuentaSaliente: paymentAccountUSD,
+          cuentaEntrante: selectedCard.nombre,
+          montoSaliente: selectedStatement.totalDolares,
+          montoEntrante: selectedStatement.totalDolares,
+          nota: `Pago resumen ${selectedStatement.monthName} (Dólares)`,
+        });
+
+        // Registrar el pago
+        await registerStatementPayment({
+          accountId: selectedCard.id,
+          statementPeriod: selectedStatement.id,
+          currency: 'USD',
+          amount: selectedStatement.totalDolares,
+          paymentAccountId: paymentAccUSD?.id,
+          transferId: transferResult?.transfer?.id || null,
+        });
+      }
 
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.TRANSFERS_CHANGED);
       emit(DataEvents.ACCOUNTS_CHANGED);
 
+      // Recargar los pagos
+      const payments = await getStatementPayments(selectedCard.id);
+      setStatementPayments(payments);
+
       setShowPayModal(false);
-      setPaymentAccount('');
+      setPaymentAccountARS('');
+      setPaymentAccountUSD('');
       setSelectedStatement(null);
       await fetchData();
     } catch (err) {
       console.error('Error paying statement:', err);
       showError('No se pudo registrar el pago del resumen', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Manejar anulación de pago
+  const handleCancelPayment = async (statement, currency) => {
+    if (!selectedCard) return;
+
+    const paymentKey = `${statement.id}_${currency}`;
+    const payment = statementPayments[paymentKey];
+
+    if (!payment) return;
+
+    try {
+      setSaving(true);
+      await cancelStatementPayment(payment.id, payment.transferId);
+
+      // Recargar los pagos
+      const payments = await getStatementPayments(selectedCard.id);
+      setStatementPayments(payments);
+
+      await fetchData();
+    } catch (err) {
+      console.error('Error canceling payment:', err);
+      showError('No se pudo anular el pago', err.message);
     } finally {
       setSaving(false);
     }
@@ -344,9 +458,8 @@ function CreditCards() {
 
   const openPayModal = (statement) => {
     setSelectedStatement(statement);
-    setPaymentAccount('');
-    // Por defecto seleccionar la moneda que tenga saldo
-    setPaymentCurrency(statement.totalPesos > 0 ? 'ARS' : 'USD');
+    setPaymentAccountARS('');
+    setPaymentAccountUSD('');
     setShowPayModal(true);
   };
 
@@ -440,12 +553,8 @@ function CreditCards() {
   // Handler para guardar cambios del movimiento
   const handleSaveMovement = async (updatedMovement) => {
     try {
+      // updateMovement ya maneja applyToSubsequent internamente
       await updateMovement(updatedMovement);
-
-      // Si es cuota y el usuario eligió aplicar a las siguientes
-      if (updatedMovement.applyToSubsequent && updatedMovement.idCompra) {
-        await updateSubsequentInstallments(updatedMovement);
-      }
 
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.EXPENSES_CHANGED);
@@ -458,10 +567,16 @@ function CreditCards() {
         setViewingStatement(prev => {
           if (!prev) return prev;
 
-          // Actualizar el item en la lista
+          // Actualizar el item en la lista (incluyendo monto)
           const updateItems = (items) => items.map(item =>
             item.id === updatedMovement.id
-              ? { ...item, nota: updatedMovement.nota, categoria: updatedMovement.categoria, fecha: updatedMovement.fecha }
+              ? {
+                  ...item,
+                  nota: updatedMovement.nota,
+                  categoria: updatedMovement.categoria,
+                  fecha: updatedMovement.fecha,
+                  monto: updatedMovement.monto,
+                }
               : item
           );
 
@@ -788,7 +903,7 @@ function CreditCards() {
         <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
           Resúmenes
         </h3>
-        
+
         {statements.length === 0 ? (
           <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
             <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -797,9 +912,28 @@ function CreditCards() {
             <p className="text-sm">No hay resúmenes con gastos</p>
           </div>
         ) : (
-          statements.map((statement) => {
+          statements.map((statement, index) => {
             const hasBothCurrencies = statement.totalPesos > 0 && statement.totalDolares > 0;
-            
+            const hasPesos = statement.totalPesos > 0;
+            const hasDolares = statement.totalDolares > 0;
+
+            // Verificar estado de pago
+            const isPesosPaid = !!statementPayments[`${statement.id}_ARS`];
+            const isDolaresPaid = !!statementPayments[`${statement.id}_USD`];
+            const isFullyPaid = (!hasPesos || isPesosPaid) && (!hasDolares || isDolaresPaid);
+            const isPartiallyPaid = (hasPesos && isPesosPaid && hasDolares && !isDolaresPaid) ||
+                                     (hasDolares && isDolaresPaid && hasPesos && !isPesosPaid);
+
+            // El resumen "actual" es el primer resumen no completamente pagado
+            const isActualCurrent = !isFullyPaid && !statement.isFuture &&
+              statements.slice(0, index).every(s => {
+                const sPesosPaid = !!statementPayments[`${s.id}_ARS`];
+                const sDolaresPaid = !!statementPayments[`${s.id}_USD`];
+                const sHasPesos = s.totalPesos > 0;
+                const sHasDolares = s.totalDolares > 0;
+                return (!sHasPesos || sPesosPaid) && (!sHasDolares || sDolaresPaid);
+              });
+
             return (
               <div
                 key={statement.id}
@@ -811,40 +945,58 @@ function CreditCards() {
                 <div
                   className="p-4 flex items-center justify-between"
                   style={{
-                    backgroundColor: statement.isCurrent
-                      ? 'rgba(20, 184, 166, 0.15)'
-                      : statement.isFuture
-                        ? 'rgba(96, 165, 250, 0.1)'
-                        : 'transparent',
+                    backgroundColor: isFullyPaid
+                      ? 'rgba(34, 197, 94, 0.1)'
+                      : isActualCurrent
+                        ? 'rgba(20, 184, 166, 0.15)'
+                        : statement.isFuture
+                          ? 'rgba(96, 165, 250, 0.1)'
+                          : 'transparent',
                   }}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{
-                        backgroundColor: statement.isCurrent
-                          ? 'var(--accent-primary)'
-                          : statement.isFuture
-                            ? 'var(--accent-blue)'
-                            : 'var(--bg-tertiary)',
+                        backgroundColor: isFullyPaid
+                          ? 'var(--accent-green)'
+                          : isActualCurrent
+                            ? 'var(--accent-primary)'
+                            : statement.isFuture
+                              ? 'var(--accent-blue)'
+                              : 'var(--bg-tertiary)',
                       }}
                     >
-                      <svg
-                        className="w-5 h-5"
-                        style={{
-                          color: statement.isCurrent || statement.isFuture ? 'white' : 'var(--text-secondary)',
-                        }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
+                      {isFullyPaid ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          style={{
+                            color: isActualCurrent || statement.isFuture ? 'white' : 'var(--text-secondary)',
+                          }}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <p className="font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
                         {statement.monthName}
-                        {statement.isCurrent && (
+                        {isFullyPaid && (
+                          <span
+                            className="ml-2 px-2 py-0.5 rounded-full text-xs"
+                            style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
+                          >
+                            Pagado
+                          </span>
+                        )}
+                        {isActualCurrent && !isFullyPaid && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
@@ -852,7 +1004,7 @@ function CreditCards() {
                             Actual
                           </span>
                         )}
-                        {statement.isFuture && (
+                        {statement.isFuture && !isFullyPaid && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
@@ -873,13 +1025,28 @@ function CreditCards() {
                             PDF
                           </span>
                         )}
-                        {statementAttachments[statement.id]?.receiptUrl && (
-                          <span
-                            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                            style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)' }}
-                          >
-                            Pagado
-                          </span>
+                        {/* Badges de pago parcial */}
+                        {isPartiallyPaid && (
+                          <>
+                            {isPesosPaid && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5"
+                                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)' }}
+                              >
+                                <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="" className="w-3 h-3" />
+                                ✓
+                              </span>
+                            )}
+                            {isDolaresPaid && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5"
+                                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)' }}
+                              >
+                                <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="" className="w-3 h-3" />
+                                ✓
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -889,19 +1056,28 @@ function CreditCards() {
                     <div className="text-right">
                       {hasBothCurrencies ? (
                         <>
-                          <p className="text-sm font-bold" style={{ color: 'var(--accent-red)' }}>
+                          <p
+                            className="text-sm font-bold flex items-center justify-end gap-1"
+                            style={{ color: isPesosPaid ? 'var(--accent-green)' : 'var(--accent-red)' }}
+                          >
+                            {isPesosPaid && <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                             {formatCurrency(statement.totalPesos, 'ARS')}
                           </p>
-                          <p className="text-sm font-bold" style={{ color: 'var(--accent-green)' }}>
+                          <p
+                            className="text-sm font-bold flex items-center justify-end gap-1"
+                            style={{ color: isDolaresPaid ? 'var(--accent-green)' : 'var(--accent-green)' }}
+                          >
+                            {isDolaresPaid && <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                             {formatCurrency(statement.totalDolares, 'USD')}
                           </p>
                         </>
                       ) : (
                         <p
-                          className="text-lg font-bold"
-                          style={{ color: statement.totalPesos > 0 || statement.totalDolares > 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}
+                          className="text-lg font-bold flex items-center gap-1"
+                          style={{ color: isFullyPaid ? 'var(--accent-green)' : (statement.totalPesos > 0 || statement.totalDolares > 0 ? 'var(--accent-red)' : 'var(--text-secondary)') }}
                         >
-                          {statement.totalPesos > 0 
+                          {isFullyPaid && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {statement.totalPesos > 0
                             ? formatCurrency(statement.totalPesos, 'ARS')
                             : formatCurrency(statement.totalDolares, 'USD')
                           }
@@ -947,16 +1123,29 @@ function CreditCards() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
                   </button>
-                  <button
-                    onClick={() => openPayModal(statement)}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-medium text-white transition-all duration-200 flex items-center justify-center gap-1.5"
-                    style={{ backgroundColor: 'var(--accent-green)' }}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Pagar Resumen
-                  </button>
+                  {isFullyPaid ? (
+                    <button
+                      onClick={() => openPayModal(statement)}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5"
+                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-green)' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Ver Pago
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openPayModal(statement)}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-medium text-white transition-all duration-200 flex items-center justify-center gap-1.5"
+                      style={{ backgroundColor: 'var(--accent-green)' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      Pagar Resumen
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1018,107 +1207,208 @@ function CreditCards() {
       )}
 
       {/* Modal - Pagar Resumen */}
-      {showPayModal && selectedStatement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowPayModal(false)}
-          />
-          <div
-            className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in"
-            style={{ backgroundColor: 'var(--bg-secondary)' }}
-          >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Pagar Resumen
-            </h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Resumen de <span className="font-medium capitalize">{selectedStatement.monthName}</span>
-            </p>
-            
-            {/* Selector de moneda a pagar */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Seleccionar porción a pagar
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setPaymentCurrency('ARS');
-                    setPaymentAccount('');
-                  }}
-                  disabled={selectedStatement.totalPesos <= 0}
-                  className={`flex-1 p-3 rounded-xl text-left transition-all ${
-                    paymentCurrency === 'ARS' ? 'ring-2' : ''
-                  } ${selectedStatement.totalPesos <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+      {showPayModal && selectedStatement && (() => {
+        const hasPesos = selectedStatement.totalPesos > 0;
+        const hasDolares = selectedStatement.totalDolares > 0;
+
+        // Verificar estado de pago
+        const isPesosPaid = !!statementPayments[`${selectedStatement.id}_ARS`];
+        const isDolaresPaid = !!statementPayments[`${selectedStatement.id}_USD`];
+        const isFullyPaid = (!hasPesos || isPesosPaid) && (!hasDolares || isDolaresPaid);
+
+        // Solo mostrar selector para monedas no pagadas
+        const needsPayPesos = hasPesos && !isPesosPaid;
+        const needsPayDolares = hasDolares && !isDolaresPaid;
+
+        // Determinar si el botón de pagar está habilitado
+        const canPay = (needsPayPesos && needsPayDolares)
+          ? (paymentAccountARS && paymentAccountUSD)
+          : (needsPayPesos ? paymentAccountARS : (needsPayDolares ? paymentAccountUSD : false));
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowPayModal(false)}
+            />
+            <div
+              className="relative w-full max-w-sm rounded-2xl p-6 animate-scale-in max-h-[90vh] overflow-y-auto"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                {isFullyPaid ? 'Resumen Pagado' : 'Pagar Resumen'}
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                Resumen de <span className="font-medium capitalize">{selectedStatement.monthName}</span>
+              </p>
+
+              {/* Estado de pago - Pesos */}
+              {hasPesos && (
+                <div
+                  className="p-3 rounded-xl mb-3"
                   style={{
-                    backgroundColor: paymentCurrency === 'ARS' ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-tertiary)',
-                    borderColor: 'var(--accent-primary)',
-                    '--tw-ring-color': 'var(--accent-primary)',
+                    backgroundColor: isPesosPaid
+                      ? 'rgba(34, 197, 94, 0.1)'
+                      : 'rgba(20, 184, 166, 0.1)'
                   }}
                 >
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Pesos</p>
-                  <p className="text-lg font-bold" style={{ color: paymentCurrency === 'ARS' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-5 h-5 rounded-sm" />
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Pesos</span>
+                    </div>
+                    {isPesosPaid ? (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
+                        style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Pagado
+                      </span>
+                    ) : (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)' }}
+                      >
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-lg font-bold" style={{ color: isPesosPaid ? 'var(--accent-green)' : 'var(--accent-primary)' }}>
                     {formatCurrency(selectedStatement.totalPesos, 'ARS')}
                   </p>
-                </button>
-                <button
-                  onClick={() => {
-                    setPaymentCurrency('USD');
-                    setPaymentAccount('');
-                  }}
-                  disabled={selectedStatement.totalDolares <= 0}
-                  className={`flex-1 p-3 rounded-xl text-left transition-all ${
-                    paymentCurrency === 'USD' ? 'ring-2' : ''
-                  } ${selectedStatement.totalDolares <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  {isPesosPaid && (
+                    <button
+                      onClick={() => handleCancelPayment(selectedStatement, 'ARS')}
+                      disabled={saving}
+                      className="mt-2 text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+                      style={{ color: 'var(--accent-red)' }}
+                    >
+                      Anular pago
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Estado de pago - Dólares */}
+              {hasDolares && (
+                <div
+                  className="p-3 rounded-xl mb-4"
                   style={{
-                    backgroundColor: paymentCurrency === 'USD' ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)',
-                    borderColor: 'var(--accent-green)',
-                    '--tw-ring-color': 'var(--accent-green)',
+                    backgroundColor: isDolaresPaid
+                      ? 'rgba(34, 197, 94, 0.1)'
+                      : 'rgba(34, 197, 94, 0.05)'
                   }}
                 >
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Dólares</p>
-                  <p className="text-lg font-bold" style={{ color: paymentCurrency === 'USD' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-5 h-5 rounded-sm" />
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Dólares</span>
+                    </div>
+                    {isDolaresPaid ? (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
+                        style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Pagado
+                      </span>
+                    ) : (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)' }}
+                      >
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-lg font-bold" style={{ color: isDolaresPaid ? 'var(--accent-green)' : 'var(--accent-green)' }}>
                     {formatCurrency(selectedStatement.totalDolares, 'USD')}
                   </p>
+                  {isDolaresPaid && (
+                    <button
+                      onClick={() => handleCancelPayment(selectedStatement, 'USD')}
+                      disabled={saving}
+                      className="mt-2 text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+                      style={{ color: 'var(--accent-red)' }}
+                    >
+                      Anular pago
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Selector de cuenta para pesos - solo si no está pagado */}
+              {needsPayPesos && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                    <span className="flex items-center gap-2">
+                      <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
+                      Pagar pesos desde
+                    </span>
+                  </label>
+                  <Combobox
+                    value={paymentAccountARS}
+                    onChange={(e) => setPaymentAccountARS(e.target.value)}
+                    options={paymentAccountsARS.map(acc => ({
+                      value: acc.nombre,
+                      label: acc.nombre,
+                      icon: acc.icon || null,
+                    }))}
+                    placeholder="Seleccionar cuenta en pesos..."
+                  />
+                </div>
+              )}
+
+              {/* Selector de cuenta para dólares - solo si no está pagado */}
+              {needsPayDolares && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                    <span className="flex items-center gap-2">
+                      <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
+                      Pagar dólares desde
+                    </span>
+                  </label>
+                  <Combobox
+                    value={paymentAccountUSD}
+                    onChange={(e) => setPaymentAccountUSD(e.target.value)}
+                    options={paymentAccountsUSD.map(acc => ({
+                      value: acc.nombre,
+                      label: acc.nombre,
+                      icon: acc.icon || null,
+                    }))}
+                    placeholder="Seleccionar cuenta en dólares..."
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPayModal(false)}
+                  className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                >
+                  {isFullyPaid ? 'Cerrar' : 'Cancelar'}
                 </button>
+                {!isFullyPaid && (
+                  <button
+                    onClick={handlePayStatement}
+                    disabled={saving || !canPay}
+                    className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--accent-green)' }}
+                  >
+                    {saving ? 'Procesando...' : 'Pagar'}
+                  </button>
+                )}
               </div>
             </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Pagar desde cuenta en {paymentCurrency === 'ARS' ? 'pesos' : 'dólares'}
-              </label>
-              <Combobox
-                value={paymentAccount}
-                onChange={setPaymentAccount}
-                options={(paymentCurrency === 'ARS' ? paymentAccountsARS : paymentAccountsUSD).map(acc => ({
-                  value: acc.nombre,
-                  label: acc.nombre,
-                }))}
-                placeholder="Seleccionar cuenta..."
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowPayModal(false)}
-                className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handlePayStatement}
-                disabled={saving || !paymentAccount}
-                className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent-green)' }}
-              >
-                {saving ? 'Procesando...' : 'Pagar'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Vista de detalle del resumen */}
       {viewingStatement && (
@@ -1474,64 +1764,91 @@ function CreditCards() {
           </div>
 
           {/* Acciones en footer */}
-          <div
-            className="px-4 py-4 safe-area-bottom flex gap-2"
-            style={{ backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-subtle)' }}
-          >
-            {/* Botón Agregar Gasto */}
-            <button
-              onClick={handleAddExpenseToStatement}
-              className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
-              style={{ backgroundColor: 'var(--accent-red)', color: 'white' }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-            {/* Botón Impuesto de Sellos */}
-            {!viewingStatement.hasTax && (
-              <button
-                onClick={() => {
-                  openTaxModal(viewingStatement);
-                  setViewingStatement(null);
-                }}
-                className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-yellow)' }}
-                title="Agregar Impuesto de Sellos"
+          {(() => {
+            // Calcular estado de pago del resumen actual
+            const vHasPesos = viewingStatement.totalPesos > 0;
+            const vHasDolares = viewingStatement.totalDolares > 0;
+            const vIsPesosPaid = !!statementPayments[`${viewingStatement.id}_ARS`];
+            const vIsDolaresPaid = !!statementPayments[`${viewingStatement.id}_USD`];
+            const vIsFullyPaid = (!vHasPesos || vIsPesosPaid) && (!vHasDolares || vIsDolaresPaid);
+
+            return (
+              <div
+                className="px-4 py-4 safe-area-bottom flex gap-2"
+                style={{ backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-subtle)' }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                </svg>
-              </button>
-            )}
-            {/* Botón Adjuntos */}
-            <button
-              onClick={() => {
-                openAttachmentsModal(viewingStatement);
-              }}
-              className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
-              title="Adjuntos"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-            </button>
-            {/* Botón Pagar Resumen */}
-            <button
-              onClick={() => {
-                openPayModal(viewingStatement);
-                setViewingStatement(null);
-              }}
-              className="flex-1 py-3 rounded-xl font-medium text-white transition-all duration-200 flex items-center justify-center gap-2"
-              style={{ backgroundColor: 'var(--accent-green)' }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Pagar
-            </button>
-          </div>
+                {/* Botón Agregar Gasto */}
+                <button
+                  onClick={handleAddExpenseToStatement}
+                  className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: 'var(--accent-red)', color: 'white' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                {/* Botón Impuesto de Sellos */}
+                {!viewingStatement.hasTax && (
+                  <button
+                    onClick={() => {
+                      openTaxModal(viewingStatement);
+                      setViewingStatement(null);
+                    }}
+                    className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-yellow)' }}
+                    title="Agregar Impuesto de Sellos"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                    </svg>
+                  </button>
+                )}
+                {/* Botón Adjuntos */}
+                <button
+                  onClick={() => {
+                    openAttachmentsModal(viewingStatement);
+                  }}
+                  className="py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
+                  title="Adjuntos"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                {/* Botón Pagar Resumen / Ver Pago */}
+                {vIsFullyPaid ? (
+                  <button
+                    onClick={() => {
+                      openPayModal(viewingStatement);
+                      setViewingStatement(null);
+                    }}
+                    className="flex-1 py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-green)' }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Pagado
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      openPayModal(viewingStatement);
+                      setViewingStatement(null);
+                    }}
+                    className="flex-1 py-3 rounded-xl font-medium text-white transition-all duration-200 flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'var(--accent-green)' }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Pagar
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
       {/* Modal - Adjuntos del Resumen */}

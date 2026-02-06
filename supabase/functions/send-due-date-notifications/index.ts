@@ -269,61 +269,99 @@ async function processUserCards(
 // CALCULATE STATEMENT AMOUNT
 // ============================================
 async function calculateStatementAmount(card: CreditCard): Promise<{ ars: number; usd: number }> {
-  // The current billing period goes from the previous closing_day to the current closing_day
-  // Since we're notifying the day before due_day, we need to calculate the previous period
+  // We need to calculate the statement that is due tomorrow
+  // The statement period is determined by the closing_day
+  // Example: closing_day=20, due_day=6
+  // - Statement closing on Jan 20 is due on Feb 6
+  // - That statement contains expenses from Dec 20 to Jan 19 (before closing)
 
-  const now = new Date()
-  const currentMonth = now.getMonth() + 1
-  const currentYear = now.getFullYear()
   const closingDay = card.closing_day || 1
 
-  // Calculate the date range for the current statement period
-  // If today is before closing_day, the statement period is from last month's closing_day to this month's closing_day
-  // If today is after closing_day, the statement period is from this month's closing_day to next month's closing_day
-
-  let periodStart: string
-  let periodEnd: string
-
-  if (now.getDate() <= closingDay) {
-    // Current period: last month's closing to this month's closing
-    const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1
-    const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear
-    periodStart = `${lastMonthYear}-${lastMonth.toString().padStart(2, '0')}-${closingDay.toString().padStart(2, '0')}`
-    periodEnd = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${closingDay.toString().padStart(2, '0')}`
-  } else {
-    // Current period: this month's closing to next month's closing
-    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
-    const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear
-    periodStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${closingDay.toString().padStart(2, '0')}`
-    periodEnd = `${nextMonthYear}-${nextMonth.toString().padStart(2, '0')}-${closingDay.toString().padStart(2, '0')}`
-  }
-
-  // Get all expenses for this card in the period, grouped by currency
+  // Get all expenses for this card
   const { data: expenses, error } = await supabase
     .from('movements')
-    .select('amount, accounts!inner(currency)')
+    .select('amount, date, original_currency')
     .eq('account_id', card.id)
     .eq('type', 'expense')
-    .gte('date', periodStart)
-    .lt('date', periodEnd)
 
   if (error) {
     console.error(`Error fetching expenses for card ${card.id}:`, error)
     return { ars: 0, usd: 0 }
   }
 
-  // Sum amounts by currency
+  if (!expenses || expenses.length === 0) {
+    return { ars: 0, usd: 0 }
+  }
+
+  // Calculate the statement period that is due tomorrow
+  // Due tomorrow means the statement closed recently (last month or so)
+  const now = new Date()
+  const currentDay = now.getDate()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+
+  // The statement period key uses the format "YYYY-MM" where MM is 1-indexed
+  // If we're before or at the closing day, the "current" statement period is this month
+  // If we're after the closing day, the "current" statement period is next month
+  // But we want the statement that VENCES tomorrow, which closed BEFORE now
+
+  let statementYear = currentYear
+  let statementMonth = currentMonth // 0-indexed
+
+  // The statement that's due tomorrow closed on the closing day of the previous period
+  // We need to go back one period from "current"
+  if (currentDay >= closingDay) {
+    // Current period is next month, so the one due tomorrow is this month
+    statementMonth = currentMonth
+  } else {
+    // Current period is this month, so the one due tomorrow is last month
+    statementMonth = currentMonth - 1
+    if (statementMonth < 0) {
+      statementMonth = 11
+      statementYear -= 1
+    }
+  }
+
+  // Convert to 1-indexed with padding for the statement period key
+  const periodKey = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`
+
+  console.log(`Calculating statement amount for ${card.name}, period: ${periodKey}, closing_day: ${closingDay}`)
+
+  // Function to get statement period for a date (same logic as frontend)
+  const getStatementPeriod = (dateStr: string): string => {
+    const d = new Date(dateStr)
+    const day = d.getDate()
+    let year = d.getFullYear()
+    let month = d.getMonth()
+
+    if (day >= closingDay) {
+      month += 1
+      if (month > 11) {
+        month = 0
+        year += 1
+      }
+    }
+    return `${year}-${String(month + 1).padStart(2, '0')}`
+  }
+
+  // Sum amounts by currency for the target period
   let totalARS = 0
   let totalUSD = 0
 
-  for (const expense of (expenses || [])) {
-    const currency = expense.accounts?.currency || 'ARS'
-    if (currency === 'ARS') {
-      totalARS += Number(expense.amount) || 0
-    } else {
-      totalUSD += Number(expense.amount) || 0
+  for (const expense of expenses) {
+    const expensePeriod = getStatementPeriod(expense.date)
+    if (expensePeriod === periodKey) {
+      const amount = Number(expense.amount) || 0
+      // Use original_currency to determine if expense is in USD or ARS
+      if (expense.original_currency === 'USD') {
+        totalUSD += amount
+      } else {
+        totalARS += amount
+      }
     }
   }
+
+  console.log(`Statement ${periodKey} for ${card.name}: ARS=${totalARS}, USD=${totalUSD}`)
 
   return { ars: totalARS, usd: totalUSD }
 }
