@@ -114,8 +114,9 @@ export const INTENT_PATTERNS = {
 
 // Patrón para extraer montos (soporta formatos argentinos)
 export const AMOUNT_PATTERNS = {
-  // Formato: $1.500,50 o $1500.50 o 1500 o 1,500.50
-  standard: /(?:\$|u\$s?|usd?\s*)?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/gi,
+  // Formato mejorado: prioriza números completos sin separadores
+  // Ejemplos: 38400, $1.500,50, 1500.50, 1,500.50
+  standard: /(?:\$|u\$s?|usd?\s*)?\s*(\d{4,}|\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d{1,3}(?:[.,]\d{1,2}))/gi,
 
   // Formato: 50k, 150 lucas, 2 palos
   withMultiplier: /(\d+(?:[.,]\d+)?)\s*(k|lucas?|mil|palos?|mill[oó]n(?:es)?)/gi,

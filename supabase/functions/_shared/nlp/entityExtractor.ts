@@ -34,8 +34,8 @@ export function extractEntities(
 
   // IMPORTANTE: Guardar el mensaje original completo como nota preliminar
   // Esto permite que las reglas automáticas evalúen contra el mensaje completo
-  // Más adelante se puede refinar con extractNote() o extractRemainingAsNote()
-  entities.note = text.trim();
+  // Se refinará al final si es necesario
+  const originalText = text.trim();
 
   // Extraer monto
   const amount = extractAmount(text);
@@ -98,8 +98,9 @@ export function extractEntities(
       firstInstallmentDate: entities.firstInstallmentDate,
       date: entities.date,
     });
-    if (remainingNote) {
-      entities.note = remainingNote;
+    // Usar la nota refinada si existe, sino usar el mensaje original completo
+    // Esto asegura que las reglas automáticas siempre tengan contexto
+    entities.note = remainingNote || originalText;
     }
   }
 
@@ -597,10 +598,13 @@ export function extractCategoryReference(
 ): string | null {
   const normalized = normalizeText(text);
 
-  // Patrones para detectar categoría
+  // Patrones para detectar categoría (mejorados para capturar palabras sueltas)
   const categoryPatterns = [
-    /\b(?:en|de|para|categoria)\s+([a-záéíóúñ\s]+?)(?:\s+(?:con|en|ayer|hoy|\d)|$)/i,
-    /\bde\s+([a-záéíóúñ]+)/i, // "pagué de luz"
+    // "en Supermercado", "de Comida", "para Transporte"
+    // Captura solo la primera palabra o máximo dos palabras juntas
+    /\b(?:en|de|para|categoria)\s+([a-záéíóúñ]{3,}(?:\s+[a-záéíóúñ]{3,})?)\b/i,
+    // "pagué de luz" - formato más corto
+    /\bde\s+([a-záéíóúñ]{3,})\b/i,
   ];
 
   for (const pattern of categoryPatterns) {
