@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { getRecentUsage } from '../services/supabaseApi';
 
 /**
- * Hook para obtener los IDs de cuentas y categorías usadas recientemente.
- * Se usa para ordenar los selectores en los formularios de movimientos.
+ * Hook para obtener los IDs de cuentas y categorías ordenados por frecuencia de uso.
+ * Se usa para mostrar las más usadas primero en los selectores de los formularios.
  */
 export const useRecentUsage = () => {
   const [recentAccountIds, setRecentAccountIds] = useState([]);

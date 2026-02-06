@@ -113,55 +113,52 @@ const getUserId = async () => {
 // ============================================
 // RECENT USAGE TRACKING
 // ============================================
-// Obtiene las cuentas y categorías usadas recientemente para ordenar selectores
+// Obtiene las cuentas y categorías más usadas para ordenar selectores
+// Ordena por FRECUENCIA de uso (cantidad de veces), no por última fecha
 export const getRecentUsage = () => withDeduplication('recentUsage', async () => {
   const userId = await getUserId();
 
-  // Obtener últimos 50 movimientos (cubren ~1-2 meses de uso activo)
-  const { data: recentMovements } = await supabase
+  // Obtener TODOS los movimientos para contar frecuencia de uso
+  const { data: allMovements } = await supabase
     .from('movements')
-    .select('account_id, category_id, date')
-    .eq('user_id', userId)
-    .order('date', { ascending: false })
-    .limit(50);
+    .select('account_id, category_id')
+    .eq('user_id', userId);
 
-  // Obtener últimas 20 transferencias
-  const { data: recentTransfers } = await supabase
+  // Obtener TODAS las transferencias
+  const { data: allTransfers } = await supabase
     .from('transfers')
-    .select('from_account_id, to_account_id, date')
-    .eq('user_id', userId)
-    .order('date', { ascending: false })
-    .limit(20);
+    .select('from_account_id, to_account_id')
+    .eq('user_id', userId);
 
-  // Construir mapa de última fecha de uso por account_id
-  const accountLastUsed = new Map();
-  const categoryLastUsed = new Map();
+  // Contar frecuencia de uso por account_id y category_id
+  const accountUsageCount = new Map();
+  const categoryUsageCount = new Map();
 
-  (recentMovements || []).forEach(m => {
-    if (m.account_id && !accountLastUsed.has(m.account_id)) {
-      accountLastUsed.set(m.account_id, m.date);
+  (allMovements || []).forEach(m => {
+    if (m.account_id) {
+      accountUsageCount.set(m.account_id, (accountUsageCount.get(m.account_id) || 0) + 1);
     }
-    if (m.category_id && !categoryLastUsed.has(m.category_id)) {
-      categoryLastUsed.set(m.category_id, m.date);
+    if (m.category_id) {
+      categoryUsageCount.set(m.category_id, (categoryUsageCount.get(m.category_id) || 0) + 1);
     }
   });
 
-  (recentTransfers || []).forEach(t => {
-    if (t.from_account_id && !accountLastUsed.has(t.from_account_id)) {
-      accountLastUsed.set(t.from_account_id, t.date);
+  (allTransfers || []).forEach(t => {
+    if (t.from_account_id) {
+      accountUsageCount.set(t.from_account_id, (accountUsageCount.get(t.from_account_id) || 0) + 1);
     }
-    if (t.to_account_id && !accountLastUsed.has(t.to_account_id)) {
-      accountLastUsed.set(t.to_account_id, t.date);
+    if (t.to_account_id) {
+      accountUsageCount.set(t.to_account_id, (accountUsageCount.get(t.to_account_id) || 0) + 1);
     }
   });
 
-  // Convertir a arrays ordenados (más reciente primero)
-  const recentAccountIds = [...accountLastUsed.entries()]
-    .sort((a, b) => b[1].localeCompare(a[1]))
+  // Convertir a arrays ordenados por frecuencia (más usados primero)
+  const recentAccountIds = [...accountUsageCount.entries()]
+    .sort((a, b) => b[1] - a[1])
     .map(([id]) => id);
 
-  const recentCategoryIds = [...categoryLastUsed.entries()]
-    .sort((a, b) => b[1].localeCompare(a[1]))
+  const recentCategoryIds = [...categoryUsageCount.entries()]
+    .sort((a, b) => b[1] - a[1])
     .map(([id]) => id);
 
   const result = { recentAccountIds, recentCategoryIds };
