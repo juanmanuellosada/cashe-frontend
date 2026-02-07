@@ -77,6 +77,7 @@ export interface ParsedEntities {
   toAccountId?: string;
   date?: string; // formato ISO: YYYY-MM-DD
   note?: string;
+  originalMessage?: string; // Mensaje original completo (para auto-reglas)
   installments?: number;
   firstInstallmentDate?: string; // fecha de primera cuota (YYYY-MM-DD)
   queryType?: "total" | "categoria" | "cuenta";

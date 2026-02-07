@@ -67,7 +67,7 @@ export function buildConfirmationPreview(
     cuenta_origen: getDisplayName("account", entities.fromAccountId, context) || "-",
     cuenta_destino: getDisplayName("account", entities.toAccountId, context) || "-",
     fecha: entities.date ? formatDateDisplay(entities.date) : "Hoy",
-    nota: entities.note || "-",
+    nota: entities.note || "",
     resumen: resumenLabel,
   };
 
@@ -113,7 +113,14 @@ export function buildConfirmationPreview(
       return "";
   }
 
-  return interpolate(template, values);
+  let result = interpolate(template, values);
+
+  // Si no hay nota, remover la línea completa de "📝 Nota:"
+  if (!entities.note || entities.note.trim() === "") {
+    result = result.replace(/📝 Nota:.*\n?/g, '');
+  }
+
+  return result;
 }
 
 /**
@@ -168,9 +175,21 @@ export function buildConfirmationMessage(
 
   const buttons: MessageButton[] = [
     { text: "✅ Confirmar", callbackData: "confirm_yes", id: "confirm_yes" },
-    { text: "✏️ Editar", callbackData: "confirm_edit", id: "confirm_edit" },
-    { text: "❌ Cancelar", callbackData: "confirm_cancel", id: "confirm_cancel" },
   ];
+
+  // Si no hay nota, agregar botón para añadir una
+  if (!entities.note || entities.note.trim() === "") {
+    buttons.push({
+      text: "📝 Agregar nota",
+      callbackData: "edit_note",
+      id: "edit_note",
+    });
+  }
+
+  buttons.push(
+    { text: "✏️ Editar", callbackData: "confirm_edit", id: "confirm_edit" },
+    { text: "❌ Cancelar", callbackData: "confirm_cancel", id: "confirm_cancel" }
+  );
 
   return { message, buttons };
 }

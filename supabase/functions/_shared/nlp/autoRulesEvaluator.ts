@@ -60,12 +60,14 @@ export async function evaluateAutoRules(
   const type = intent === "REGISTRAR_GASTO" ? "expense" : "income";
 
   // Construir contexto para evaluación
-  const note = entities.note || "";
+  // Usar originalMessage para evaluar las reglas (aunque la nota esté vacía)
+  // Esto permite que las reglas funcionen sin llenar la nota del movimiento
+  const note = entities.originalMessage || entities.note || "";
   const amount = entities.amount || 0;
   const accountId = entities.accountId || "";
 
   console.log(`[AutoRules] Evaluating ${rules.length} rules with context:`, {
-    note,
+    note: note.substring(0, 50) + (note.length > 50 ? '...' : ''),
     amount,
     accountId,
     type,
@@ -80,18 +82,27 @@ export async function evaluateAutoRules(
         const noteLC = note.toLowerCase();
         const valueLC = value.toLowerCase();
 
+        let result = false;
         switch (operator) {
           case "contains":
-            return noteLC.includes(valueLC);
+            result = noteLC.includes(valueLC);
+            break;
           case "equals":
-            return noteLC === valueLC;
+            result = noteLC === valueLC;
+            break;
           case "starts_with":
-            return noteLC.startsWith(valueLC);
+            result = noteLC.startsWith(valueLC);
+            break;
           case "ends_with":
-            return noteLC.endsWith(valueLC);
+            result = noteLC.endsWith(valueLC);
+            break;
           default:
-            return false;
+            result = false;
         }
+
+        // Log detallado para debug
+        console.log(`[AutoRules] Condition check: note "${noteLC}" ${operator} "${valueLC}" = ${result}`);
+        return result;
       }
 
       case "amount": {
@@ -130,6 +141,8 @@ export async function evaluateAutoRules(
   for (const rule of rules) {
     if (!rule.conditions || rule.conditions.length === 0) continue;
 
+    console.log(`[AutoRules] Evaluating rule: ${rule.name} (priority: ${rule.priority}, logic: ${rule.logic_operator})`);
+
     const conditionResults = rule.conditions.map(evaluateCondition);
     const logicOp = rule.logic_operator || "AND";
 
@@ -138,8 +151,10 @@ export async function evaluateAutoRules(
         ? conditionResults.every(Boolean)
         : conditionResults.some(Boolean);
 
+    console.log(`[AutoRules] Rule "${rule.name}" result: ${ruleMatches} (conditions: ${conditionResults.join(', ')})`);
+
     if (ruleMatches) {
-      console.log(`[AutoRules] Rule matched: ${rule.name}`);
+      console.log(`[AutoRules] ✅ Rule matched: ${rule.name}`);
 
       // Construir objeto de sugerencias
       const suggestion: AutoRuleSuggestion = {

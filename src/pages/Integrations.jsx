@@ -2,8 +2,43 @@ import WhatsAppLinkSection from '../components/integrations/WhatsAppLinkSection'
 import TelegramLinkSection from '../components/integrations/TelegramLinkSection';
 import PushNotificationSection from '../components/integrations/PushNotificationSection';
 import NotificationPreferencesSection from '../components/integrations/NotificationPreferencesSection';
+import CardReminderSection from '../components/integrations/CardReminderSection';
+import { useState, useEffect } from 'react';
+import { getUserSettings, updateUserSettings } from '../services/supabaseApi';
+import { useError } from '../contexts/ErrorContext';
 
 function Integrations() {
+  const { showError } = useError();
+  const [userSettings, setUserSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserSettings();
+  }, []);
+
+  const loadUserSettings = async () => {
+    try {
+      setSettingsLoading(true);
+      const settings = await getUserSettings();
+      setUserSettings(settings);
+    } catch (err) {
+      console.error('Error loading user settings:', err);
+      showError('Error al cargar configuración', err.message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleUpdateSettings = async (updates) => {
+    try {
+      const updated = await updateUserSettings(updates);
+      setUserSettings(updated);
+    } catch (err) {
+      showError('Error al guardar configuración', err.message);
+      throw err;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -66,6 +101,13 @@ function Integrations() {
 
       {/* Card Due Date Notifications */}
       <NotificationPreferencesSection />
+
+      {/* Card Monthly Reminder - Update closing/due dates */}
+      <CardReminderSection
+        settings={userSettings}
+        onUpdate={handleUpdateSettings}
+        loading={settingsLoading}
+      />
 
       {/* Integrations list */}
       <div className="space-y-4">

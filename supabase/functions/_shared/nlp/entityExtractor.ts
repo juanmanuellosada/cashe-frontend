@@ -88,12 +88,12 @@ export function extractEntities(
   const explicitNote = extractNote(text);
   if (explicitNote) {
     entities.note = explicitNote;
-  } else {
-    // SIMPLIFICADO: Usar siempre el mensaje original completo como nota
-    // Esto garantiza que las auto-reglas tengan el máximo contexto para evaluar
-    // El mensaje original contiene toda la información necesaria (monto, categoría, cuenta, etc.)
-    entities.note = originalText;
   }
+  // Si no hay nota explícita, dejar entities.note como undefined
+  // El usuario puede agregar nota desde el flujo de confirmación
+
+  // Guardar el mensaje original en un campo separado para que las auto-reglas puedan usarlo
+  entities.originalMessage = originalText;
 
   // Para consultas, extraer límite
   if (intent === "ULTIMOS_MOVIMIENTOS") {

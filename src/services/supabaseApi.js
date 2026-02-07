@@ -4648,6 +4648,25 @@ export const reorderAutoRules = async (rules) => {
 };
 
 /**
+ * Generar todas las reglas automáticas para el usuario actual
+ * Crea reglas para todas las categorías y cuentas con variaciones comunes
+ */
+export const generateAllAutoRules = async () => {
+  const userId = await getUserId();
+
+  // Llamar a la función SQL que genera todas las reglas
+  const { data, error } = await supabase.rpc('generate_auto_rules_for_user_v2', {
+    p_user_id: userId
+  });
+
+  if (error) throw error;
+
+  invalidateCache('autoRules');
+  emit(DataEvents.RULES_CHANGED);
+  return { success: true, rulesCreated: data?.[0]?.generate_auto_rules_for_user_v2 || 0 };
+};
+
+/**
  * Evaluar reglas automáticas contra datos de un movimiento
  * Retorna la primera regla que matchea (por prioridad) o null
  *
@@ -4758,4 +4777,70 @@ export const evaluateAutoRules = async ({ note = '', amount = 0, accountId = '',
   }
 
   return null;
+};
+
+// ============================================
+// USER SETTINGS & NOTIFICATION PREFERENCES
+// ============================================
+
+/**
+ * Obtener configuración del usuario (incluyendo preferencias de notificación)
+ */
+export const getUserSettings = async () => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    // Si no existe, crear settings por defecto
+    if (error.code === 'PGRST116') {
+      const { data: newSettings, error: createError } = await supabase
+        .from('user_settings')
+        .insert({
+          user_id: userId,
+          default_currency: 'ARS',
+          exchange_rate: 1000,
+          card_reminder_enabled: true,
+          card_reminder_whatsapp: true,
+          card_reminder_telegram: true,
+          card_reminder_day: 10,
+          card_reminder_hour: 9,
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      return newSettings;
+    }
+    throw error;
+  }
+
+  return data;
+};
+
+/**
+ * Actualizar configuración del usuario
+ */
+export const updateUserSettings = async (settings) => {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update({
+      ...settings,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Invalidar cache si existe
+  invalidateCache('userSettings');
+  return data;
 };

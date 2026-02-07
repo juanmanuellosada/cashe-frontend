@@ -538,12 +538,12 @@ async function processNewMessage(
   console.log(`[NLP] Needs disambiguation: ${needsDisambiguation}, field: ${disambiguationField}`);
 
   // 6.5. Evaluar reglas automáticas si faltan campos (categoría o cuenta)
-  // Solo evaluar si es un intent de escritura y hay nota extraída
-  if (isWriteIntent(finalIntent) && (resolved.note || entities.note)) {
+  // Usar originalMessage para que las reglas funcionen aunque la nota esté vacía
+  if (isWriteIntent(finalIntent) && entities.originalMessage) {
     const ruleSuggestion = await evaluateAutoRules(
       supabase,
       userId,
-      { ...resolved, note: resolved.note || entities.note || "" },
+      { ...resolved, originalMessage: entities.originalMessage },
       finalIntent
     );
 

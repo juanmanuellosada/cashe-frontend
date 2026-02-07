@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Plus, Bot, Sparkles, CheckSquare, X, Trash2 } from 'lucide-react';
 import { useAutoRules } from '../hooks/useAutoRules';
 import { useError } from '../contexts/ErrorContext';
-import { getAccounts, getCategories, createAutoRule, updateAutoRule, deleteAutoRule, toggleAutoRule } from '../services/supabaseApi';
+import { getAccounts, getCategories, createAutoRule, updateAutoRule, deleteAutoRule, toggleAutoRule, generateAllAutoRules } from '../services/supabaseApi';
 import RuleFormModal from '../components/rules/RuleFormModal';
 import RuleMobileCard from '../components/rules/RuleMobileCard';
 import ConfirmModal from '../components/ConfirmModal';
@@ -18,6 +18,7 @@ function AutoRules() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Multi-select state
@@ -98,6 +99,20 @@ function AutoRules() {
     }
   };
 
+  const handleGenerateAllRules = async () => {
+    try {
+      setGenerating(true);
+      const result = await generateAllAutoRules();
+      await refetch();
+      // Mostrar toast de éxito (opcional)
+      console.log(`✅ ${result.rulesCreated} reglas generadas exitosamente`);
+    } catch (err) {
+      showError('Error al generar reglas', err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // Multi-select handlers
   const toggleSelectionMode = () => {
     setSelectionMode(!selectionMode);
@@ -153,7 +168,7 @@ function AutoRules() {
   // Empty state
   const renderEmptyState = () => (
     <div
-      className="rounded-2xl p-8 text-center"
+      className="rounded-2xl p-8 text-center max-w-2xl mx-auto"
       style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
       <div
@@ -164,21 +179,58 @@ function AutoRules() {
       </div>
 
       <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-        No tenés reglas automáticas
+        ¿Qué son las reglas automáticas?
       </h3>
-      <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
-        Creá reglas para categorizar tus movimientos automáticamente.
-        Por ejemplo: "Si la nota contiene 'spotify' → Categoría: Entretenimiento"
+
+      <p className="text-sm mb-4 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+        Las reglas automáticas te permiten categorizar tus movimientos de forma inteligente,
+        tanto en la app web como en el <strong>bot de WhatsApp/Telegram</strong>.
       </p>
 
-      <button
-        onClick={() => handleOpenModal()}
-        className="px-6 py-3 rounded-xl font-medium text-white transition-all inline-flex items-center gap-2"
-        style={{ backgroundColor: 'var(--accent-primary)' }}
-      >
-        <Plus className="w-5 h-5" />
-        Crear primera regla
-      </button>
+      <div className="bg-opacity-50 rounded-xl p-4 mb-6 text-left max-w-md mx-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+        <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Por ejemplo:</strong>
+        </p>
+        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+          • Si la nota contiene "super" → 🛒 Supermercado<br />
+          • Si la nota contiene "galicia" → 🏦 Galicia Pesos<br />
+          • Si la nota contiene "spotify" → 📱 Servicios
+        </p>
+      </div>
+
+      <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+        Cuando usás el bot, estas reglas ayudan a detectar automáticamente
+        la categoría y cuenta correcta para cada movimiento.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          onClick={handleGenerateAllRules}
+          disabled={generating}
+          className="px-6 py-3 rounded-xl font-medium text-white transition-all inline-flex items-center justify-center gap-2"
+          style={{
+            backgroundColor: generating ? 'var(--text-tertiary)' : 'var(--accent-primary)',
+            opacity: generating ? 0.6 : 1,
+            cursor: generating ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <Sparkles className="w-5 h-5" />
+          {generating ? 'Generando...' : 'Generar reglas automáticamente'}
+        </button>
+
+        <button
+          onClick={() => handleOpenModal()}
+          className="px-6 py-3 rounded-xl font-medium transition-all inline-flex items-center justify-center gap-2"
+          style={{
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-medium)',
+          }}
+        >
+          <Plus className="w-5 h-5" />
+          Crear regla manualmente
+        </button>
+      </div>
     </div>
   );
 
