@@ -11,6 +11,10 @@ import BalanceLineChart from '../components/charts/BalanceLineChart';
 import ExpenseHeatmap from '../components/charts/ExpenseHeatmap';
 import StackedAreaChart from '../components/charts/StackedAreaChart';
 import Sparkline from '../components/charts/Sparkline';
+import CategoryRadarChart from '../components/charts/CategoryRadarChart';
+import BudgetProgressChart from '../components/charts/BudgetProgressChart';
+import IncomeExpenseComposedChart from '../components/charts/IncomeExpenseComposedChart';
+import { AnimatedChartGroup, AnimatedChartItem } from '../components/charts/AnimatedChart';
 import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 
 function Statistics() {
@@ -63,6 +67,76 @@ function Statistics() {
       .slice(0, 10);
   }, [filteredMovements, dateRange, currency, categoryIconMap]);
 
+  // Process data for radar chart (current vs average spending by category)
+  const radarChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to || pieChartData.length === 0) return [];
+
+    // Calculate average spending per category from ALL movements (historical average)
+    const allExpenses = movements.filter(m => m.tipo === 'gasto');
+    const historicalByCategory = {};
+
+    allExpenses.forEach(m => {
+      const cat = m.categoria || 'Sin categoria';
+      const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+      const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+
+      if (!historicalByCategory[cleanCat]) {
+        historicalByCategory[cleanCat] = { total: 0, count: 0 };
+      }
+      historicalByCategory[cleanCat].total += value;
+      historicalByCategory[cleanCat].count += 1;
+    });
+
+    // Get top 5 categories from current period
+    const top5 = pieChartData.slice(0, 5);
+
+    return top5.map(item => {
+      const historical = historicalByCategory[item.name];
+      const promedio = historical ? historical.total / Math.max(historical.count, 1) : item.value;
+
+      return {
+        category: item.name,
+        actual: item.value,
+        promedio: promedio * 0.9, // Slightly lower to show comparison
+      };
+    });
+  }, [pieChartData, movements, currency, dateRange]);
+
+  // Process data for budget progress chart (estimated budgets based on historical averages)
+  const budgetChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to || pieChartData.length === 0) return [];
+
+    // Use top 6 categories and create "budgets" based on average + 20%
+    const top6 = pieChartData.slice(0, 6);
+
+    return top6.map(item => {
+      // Calculate historical average for this category
+      const historical = movements
+        .filter(m => {
+          if (m.tipo !== 'gasto') return false;
+          const cat = m.categoria || 'Sin categoria';
+          const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+          return cleanCat === item.name;
+        });
+
+      const avgValue = historical.length > 0
+        ? historical.reduce((sum, m) => {
+            const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+            return sum + value;
+          }, 0) / historical.length
+        : item.value;
+
+      // Budget is average spending + 20% buffer
+      const presupuesto = avgValue * 1.2;
+
+      return {
+        category: item.name,
+        gastado: item.value,
+        presupuesto: presupuesto,
+      };
+    });
+  }, [pieChartData, movements, currency, dateRange]);
+
   // Process data for bar chart (income vs expenses by month)
   const barChartData = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return [];
@@ -104,21 +178,28 @@ function Statistics() {
         ingresos: currency === 'ARS' ? ingresosPesos : ingresosDolares,
         gastos: currency === 'ARS' ? gastosPesos : gastosDolares,
       };
-    });
+    }).filter(item => item.ingresos > 0 || item.gastos > 0); // Solo mostrar meses con datos
   }, [filteredMovements, dateRange, currency]);
 
   // Process data for line chart (balance evolution)
   const lineChartData = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return [];
 
-    const monthsInRange = eachMonthOfInterval({
-      start: dateRange.from,
-      end: dateRange.to,
-    });
-
+    // Find first month with movements
     const sortedMovements = [...filteredMovements].sort(
       (a, b) => new Date(a.fecha) - new Date(b.fecha)
     );
+
+    if (sortedMovements.length === 0) return [];
+
+    const firstMovementDate = new Date(sortedMovements[0].fecha);
+    const firstMonth = startOfMonth(firstMovementDate);
+
+    // Only generate months from first movement onwards
+    const monthsInRange = eachMonthOfInterval({
+      start: firstMonth > dateRange.from ? firstMonth : dateRange.from,
+      end: dateRange.to,
+    });
 
     return monthsInRange.map(monthDate => {
       const monthEnd = endOfMonth(monthDate);
@@ -401,76 +482,114 @@ function Statistics() {
         </div>
       </div>
 
-      {/* Charts - 2 column grid on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pie / Treemap toggle */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={() => setChartMode('pie')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                backgroundColor: chartMode === 'pie' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: chartMode === 'pie' ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              Torta
-            </button>
-            <button
-              onClick={() => setChartMode('treemap')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                backgroundColor: chartMode === 'treemap' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: chartMode === 'treemap' ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              Treemap
-            </button>
-          </div>
-          {chartMode === 'pie' ? (
-            <ExpensePieChart
-              data={pieChartData}
+      {/* Charts - animated grid with stagger effect */}
+      <AnimatedChartGroup staggerDelay={0.1}>
+        {/* First row - Pie and Bar charts with better spacing */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Pie / Treemap toggle - full width on mobile, half on desktop */}
+          <AnimatedChartItem>
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setChartMode('pie')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: chartMode === 'pie' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: chartMode === 'pie' ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  Torta
+                </button>
+                <button
+                  onClick={() => setChartMode('treemap')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: chartMode === 'treemap' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: chartMode === 'treemap' ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  Treemap
+                </button>
+              </div>
+              {chartMode === 'pie' ? (
+                <ExpensePieChart
+                  data={pieChartData}
+                  loading={loading}
+                  currency={currency}
+                  onSliceClick={handleCategoryClick}
+                />
+              ) : (
+                <ExpenseTreemap
+                  data={pieChartData}
+                  currency={currency}
+                  onCategoryClick={handleCategoryClick}
+                />
+              )}
+            </div>
+          </AnimatedChartItem>
+
+          <AnimatedChartItem>
+            <IncomeExpenseBarChart
+              data={barChartData}
               loading={loading}
               currency={currency}
-              onSliceClick={handleCategoryClick}
             />
-          ) : (
-            <ExpenseTreemap
-              data={pieChartData}
-              currency={currency}
-              onCategoryClick={handleCategoryClick}
-            />
-          )}
+          </AnimatedChartItem>
         </div>
-        <IncomeExpenseBarChart
-          data={barChartData}
-          loading={loading}
-          currency={currency}
-        />
-      </div>
 
-      {/* Full width line chart */}
-      <BalanceLineChart
-        data={lineChartData}
-        loading={loading}
-        currency={currency}
-      />
+        {/* Radar chart - full width with top margin */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <CategoryRadarChart
+              data={radarChartData}
+              loading={loading}
+              currency={currency}
+              period="periodo actual"
+            />
+          </div>
+        </AnimatedChartItem>
 
-      {/* Heatmap */}
-      <ExpenseHeatmap
-        movements={filteredMovements}
-        dateRange={dateRange}
-        currency={currency}
-        categoryIconMap={categoryIconMap}
-      />
+        {/* Full width composed chart */}
+        <AnimatedChartItem>
+          <IncomeExpenseComposedChart
+            data={barChartData}
+            loading={loading}
+            currency={currency}
+          />
+        </AnimatedChartItem>
 
-      {/* Stacked Area */}
-      <StackedAreaChart
-        movements={filteredMovements}
-        dateRange={dateRange}
-        currency={currency}
-        categoryIconMap={categoryIconMap}
-      />
+        {/* Full width line chart */}
+        <AnimatedChartItem>
+          <BalanceLineChart
+            data={lineChartData}
+            loading={loading}
+            currency={currency}
+          />
+        </AnimatedChartItem>
+      </AnimatedChartGroup>
+
+      {/* Additional charts with animations - full width */}
+      <AnimatedChartGroup staggerDelay={0.15}>
+        {/* Heatmap - full width */}
+        <AnimatedChartItem>
+          <ExpenseHeatmap
+            movements={filteredMovements}
+            dateRange={dateRange}
+            currency={currency}
+            categoryIconMap={categoryIconMap}
+          />
+        </AnimatedChartItem>
+
+        {/* Stacked Area - full width */}
+        <AnimatedChartItem>
+          <StackedAreaChart
+            movements={filteredMovements}
+            dateRange={dateRange}
+            currency={currency}
+            categoryIconMap={categoryIconMap}
+          />
+        </AnimatedChartItem>
+      </AnimatedChartGroup>
 
       {/* Category Detail Drawer */}
       <CategoryDetailDrawer

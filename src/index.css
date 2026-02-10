@@ -913,6 +913,37 @@ select {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHART COLORS - EvilCharts Integration
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Chart palette - mapped to Cashé colors */
+  --chart-1: var(--accent-primary);     /* Teal */
+  --chart-2: var(--accent-purple);      /* Purple */
+  --chart-3: var(--accent-blue);        /* Blue */
+  --chart-4: var(--accent-yellow);      /* Amber */
+  --chart-5: var(--accent-cyan);        /* Cyan */
+
+  /* Chart semantic colors */
+  --chart-income: var(--accent-green);
+  --chart-expense: var(--accent-red);
+  --chart-transfer: var(--accent-blue);
+
+  /* Chart backgrounds */
+  --chart-bg: var(--bg-secondary);
+  --chart-grid: var(--border-subtle);
+}
+
+.light {
+  /* Chart colors remain consistent in light mode */
+  --chart-1: var(--accent-primary);
+  --chart-2: var(--accent-purple);
+  --chart-3: var(--accent-blue);
+  --chart-4: var(--accent-yellow);
+  --chart-5: var(--accent-cyan);
+}
+
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

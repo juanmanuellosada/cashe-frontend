@@ -16,7 +16,8 @@
 | **Tailwind CSS** | Estilos |
 | **React Router DOM** | Navegación |
 | **Supabase** | Autenticación (Google OAuth) + Base de datos PostgreSQL |
-| **Recharts** | Gráficos |
+| **Recharts 3.6.0** + **EvilCharts** | Sistema de gráficos avanzados |
+| **Framer Motion** | Animaciones y transiciones |
 | **Lucide React** | Iconos |
 | **React Day Picker** + **date-fns** | Selector de fechas |
 | **GitHub Pages** | Hosting |
@@ -99,6 +100,9 @@ cashe-frontend/
     │   ├── useCategories.js       # Hook para categorías
     │   └── useDashboard.js        # Hook para datos del dashboard
     │
+    ├── lib/
+    │   └── utils.js               # Utilidades (cn para className merging)
+    │
     ├── utils/
     │   └── format.js              # Formateo de números y fechas
     │
@@ -130,6 +134,11 @@ cashe-frontend/
     │   ├── SearchModal.jsx        # Modal de búsqueda
     │   ├── SessionExpiryWarning.jsx # Aviso de sesión por expirar
     │   │
+    │   ├── ui/                    # Componentes base (shadcn/ui style)
+    │   │   ├── Card.jsx           # Sistema de Cards
+    │   │   ├── Badge.jsx          # Badges con variantes
+    │   │   └── Chart.jsx          # Sistema de gráficos (ChartContainer, ChartTooltip, ChartLegend)
+    │   │
     │   ├── integrations/
     │   │   ├── WhatsAppLinkSection.jsx # Vinculación de WhatsApp
     │   │   └── TelegramLinkSection.jsx  # Vinculación de Telegram
@@ -147,10 +156,15 @@ cashe-frontend/
     │   │   ├── RecentMovements.jsx    # Últimos movimientos
     │   │   └── WeeklySummary.jsx      # Resumen semanal
     │   │
-    │   └── charts/
-    │       ├── BalanceLineChart.jsx     # Evolución del balance
-    │       ├── ExpensePieChart.jsx      # Gastos por categoría
-    │       └── IncomeExpenseBarChart.jsx # Comparativo mensual
+    │   └── charts/                # Sistema de visualización de datos
+    │       ├── AnimatedChart.jsx          # Wrappers de animación (Framer Motion)
+    │       ├── BalanceLineChart.jsx       # Evolución del balance (línea con glow)
+    │       ├── ExpensePieChart.jsx        # Gastos por categoría (pie con porcentajes)
+    │       ├── IncomeExpenseBarChart.jsx  # Comparativo mensual (barras con gradientes)
+    │       ├── StackedAreaChart.jsx       # Composición de gastos (área apilada)
+    │       ├── CategoryRadarChart.jsx     # Comparación actual vs promedio (radar)
+    │       ├── BudgetProgressChart.jsx    # Progreso de presupuestos (radial)
+    │       └── IncomeExpenseComposedChart.jsx # Vista completa (barras + línea de balance)
     │
     └── pages/
         ├── Landing.jsx            # Página de bienvenida (pública)
@@ -386,6 +400,8 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 - [x] Feedback visual (toasts, loaders)
 - [x] Empty states
 - [x] Lazy loading de rutas protegidas
+- [x] Animaciones suaves con Framer Motion
+- [x] Gráficos premium con efectos visuales (glow, gradientes, patterns)
 
 ### ✅ Performance
 - [x] Cache de requests con deduplicación
@@ -397,6 +413,221 @@ VITE_SUPABASE_ANON_KEY=tu-anon-key
 - [x] Vinculación de WhatsApp con código de verificación
 - [x] Registro de movimientos por mensaje de texto
 - [x] Consultas de gastos y saldos por WhatsApp
+
+---
+
+## Sistema de Visualización de Datos
+
+### Arquitectura de Gráficos
+
+La aplicación utiliza un sistema de gráficos premium basado en **EvilCharts** (arquitectura shadcn/ui) con **Recharts 3.6.0** y animaciones de **Framer Motion**.
+
+### Stack de Visualización
+- **Recharts 3.6.0**: Motor de renderizado de gráficos basado en D3
+- **EvilCharts**: Sistema de componentes copiables (no npm package)
+- **Framer Motion**: Animaciones suaves y transiciones
+- **CSS Variables**: Theming dinámico adaptado al dark/light mode
+- **SVG Filters**: Efectos visuales (glow, blur, shadows)
+
+### Componentes de UI Base
+
+#### `src/components/ui/Chart.jsx`
+Sistema central de gráficos que proporciona:
+- **ChartContainer**: Wrapper con contexto de configuración
+- **ChartTooltip**: Tooltips personalizados con payload parsing
+- **ChartLegend**: Leyendas con soporte para iconos
+- CSS variables dinámicas para theming (`--chart-1` a `--chart-5`)
+
+#### `src/components/ui/Card.jsx`
+Sistema de Cards adaptado a Cashé:
+- Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+- Integración con CSS variables de Cashé
+
+#### `src/components/ui/Badge.jsx`
+Badges con variantes usando class-variance-authority:
+- default, secondary, destructive, success, outline
+
+### Sistema de Animaciones
+
+**Archivo**: `src/components/charts/AnimatedChart.jsx`
+
+Componentes de animación con Framer Motion:
+
+| Componente | Propósito | Efecto |
+|------------|-----------|--------|
+| `AnimatedChart` | Wrapper por defecto | Fade + slide (0.5s, ease-out-expo) |
+| `AnimatedChartGroup` + `AnimatedChartItem` | Animación en secuencia | Stagger effect (0.1s entre items) |
+| `AnimatedNumber` | Números/estadísticas | Bounce (1s, spring) |
+| `AnimatedBadge` | Badges | Scale 0 → 1 con bounce |
+| `HoverCard` | Hover interactivo | Lift -4px |
+
+**Ejemplo de uso**:
+```jsx
+<AnimatedChartGroup staggerDelay={0.15}>
+  <AnimatedChartItem>
+    <BalanceLineChart data={data} />
+  </AnimatedChartItem>
+  <AnimatedChartItem>
+    <ExpensePieChart data={data} />
+  </AnimatedChartItem>
+</AnimatedChartGroup>
+```
+
+### Catálogo de Gráficos
+
+#### 1. **BalanceLineChart** - Evolución del Balance
+**Archivo**: `src/components/charts/BalanceLineChart.jsx`
+
+- **Tipo**: Line chart con área gradiente
+- **Props**: `{ data, loading, currency }`
+- **Data**: `[{ month: string, balance: number }]`
+- **Características**:
+  - Glow effect en la línea
+  - Gradiente en área bajo la línea
+  - Badge con tendencia (% de cambio)
+  - Patrón de puntos en fondo
+  - AnimatedChart (delay: 0s)
+
+#### 2. **ExpensePieChart** - Gastos por Categoría
+**Archivo**: `src/components/charts/ExpensePieChart.jsx`
+
+- **Tipo**: Donut chart (pie con innerRadius)
+- **Props**: `{ data, loading, currency, onSliceClick }`
+- **Data**: `[{ name: string, value: number, icon?: string }]`
+- **Características**:
+  - LabelList con porcentajes dentro de las secciones
+  - cornerRadius + paddingAngle para diseño moderno
+  - Soporte para iconos de categorías (emoji o SVG)
+  - Badge con categoría top
+  - AnimatedChart (delay: 0.1s)
+
+#### 3. **IncomeExpenseBarChart** - Comparativo Mensual
+**Archivo**: `src/components/charts/IncomeExpenseBarChart.jsx`
+
+- **Tipo**: Bar chart con dos series
+- **Props**: `{ data, loading, currency }`
+- **Data**: `[{ month: string, ingresos: number, gastos: number }]`
+- **Características**:
+  - Gradientes en barras (verde para ingresos, rojo para gastos)
+  - Glow effect
+  - Tooltip con balance calculado
+  - Badge con % de diferencia
+  - AnimatedChart (delay: 0.2s)
+
+#### 4. **StackedAreaChart** - Composición de Gastos
+**Archivo**: `src/components/charts/StackedAreaChart.jsx`
+
+- **Tipo**: Stacked area chart
+- **Props**: `{ movements, dateRange, currency, categoryIconMap }`
+- **Características**:
+  - Top 8 categorías + "Otros"
+  - Gradientes individuales por categoría
+  - Toggle para ocultar categorías (clickeable legend)
+  - Badge con % de categoría top
+  - AnimatedChart (delay: 0.15s)
+
+#### 5. **CategoryRadarChart** - Comparación Actual vs Promedio (NUEVO)
+**Archivo**: `src/components/charts/CategoryRadarChart.jsx`
+
+- **Tipo**: Radar chart
+- **Props**: `{ data, loading, currency, period }`
+- **Data**: `[{ category: string, actual: number, promedio: number }]`
+- **Características**:
+  - Compara gastos actuales vs histórico
+  - Glow effect en radar actual
+  - Detecta categoría con mayor variación
+  - Badge si gastos > promedio
+  - AnimatedChart (delay: 0.2s)
+
+#### 6. **BudgetProgressChart** - Progreso de Presupuestos (NUEVO)
+**Archivo**: `src/components/charts/BudgetProgressChart.jsx`
+
+- **Tipo**: Radial bar chart
+- **Props**: `{ data, loading, currency }`
+- **Data**: `[{ category: string, gastado: number, presupuesto: number }]`
+- **Características**:
+  - Colores semánticos: Verde (<80%), Amarillo (80-100%), Rojo (>100%)
+  - AnimatedNumber en centro con % promedio
+  - Badge con estado: "En control" / "Cerca del límite" / "Excedido"
+  - Grid legend con todas las categorías
+  - AnimatedChart (delay: 0.25s)
+
+#### 7. **IncomeExpenseComposedChart** - Vista Completa (NUEVO)
+**Archivo**: `src/components/charts/IncomeExpenseComposedChart.jsx`
+
+- **Tipo**: Composed chart (bars + line)
+- **Props**: `{ data, loading, currency }`
+- **Data**: `[{ month: string, ingresos: number, gastos: number }]`
+- **Características**:
+  - Barras con gradientes (ingresos y gastos)
+  - Línea con balance acumulado (con glow)
+  - ReferenceLine en Y=0
+  - Badge con tendencia (primer vs último mes)
+  - Patrón de puntos en fondo
+  - AnimatedChart (delay: 0.4s)
+
+### Efectos Visuales
+
+#### SVG Filters
+```jsx
+// Glow effect
+<filter id="chart-glow">
+  <feGaussianBlur stdDeviation="2" result="blur" />
+  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+</filter>
+```
+
+#### Gradientes
+```jsx
+<linearGradient id="gradient-name" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stopColor="color" stopOpacity={0.8} />
+  <stop offset="100%" stopColor="color" stopOpacity={0.3} />
+</linearGradient>
+```
+
+#### Background Patterns
+```jsx
+<pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse">
+  <circle cx="2" cy="2" r="1" fill="var(--border-subtle)" opacity="0.5" />
+</pattern>
+```
+
+### CSS Variables de Gráficos
+
+```css
+:root {
+  --chart-1: var(--accent-primary);  /* Teal */
+  --chart-2: var(--accent-purple);   /* Purple */
+  --chart-3: var(--accent-blue);     /* Blue */
+  --chart-4: var(--accent-yellow);   /* Yellow */
+  --chart-5: var(--accent-cyan);     /* Cyan */
+
+  --chart-income: var(--accent-green);   /* Ingresos */
+  --chart-expense: var(--accent-red);    /* Gastos */
+  --chart-transfer: var(--accent-blue);  /* Transferencias */
+}
+```
+
+### Performance
+
+#### Bundle Size Impact
+- Recharts: Ya incluido (0 KB adicionales)
+- EvilCharts components: ~4 KB (gzipped)
+- Framer Motion: ~18 KB (gzipped)
+- **Total adicional**: ~22 KB gzipped
+
+#### Optimizaciones
+- Lazy loading de rutas con gráficos
+- AnimatePresence para unmounting suave
+- GPU acceleration (will-change automático)
+- Respeta `prefers-reduced-motion`
+
+### Documentación Adicional
+
+Para ejemplos completos de uso y guías de integración, consultar:
+- `NEW_CHARTS_GUIDE.md` - Guía completa de nuevos gráficos y animaciones
+- `CHART_EXAMPLES.md` - Ejemplos de código listo para usar
+- `FINAL_SUMMARY.md` - Resumen ejecutivo del proyecto
 
 ---
 
@@ -455,6 +686,16 @@ npm run deploy
 --accent-green: #22c55e;    /* Ingresos, éxito */
 --accent-red: #ef4444;      /* Gastos, error */
 --accent-blue: #3b82f6;     /* Transferencias, info */
+
+/* Colores de gráficos */
+--chart-1: var(--accent-primary);  /* Teal */
+--chart-2: var(--accent-purple);   /* Purple */
+--chart-3: var(--accent-blue);     /* Blue */
+--chart-4: var(--accent-yellow);   /* Yellow */
+--chart-5: var(--accent-cyan);     /* Cyan */
+--chart-income: var(--accent-green);   /* Ingresos */
+--chart-expense: var(--accent-red);    /* Gastos */
+--chart-transfer: var(--accent-blue);  /* Transferencias */
 
 /* Dark Mode */
 --bg-primary: #0a0a0a;

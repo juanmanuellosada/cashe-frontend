@@ -67,7 +67,14 @@
       "WebFetch(domain:argentinadatos.com)",
       "mcp__playwright__browser_fill_form",
       "mcp__playwright__browser_close",
-      "Bash(supabase db execute:*)"
+      "Bash(supabase db execute:*)",
+      "WebFetch(domain:evilcharts.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe /c \"taskkill /PID 23284 /F\")",
+      "Bash(powershell.exe -Command \"Stop-Process -Id 23284 -Force\")"
     ]
   },
   "enableAllProjectMcpServers": true,
