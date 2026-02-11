@@ -74,7 +74,8 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /PID 23284 /F\")",
-      "Bash(powershell.exe -Command \"Stop-Process -Id 23284 -Force\")"
+      "Bash(powershell.exe -Command \"Stop-Process -Id 23284 -Force\")",
+      "Bash(npx vite build:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

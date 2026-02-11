@@ -1185,19 +1185,19 @@ function MovementsList({
                 </button>
 
                 {/* Attachment indicator */}
-                {movement.attachmentUrl && !selectionMode && (
+                {(movement.attachmentUrl || movement.attachmentUrl2) && !selectionMode && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      downloadAttachment(movement.attachmentUrl, movement.attachmentName);
+                      downloadAttachment(movement.attachmentUrl || movement.attachmentUrl2, movement.attachmentName || movement.attachmentName2);
                     }}
-                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105"
+                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 relative"
                     style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                    title={movement.attachmentName ? `Descargar: ${movement.attachmentName}` : 'Descargar adjunto'}
+                    title={movement.attachmentUrl && movement.attachmentUrl2 ? '2 adjuntos' : (movement.attachmentName || movement.attachmentName2 || 'Descargar adjunto')}
                   >
-                    {isImageFile(movement.attachmentName) ? (
+                    {isImageFile(movement.attachmentName || movement.attachmentName2) ? (
                       <img
-                        src={movement.attachmentUrl}
+                        src={movement.attachmentUrl || movement.attachmentUrl2}
                         alt="Adjunto"
                         className="w-6 h-6 rounded object-cover"
                       />
@@ -1211,6 +1211,14 @@ function MovementsList({
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
+                    )}
+                    {movement.attachmentUrl && movement.attachmentUrl2 && (
+                      <span
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                        style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+                      >
+                        2
+                      </span>
                     )}
                   </button>
                 )}

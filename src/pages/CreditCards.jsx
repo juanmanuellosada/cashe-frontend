@@ -925,7 +925,8 @@ function CreditCards() {
                                      (hasDolares && isDolaresPaid && hasPesos && !isPesosPaid);
 
             // El resumen "actual" es el primer resumen no completamente pagado
-            const isActualCurrent = !isFullyPaid && !statement.isFuture &&
+            // (puede ser futuro por calendario si ya se pagaron los anteriores)
+            const isActualCurrent = !isFullyPaid &&
               statements.slice(0, index).every(s => {
                 const sPesosPaid = !!statementPayments[`${s.id}_ARS`];
                 const sDolaresPaid = !!statementPayments[`${s.id}_USD`];
@@ -1004,7 +1005,7 @@ function CreditCards() {
                             Actual
                           </span>
                         )}
-                        {statement.isFuture && !isFullyPaid && (
+                        {statement.isFuture && !isFullyPaid && !isActualCurrent && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
