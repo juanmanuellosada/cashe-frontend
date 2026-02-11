@@ -5,6 +5,7 @@ import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency } from '../utils/format';
 import StatisticsFilterBar from '../components/StatisticsFilterBar';
 import ExpensePieChart from '../components/charts/ExpensePieChart';
+import IncomePieChart from '../components/charts/IncomePieChart';
 import ExpenseTreemap from '../components/charts/ExpenseTreemap';
 import IncomeExpenseBarChart from '../components/charts/IncomeExpenseBarChart';
 import BalanceLineChart from '../components/charts/BalanceLineChart';
@@ -35,7 +36,7 @@ function Statistics() {
 
     expenses.forEach(m => {
       const cat = m.categoria || 'Sin categoria';
-      const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+      const cleanCat = cat.replace(/^[\p{Emoji}\p{Emoji_Presentation}\u200d\uFE0F]+\s*/u, '').trim() || cat;
       const pesos = m.montoPesos || m.monto || 0;
       const dolares = m.montoDolares || 0;
 
@@ -43,7 +44,7 @@ function Statistics() {
       totalDolares += dolares;
 
       if (!byCategory[cleanCat]) {
-        byCategory[cleanCat] = { pesos: 0, dolares: 0 };
+        byCategory[cleanCat] = { pesos: 0, dolares: 0, originalName: cat };
       }
       byCategory[cleanCat].pesos += pesos;
       byCategory[cleanCat].dolares += dolares;
@@ -60,7 +61,49 @@ function Statistics() {
           pesos: data.pesos,
           dolares: data.dolares,
           percentage: total > 0 ? (value / total) * 100 : 0,
-          icon: categoryIconMap[name] || null,
+          icon: categoryIconMap[name] || categoryIconMap[data.originalName] || null,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [filteredMovements, dateRange, currency, categoryIconMap]);
+
+  // Process data for income pie chart
+  const incomePieChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return [];
+
+    const incomes = filteredMovements.filter(m => m.tipo === 'ingreso');
+
+    const byCategory = {};
+    let totalPesos = 0;
+    let totalDolares = 0;
+
+    incomes.forEach(m => {
+      const cat = m.categoria || 'Sin categoria';
+      const cleanCat = cat.replace(/^[\p{Emoji}\p{Emoji_Presentation}\u200d\uFE0F]+\s*/u, '').trim() || cat;
+      const pesos = m.montoPesos || m.monto || 0;
+      const dolares = m.montoDolares || 0;
+
+      totalPesos += pesos;
+      totalDolares += dolares;
+
+      if (!byCategory[cleanCat]) {
+        byCategory[cleanCat] = { pesos: 0, dolares: 0, originalName: cat };
+      }
+      byCategory[cleanCat].pesos += pesos;
+      byCategory[cleanCat].dolares += dolares;
+    });
+
+    const total = currency === 'ARS' ? totalPesos : totalDolares;
+
+    return Object.entries(byCategory)
+      .map(([name, data]) => {
+        const value = currency === 'ARS' ? data.pesos : data.dolares;
+        return {
+          name,
+          value,
+          percentage: total > 0 ? (value / total) * 100 : 0,
+          icon: categoryIconMap[name] || categoryIconMap[data.originalName] || null,
         };
       })
       .sort((a, b) => b.value - a.value)
@@ -516,6 +559,7 @@ function Statistics() {
                   data={pieChartData}
                   loading={loading}
                   currency={currency}
+                  dateRange={dateRange}
                   onSliceClick={handleCategoryClick}
                 />
               ) : (
@@ -526,6 +570,15 @@ function Statistics() {
                 />
               )}
             </div>
+          </AnimatedChartItem>
+
+          <AnimatedChartItem>
+            <IncomePieChart
+              data={incomePieChartData}
+              loading={loading}
+              currency={currency}
+              dateRange={dateRange}
+            />
           </AnimatedChartItem>
 
           <AnimatedChartItem>
@@ -551,20 +604,24 @@ function Statistics() {
 
         {/* Full width composed chart */}
         <AnimatedChartItem>
-          <IncomeExpenseComposedChart
-            data={barChartData}
-            loading={loading}
-            currency={currency}
-          />
+          <div className="mt-6">
+            <IncomeExpenseComposedChart
+              data={barChartData}
+              loading={loading}
+              currency={currency}
+            />
+          </div>
         </AnimatedChartItem>
 
         {/* Full width line chart */}
         <AnimatedChartItem>
-          <BalanceLineChart
-            data={lineChartData}
-            loading={loading}
-            currency={currency}
-          />
+          <div className="mt-6">
+            <BalanceLineChart
+              data={lineChartData}
+              loading={loading}
+              currency={currency}
+            />
+          </div>
         </AnimatedChartItem>
       </AnimatedChartGroup>
 
@@ -572,22 +629,26 @@ function Statistics() {
       <AnimatedChartGroup staggerDelay={0.15}>
         {/* Heatmap - full width */}
         <AnimatedChartItem>
-          <ExpenseHeatmap
-            movements={filteredMovements}
-            dateRange={dateRange}
-            currency={currency}
-            categoryIconMap={categoryIconMap}
-          />
+          <div className="mt-6">
+            <ExpenseHeatmap
+              movements={filteredMovements}
+              dateRange={dateRange}
+              currency={currency}
+              categoryIconMap={categoryIconMap}
+            />
+          </div>
         </AnimatedChartItem>
 
         {/* Stacked Area - full width */}
         <AnimatedChartItem>
-          <StackedAreaChart
-            movements={filteredMovements}
-            dateRange={dateRange}
-            currency={currency}
-            categoryIconMap={categoryIconMap}
-          />
+          <div className="mt-6">
+            <StackedAreaChart
+              movements={filteredMovements}
+              dateRange={dateRange}
+              currency={currency}
+              categoryIconMap={categoryIconMap}
+            />
+          </div>
         </AnimatedChartItem>
       </AnimatedChartGroup>
 

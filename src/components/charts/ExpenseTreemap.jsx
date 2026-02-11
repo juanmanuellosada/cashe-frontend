@@ -95,7 +95,7 @@ function ExpenseTreemap({ data, currency = 'ARS', onCategoryClick }) {
       const d = payload[0].payload;
       return (
         <div
-          className="px-3 py-2 rounded-lg shadow-lg"
+          className="px-3 py-2 rounded-lg shadow-xl"
           style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
         >
           <div className="flex items-center gap-1.5">

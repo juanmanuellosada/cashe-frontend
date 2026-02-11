@@ -15,14 +15,17 @@ import { Badge } from "../ui/Badge";
 import AnimatedChart from "./AnimatedChart";
 import { formatCurrency } from "../../utils/format";
 
+const ACTUAL_COLOR = "#f59e0b";   // Amber - cálido, destaca
+const PROMEDIO_COLOR = "#22d3ee"; // Cyan - contrasta con naranja y fondo oscuro
+
 const chartConfig = {
   actual: {
-    label: "Actual",
-    color: "#14b8a6", // Teal más brillante para mejor contraste
+    label: "Este período",
+    color: ACTUAL_COLOR,
   },
   promedio: {
     label: "Promedio",
-    color: "#60a5fa", // Blue más brillante para mejor contraste
+    color: PROMEDIO_COLOR,
   },
 };
 
@@ -91,20 +94,20 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: '#14b8a6' }} />
-            <span className="text-[var(--text-muted)]">Actual</span>
+            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: ACTUAL_COLOR }} />
+            <span className="text-[var(--text-muted)]">Este período</span>
           </div>
-          <span className="font-mono font-medium text-[var(--text-primary)]">
+          <span className="font-mono font-medium" style={{ color: ACTUAL_COLOR }}>
             {formatCurrency(actual, currency)}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: '#60a5fa' }} />
+            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: PROMEDIO_COLOR }} />
             <span className="text-[var(--text-muted)]">Promedio</span>
           </div>
-          <span className="font-mono font-medium text-[var(--text-primary)]">
+          <span className="font-mono font-medium" style={{ color: PROMEDIO_COLOR }}>
             {formatCurrency(promedio, currency)}
           </span>
         </div>
@@ -154,47 +157,27 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <RadarChart data={data}>
               <defs>
-                {/* Glow effect */}
                 <filter id="radar-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feGaussianBlur stdDeviation="3" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
-
-                {/* Pattern */}
-                <pattern
-                  id="radar-pattern"
-                  x="0"
-                  y="0"
-                  width="20"
-                  height="20"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <circle cx="10" cy="10" r="1" fill="var(--border-subtle)" opacity="0.3" />
-                </pattern>
               </defs>
 
-              <rect
-                x="0"
-                y="0"
-                width="100%"
-                height="100%"
-                fill="url(#radar-pattern)"
-                opacity="0.5"
-              />
-
               <PolarGrid
-                stroke="var(--border-subtle)"
-                strokeDasharray="3 3"
+                stroke="var(--text-secondary)"
+                strokeOpacity={0.25}
               />
 
               <PolarAngleAxis
                 dataKey="category"
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                tick={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 500 }}
               />
 
               <PolarRadiusAxis
                 angle={90}
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                stroke="var(--text-secondary)"
+                strokeOpacity={0.15}
                 tickFormatter={(value) => {
                   if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
                   return value.toFixed(0);
@@ -206,44 +189,42 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
                 content={<CustomTooltipContent />}
               />
 
-              {/* Promedio (background) */}
+              {/* Promedio (background - referencia) */}
               <Radar
                 name="Promedio"
                 dataKey="promedio"
-                stroke="#60a5fa"
-                fill="#60a5fa"
-                fillOpacity={0.25}
+                stroke={PROMEDIO_COLOR}
+                fill={PROMEDIO_COLOR}
+                fillOpacity={0.15}
                 strokeWidth={2}
+                strokeDasharray="6 3"
+                strokeOpacity={0.8}
               />
 
-              {/* Actual (foreground) */}
+              {/* Actual (foreground - destaca) */}
               <Radar
-                name="Actual"
+                name="Este período"
                 dataKey="actual"
-                stroke="#14b8a6"
-                fill="#14b8a6"
-                fillOpacity={0.5}
+                stroke={ACTUAL_COLOR}
+                fill={ACTUAL_COLOR}
+                fillOpacity={0.3}
                 strokeWidth={2.5}
+                strokeOpacity={1}
                 filter="url(#radar-glow)"
+                dot={{ r: 3.5, fill: ACTUAL_COLOR, strokeWidth: 0 }}
               />
             </RadarChart>
           </ChartContainer>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-center justify-center gap-8 mt-3">
             <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: '#14b8a6', opacity: 0.6 }}
-              />
-              <span className="text-xs text-[var(--text-secondary)]">Actual</span>
+              <div className="w-5 h-[3px] rounded-full" style={{ backgroundColor: ACTUAL_COLOR }} />
+              <span className="text-xs font-medium text-[var(--text-primary)]">Este período</span>
             </div>
             <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: '#60a5fa', opacity: 0.6 }}
-              />
-              <span className="text-xs text-[var(--text-secondary)]">Promedio</span>
+              <div className="w-5 h-[3px] rounded-full opacity-80" style={{ backgroundColor: PROMEDIO_COLOR, backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 3px, var(--bg-card) 3px, var(--bg-card) 5px)' }} />
+              <span className="text-xs font-medium text-[var(--text-primary)]">Promedio histórico</span>
             </div>
           </div>
         </CardContent>

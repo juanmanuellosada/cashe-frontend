@@ -136,7 +136,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
               <div
                 key={weekIdx}
                 className="text-[10px] font-medium truncate"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: 'var(--text-secondary)' }}
               >
                 {monthLabel
                   ? monthLabel.label.charAt(0).toUpperCase() + monthLabel.label.slice(1)
@@ -161,7 +161,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
                 className="flex items-center justify-end pr-0.5"
                 style={{
                   fontSize: '9px',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-secondary)',
                   visibility: dayIdx % 2 === 0 ? 'visible' : 'hidden',
                 }}
               >
@@ -205,7 +205,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
         {/* Tooltip */}
         {hoveredDay && gastosPorDia[hoveredDay] && (
           <div
-            className="absolute z-10 px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none"
+            className="absolute z-10 px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none"
             style={{
               backgroundColor: 'var(--bg-tertiary)',
               border: '1px solid var(--border-subtle)',
@@ -220,7 +220,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
             <p className="text-xs" style={{ color: 'var(--accent-red)' }}>
               {formatCurrency(gastosPorDia[hoveredDay].total, currency)}
             </p>
-            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
               {gastosPorDia[hoveredDay].count} transaccion{gastosPorDia[hoveredDay].count !== 1 ? 'es' : ''}
             </p>
           </div>
@@ -228,13 +228,13 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 justify-end">
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Menos</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Menos</span>
           <div className="rounded-[3px]" style={{ width: '12px', height: '12px', backgroundColor: 'var(--bg-tertiary)' }} />
           <div className="rounded-[3px]" style={{ width: '12px', height: '12px', backgroundColor: 'rgba(244, 63, 94, 0.25)' }} />
           <div className="rounded-[3px]" style={{ width: '12px', height: '12px', backgroundColor: 'rgba(244, 63, 94, 0.5)' }} />
           <div className="rounded-[3px]" style={{ width: '12px', height: '12px', backgroundColor: 'rgba(244, 63, 94, 0.75)' }} />
           <div className="rounded-[3px]" style={{ width: '12px', height: '12px', backgroundColor: 'rgba(244, 63, 94, 1)' }} />
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Mas</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Mas</span>
         </div>
       </div>
 
@@ -279,7 +279,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
                     {cleanName}
                   </p>
                   {m.nota && (
-                    <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-[10px] truncate" style={{ color: 'var(--text-secondary)' }}>
                       {m.nota}
                     </p>
                   )}
@@ -292,7 +292,7 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
             );
             })}
           </div>
-          <p className="text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[10px] text-right" style={{ color: 'var(--text-secondary)' }}>
             Total: {formatCurrency(selectedDayData.total, currency)} ({selectedDayData.count} transacciones)
           </p>
         </div>

@@ -10,8 +10,6 @@ import {
 import {
   ChartContainer,
   ChartTooltip,
-  ChartLegend,
-  ChartLegendContent,
 } from "../ui/Chart";
 import { Badge } from "../ui/Badge";
 import AnimatedChart from "./AnimatedChart";
@@ -28,7 +26,7 @@ const chartConfig = {
   },
   balance: {
     label: "Balance",
-    color: "var(--chart-1)",
+    color: "#f59e0b",
   },
 };
 
@@ -127,7 +125,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
 
         <div className="flex items-center justify-between gap-4 pt-1 mt-1 border-t border-[var(--border-subtle)]">
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: 'var(--chart-1)' }} />
+            <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: '#f59e0b' }} />
             <span className="text-[var(--text-muted)] font-medium">Balance</span>
           </div>
           <span
@@ -174,7 +172,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-80">
+          <ChartContainer config={chartConfig} className="h-80 w-full">
             <ComposedChart
               data={enrichedData}
               margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
@@ -199,15 +197,15 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                 </pattern>
 
                 {/* Gradient for Ingresos */}
-                <linearGradient id="ingresosGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.8} />
-                  <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.3} />
+                <linearGradient id="composed-ingresosGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={1} />
+                  <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.6} />
                 </linearGradient>
 
                 {/* Gradient for Gastos */}
-                <linearGradient id="gastosGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={0.8} />
-                  <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.3} />
+                <linearGradient id="composed-gastosGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={1} />
+                  <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.6} />
                 </linearGradient>
 
                 {/* Glow for bars */}
@@ -234,8 +232,8 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
-                stroke="var(--border-subtle)"
-                strokeOpacity={0.5}
+                stroke="var(--text-secondary)"
+                strokeOpacity={0.2}
               />
 
               <XAxis
@@ -243,14 +241,14 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
               />
 
               <YAxis
                 tickFormatter={formatYAxis}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
               />
 
               <ChartTooltip
@@ -258,19 +256,18 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                 content={<CustomTooltipContent />}
               />
 
-              <ChartLegend content={<ChartLegendContent />} />
 
               <ReferenceLine
                 y={0}
-                stroke="var(--text-muted)"
+                stroke="var(--text-secondary)"
                 strokeDasharray="3 3"
-                strokeOpacity={0.3}
+                strokeOpacity={0.5}
               />
 
               {/* Bars for income and expenses */}
               <Bar
                 dataKey="ingresos"
-                fill="url(#ingresosGradient)"
+                fill="url(#composed-ingresosGradient)"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
                 filter="url(#composed-bar-glow)"
@@ -278,7 +275,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
 
               <Bar
                 dataKey="gastos"
-                fill="url(#gastosGradient)"
+                fill="url(#composed-gastosGradient)"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
                 filter="url(#composed-bar-glow)"
@@ -288,16 +285,16 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
               <Line
                 type="monotone"
                 dataKey="balance"
-                stroke="var(--chart-1)"
+                stroke="#f59e0b"
                 strokeWidth={2.5}
                 dot={{
-                  fill: "var(--chart-1)",
+                  fill: "#f59e0b",
                   strokeWidth: 0,
                   r: 4,
                 }}
                 activeDot={{
                   r: 6,
-                  fill: "var(--chart-1)",
+                  fill: "#f59e0b",
                   stroke: "var(--bg-secondary)",
                   strokeWidth: 2,
                 }}
@@ -305,6 +302,22 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
               />
             </ComposedChart>
           </ChartContainer>
+
+          {/* Custom legend */}
+          <div className="flex items-center justify-center gap-6 mt-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--accent-green)' }} />
+              <span className="text-xs font-medium text-[var(--text-primary)]">Ingresos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--accent-red)' }} />
+              <span className="text-xs font-medium text-[var(--text-primary)]">Gastos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-[3px] rounded-full" style={{ backgroundColor: '#f59e0b' }} />
+              <span className="text-xs font-medium text-[var(--text-primary)]">Balance</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </AnimatedChart>

@@ -187,14 +187,14 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
 
               {/* Gradient for Ingresos */}
               <linearGradient id="ingresosGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.3} />
+                <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={1} />
+                <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.6} />
               </linearGradient>
 
               {/* Gradient for Gastos */}
               <linearGradient id="gastosGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.3} />
+                <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={1} />
+                <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.6} />
               </linearGradient>
 
               {/* Glow effect */}
@@ -216,7 +216,7 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
               strokeDasharray="3 3"
               vertical={false}
               stroke="var(--border-subtle)"
-              strokeOpacity={0.5}
+              strokeOpacity={0.7}
             />
 
             <XAxis
@@ -224,14 +224,14 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
 
             <YAxis
               tickFormatter={formatYAxis}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
 
             <ChartTooltip

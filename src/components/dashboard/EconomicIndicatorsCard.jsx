@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAllDollarRates, fetchInflationData, fetchRiesgoPais, updateExchangeRateType, getExchangeRate } from '../../services/supabaseApi';
+import { fetchAllDollarRates, fetchInflationData, fetchRiesgoPais, updateExchangeRateType, getExchangeRate, refreshExchangeRate } from '../../services/supabaseApi';
 import { formatNumberAR } from '../../utils/format';
 
 // Mapeo de tipos de dólar
@@ -109,10 +109,12 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
           setDollarRates(data.dollarRates);
           setInflation(data.inflation);
           setRiesgoPais(data.riesgoPais);
-          // Solo cargar tipo de usuario
           const exchangeData = await getExchangeRate();
-          setSelectedType(exchangeData.tipoUsado || 'oficial');
-          setCurrentRate(exchangeData.tipoCambio);
+          const tipoUsado = exchangeData.tipoUsado || 'oficial';
+          setSelectedType(tipoUsado);
+          // Usar valor de venta en vivo del cache si disponible
+          const cachedLive = data.dollarRates?.find(r => r.casa === tipoUsado);
+          setCurrentRate(cachedLive?.venta || exchangeData.tipoCambio);
           setLoading(false);
           return;
         }
@@ -129,8 +131,20 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
       setDollarRates(rates);
       setInflation(inflationData);
       setRiesgoPais(riesgoPaisData);
-      setSelectedType(exchangeData.tipoUsado || 'oficial');
-      setCurrentRate(exchangeData.tipoCambio);
+
+      const tipoUsado = exchangeData.tipoUsado || 'oficial';
+      setSelectedType(tipoUsado);
+
+      // Sincronizar con cotización en vivo si hay datos frescos
+      const liveRate = rates?.find(r => r.casa === tipoUsado);
+      if (liveRate?.venta && liveRate.venta !== exchangeData.tipoCambio) {
+        // Actualizar en DB y usar valor en vivo
+        refreshExchangeRate(tipoUsado).catch(() => {});
+        setCurrentRate(liveRate.venta);
+        if (onExchangeRateChange) onExchangeRateChange();
+      } else {
+        setCurrentRate(exchangeData.tipoCambio);
+      }
 
       // Guardar en cache
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({

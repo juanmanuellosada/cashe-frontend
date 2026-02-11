@@ -111,8 +111,15 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
       return entry;
     });
 
+    // Trim leading empty months (keep max 1 empty month before first data)
+    const hasData = (entry) => allCats.some(cat => entry[cat] > 0);
+    const firstDataIndex = data.findIndex(hasData);
+    const trimmedData = firstDataIndex > 1
+      ? data.slice(firstDataIndex - 1)
+      : data;
+
     return {
-      chartData: data,
+      chartData: trimmedData,
       categorias: allCats,
       chartConfig: config,
       topCategory: topCat
@@ -146,7 +153,7 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
     const validPayload = payload.filter(p => p.value > 0).sort((a, b) => b.value - a.value);
 
     return (
-      <div className="grid min-w-[10rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl bg-[var(--bg-tertiary)] border-[var(--border-subtle)] max-w-[220px]">
+      <div className="grid min-w-[14rem] items-start gap-1.5 rounded-lg border px-3 py-2 text-xs shadow-xl bg-[var(--bg-tertiary)] border-[var(--border-subtle)]">
         <div className="font-medium text-[var(--text-primary)] mb-1">{label}</div>
 
         {validPayload.map((entry, i) => (
@@ -216,52 +223,26 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[280px]">
+        <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <AreaChart
             data={chartData}
             margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
           >
             <defs>
-              {/* Background pattern */}
-              <pattern
-                id="area-pattern-dots"
-                x="0"
-                y="0"
-                width="10"
-                height="10"
-                patternUnits="userSpaceOnUse"
-              >
-                <circle
-                  cx="2"
-                  cy="2"
-                  r="1"
-                  fill="var(--border-subtle)"
-                  opacity="0.5"
-                />
-              </pattern>
-
               {/* Gradients for each category */}
               {categorias.map((cat, i) => (
                 <linearGradient key={cat} id={`gradient-${cat}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.6} />
-                  <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.8} />
+                  <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.2} />
                 </linearGradient>
               ))}
             </defs>
 
-            <rect
-              x="0"
-              y="0"
-              width="100%"
-              height="85%"
-              fill="url(#area-pattern-dots)"
-            />
-
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="var(--border-subtle)"
-              strokeOpacity={0.5}
+              stroke="var(--text-secondary)"
+              strokeOpacity={0.2}
             />
 
             <XAxis
@@ -269,18 +250,18 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
 
             <YAxis
               tickFormatter={formatYAxis}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
 
             <ChartTooltip
-              cursor={{ strokeDasharray: '3 3', stroke: 'var(--border-medium)' }}
+              cursor={{ strokeDasharray: '3 3', stroke: 'var(--text-secondary)', strokeOpacity: 0.4 }}
               content={<CustomTooltipContent />}
             />
 
@@ -294,7 +275,7 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
                 fill={`url(#gradient-${cat})`}
                 fillOpacity={hiddenCategories.has(cat) ? 0 : 1}
                 strokeOpacity={hiddenCategories.has(cat) ? 0 : 1}
-                strokeWidth={hiddenCategories.has(cat) ? 0 : 1.5}
+                strokeWidth={hiddenCategories.has(cat) ? 0 : 2}
                 hide={hiddenCategories.has(cat)}
               />
             ))}
@@ -309,25 +290,24 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
               <button
                 key={cat}
                 onClick={() => toggleCategory(cat)}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all"
                 style={{
                   backgroundColor: 'var(--bg-tertiary)',
-                  opacity: isHidden ? 0.4 : 1,
+                  opacity: isHidden ? 0.35 : 1,
                   cursor: 'pointer',
                 }}
               >
-                {categoryIconMap[cat] ? (
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                />
+                {categoryIconMap[cat] && (
                   <CategoryIcon icon={categoryIconMap[cat]} size={12} />
-                ) : (
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                  />
                 )}
-                <span style={{ color: 'var(--text-secondary)' }}>
+                <span style={{ color: 'var(--text-primary)' }}>
                   {(() => {
                     const c = stripEmoji(cat);
-                    return c.length > 12 ? c.substring(0, 12) + '...' : c;
+                    return c.length > 14 ? c.substring(0, 14) + '...' : c;
                   })()}
                 </span>
               </button>

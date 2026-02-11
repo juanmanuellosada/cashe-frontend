@@ -104,21 +104,21 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
         <div className="font-medium text-[var(--text-primary)] mb-1">{data.category}</div>
 
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Gastado</span>
+          <span className="text-[var(--text-secondary)]">Gastado</span>
           <span className="font-mono font-medium text-[var(--text-primary)]">
             {formatCurrency(data.gastado, currency)}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Presupuesto</span>
+          <span className="text-[var(--text-secondary)]">Presupuesto</span>
           <span className="font-mono font-medium text-[var(--text-primary)]">
             {formatCurrency(data.presupuesto, currency)}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-4 pt-1 mt-1 border-t border-[var(--border-subtle)]">
-          <span className="text-[var(--text-muted)]">Restante</span>
+          <span className="text-[var(--text-secondary)]">Restante</span>
           <span
             className="font-mono font-medium"
             style={{ color: remaining >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
@@ -128,7 +128,7 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Progreso</span>
+          <span className="text-[var(--text-secondary)]">Progreso</span>
           <span
             className="font-medium"
             style={{ color: data.fill }}
@@ -170,7 +170,7 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
+          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px] w-full">
             <RadialBarChart
               data={chartData}
               innerRadius={30}

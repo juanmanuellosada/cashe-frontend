@@ -19,7 +19,7 @@ import { formatCurrency } from "../../utils/format";
 const chartConfig = {
   balance: {
     label: "Balance",
-    color: "var(--chart-1)",
+    color: "#14b8a6",
   },
 };
 
@@ -59,9 +59,10 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
   // Calculate trend
   const firstBalance = data[0]?.balance || 0;
   const lastBalance = data[data.length - 1]?.balance || 0;
-  const percentageChange = firstBalance !== 0
+  const rawChange = Math.abs(firstBalance) > 1
     ? ((lastBalance - firstBalance) / Math.abs(firstBalance)) * 100
     : 0;
+  const percentageChange = Math.min(Math.max(rawChange, -999), 999);
   const isPositiveTrend = percentageChange >= 0;
 
   // Calculate min/max for better Y axis
@@ -129,30 +130,12 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
         <CardDescription>Últimos meses</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-60">
+        <ChartContainer config={chartConfig} className="h-60 w-full">
           <LineChart
             data={data}
             margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
           >
-            {/* Background pattern */}
             <defs>
-              <pattern
-                id="balance-pattern-dots"
-                x="0"
-                y="0"
-                width="10"
-                height="10"
-                patternUnits="userSpaceOnUse"
-              >
-                <circle
-                  cx="2"
-                  cy="2"
-                  r="1"
-                  fill="var(--border-subtle)"
-                  opacity="0.5"
-                />
-              </pattern>
-
               {/* Glow effect */}
               <filter
                 id="balance-line-glow"
@@ -164,27 +147,13 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
-
-              {/* Gradient for positive balance */}
-              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
-              </linearGradient>
             </defs>
-
-            <rect
-              x="0"
-              y="0"
-              width="100%"
-              height="85%"
-              fill="url(#balance-pattern-dots)"
-            />
 
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="var(--border-subtle)"
-              strokeOpacity={0.5}
+              stroke="var(--text-secondary)"
+              strokeOpacity={0.2}
             />
 
             <XAxis
@@ -192,14 +161,14 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
 
             <YAxis
               tickFormatter={formatYAxis}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
               domain={[minValue - padding, maxValue + padding]}
             />
 
@@ -210,20 +179,20 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
 
             <ReferenceLine
               y={0}
-              stroke="var(--text-muted)"
+              stroke="var(--text-secondary)"
               strokeDasharray="3 3"
-              strokeOpacity={0.3}
+              strokeOpacity={0.5}
             />
 
             <Line
               type="monotone"
               dataKey="balance"
-              stroke="var(--chart-1)"
-              strokeWidth={2.5}
-              dot={false}
+              stroke="#14b8a6"
+              strokeWidth={3}
+              dot={{ r: 3, fill: '#14b8a6', strokeWidth: 0 }}
               activeDot={{
-                r: 5,
-                fill: "var(--chart-1)",
+                r: 6,
+                fill: "#14b8a6",
                 stroke: "var(--bg-secondary)",
                 strokeWidth: 2,
               }}
