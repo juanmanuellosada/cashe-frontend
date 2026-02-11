@@ -67,7 +67,8 @@
       "WebFetch(domain:argentinadatos.com)",
       "mcp__playwright__browser_fill_form",
       "mcp__playwright__browser_close",
-      "Bash(supabase db execute:*)"
+      "Bash(supabase db execute:*)",
+      "Bash(npx vite build:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

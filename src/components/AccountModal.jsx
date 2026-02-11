@@ -2,6 +2,27 @@ import { useState, useRef } from 'react';
 import IconPicker from './IconPicker';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
+// Calcula la próxima fecha para un día del mes dado
+function getNextDateForDay(day) {
+  if (!day) return '';
+  const d = parseInt(day);
+  if (!d || d < 1 || d > 31) return '';
+
+  const today = new Date();
+  const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const dayThisMonth = Math.min(d, lastDayThisMonth);
+  const thisMonthDate = new Date(today.getFullYear(), today.getMonth(), dayThisMonth);
+
+  if (thisMonthDate >= today) {
+    return thisMonthDate.toISOString().split('T')[0];
+  }
+
+  const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate();
+  const dayNextMonth = Math.min(d, lastDayNextMonth);
+  const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, dayNextMonth);
+  return nextMonthDate.toISOString().split('T')[0];
+}
+
 function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   const isEditing = !!account;
   const [formData, setFormData] = useState({
@@ -13,8 +34,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     numeroCuenta: account?.numeroCuenta || '',
     tipo: account?.tipo || '',
     esTarjetaCredito: account?.esTarjetaCredito || false,
-    diaCierre: account?.diaCierre?.toString() || '1',
-    diaVencimiento: account?.diaVencimiento?.toString() || '',
+    fechaCierre: account?.fechaCierre || getNextDateForDay(account?.diaCierre) || '',
+    fechaVencimiento: account?.fechaVencimiento || getNextDateForDay(account?.diaVencimiento) || '',
     icon: account?.icon || null,
     ocultaDelBalance: account?.ocultaDelBalance || false,
   });
@@ -54,10 +75,14 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validate that closing day and due day are different for credit cards
+    // Validate credit card dates
     if (formData.esTarjetaCredito) {
-      const cierre = parseInt(formData.diaCierre) || 1;
-      const vencimiento = parseInt(formData.diaVencimiento) || null;
+      if (!formData.fechaCierre) {
+        setValidationError('Seleccioná la fecha de cierre');
+        return;
+      }
+      const cierre = new Date(formData.fechaCierre + 'T12:00:00').getDate();
+      const vencimiento = formData.fechaVencimiento ? new Date(formData.fechaVencimiento + 'T12:00:00').getDate() : null;
       if (vencimiento && cierre === vencimiento) {
         setValidationError('El día de cierre y vencimiento no pueden ser iguales');
         return;
@@ -68,8 +93,10 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
     onSave({
       ...formData,
       balanceInicial: parseFloat(formData.balanceInicial) || 0,
-      diaCierre: formData.esTarjetaCredito ? parseInt(formData.diaCierre) || 1 : null,
-      diaVencimiento: formData.esTarjetaCredito ? parseInt(formData.diaVencimiento) || null : null,
+      diaCierre: formData.esTarjetaCredito && formData.fechaCierre ? new Date(formData.fechaCierre + 'T12:00:00').getDate() : null,
+      diaVencimiento: formData.esTarjetaCredito && formData.fechaVencimiento ? new Date(formData.fechaVencimiento + 'T12:00:00').getDate() : null,
+      fechaCierre: formData.esTarjetaCredito ? formData.fechaCierre || null : null,
+      fechaVencimiento: formData.esTarjetaCredito ? formData.fechaVencimiento || null : null,
       icon: formData.icon,
       ocultaDelBalance: formData.ocultaDelBalance,
     });
@@ -281,38 +308,48 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
             </div>
           </div>
 
-          {/* Días de cierre y vencimiento - solo visible si es tarjeta de crédito */}
+          {/* Fechas de cierre y vencimiento - solo visible si es tarjeta de crédito */}
           {formData.esTarjetaCredito && (
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-dim)' }}>
-                {/* Día de cierre */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Cierre día</span>
+              <div className="grid grid-cols-1 gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-dim)' }}>
+                {/* Fecha de cierre */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    Próximo cierre
+                  </label>
                   <input
-                    type="number"
-                    name="diaCierre"
-                    value={formData.diaCierre}
+                    type="date"
+                    name="fechaCierre"
+                    value={formData.fechaCierre}
                     onChange={handleChange}
-                    min="1"
-                    max="31"
-                    className="w-16 px-2 py-1.5 rounded-md text-sm text-center font-semibold border border-transparent focus:border-[var(--accent-purple)]"
+                    className="w-full px-3 py-2 rounded-md text-sm font-semibold border border-transparent focus:border-[var(--accent-purple)]"
                     style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                    required
                   />
+                  {formData.fechaCierre && (
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Se usará el día {new Date(formData.fechaCierre + 'T12:00:00').getDate()} como cierre mensual recurrente
+                    </p>
+                  )}
                 </div>
-                {/* Día de vencimiento */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>Vence día</span>
+                {/* Fecha de vencimiento */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    Próximo vencimiento (opcional)
+                  </label>
                   <input
-                    type="number"
-                    name="diaVencimiento"
-                    value={formData.diaVencimiento}
+                    type="date"
+                    name="fechaVencimiento"
+                    value={formData.fechaVencimiento}
                     onChange={handleChange}
-                    min="1"
-                    max="31"
-                    placeholder="—"
-                    className="w-16 px-2 py-1.5 rounded-md text-sm text-center font-semibold border border-transparent focus:border-[var(--accent-purple)]"
+                    className="w-full px-3 py-2 rounded-md text-sm font-semibold border border-transparent focus:border-[var(--accent-purple)]"
                     style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                   />
+                  {formData.fechaVencimiento && (
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Se usará el día {new Date(formData.fechaVencimiento + 'T12:00:00').getDate()} como vencimiento mensual recurrente
+                    </p>
+                  )}
                 </div>
               </div>
               {/* Validation error */}
