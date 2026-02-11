@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAllDollarRates, fetchInflationData, fetchRiesgoPais, updateExchangeRateType, getExchangeRate } from '../../services/supabaseApi';
+import { fetchAllDollarRates, fetchInflationData, fetchRiesgoPais, updateExchangeRateType, getExchangeRate, refreshExchangeRate } from '../../services/supabaseApi';
 import { formatNumberAR } from '../../utils/format';
 
 // Mapeo de tipos de dólar
@@ -50,7 +50,7 @@ function InflationTooltip({ children, title, description, details }) {
       {/* Tooltip */}
       {show && (
         <div
-          className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-xl shadow-lg z-20 animate-scale-in"
+          className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-xl shadow-lg z-[9999] animate-scale-in"
           style={{
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -109,10 +109,12 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
           setDollarRates(data.dollarRates);
           setInflation(data.inflation);
           setRiesgoPais(data.riesgoPais);
-          // Solo cargar tipo de usuario
           const exchangeData = await getExchangeRate();
-          setSelectedType(exchangeData.tipoUsado || 'oficial');
-          setCurrentRate(exchangeData.tipoCambio);
+          const tipoUsado = exchangeData.tipoUsado || 'oficial';
+          setSelectedType(tipoUsado);
+          // Usar valor de venta en vivo del cache si disponible
+          const cachedLive = data.dollarRates?.find(r => r.casa === tipoUsado);
+          setCurrentRate(cachedLive?.venta || exchangeData.tipoCambio);
           setLoading(false);
           return;
         }
@@ -129,8 +131,20 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
       setDollarRates(rates);
       setInflation(inflationData);
       setRiesgoPais(riesgoPaisData);
-      setSelectedType(exchangeData.tipoUsado || 'oficial');
-      setCurrentRate(exchangeData.tipoCambio);
+
+      const tipoUsado = exchangeData.tipoUsado || 'oficial';
+      setSelectedType(tipoUsado);
+
+      // Sincronizar con cotización en vivo si hay datos frescos
+      const liveRate = rates?.find(r => r.casa === tipoUsado);
+      if (liveRate?.venta && liveRate.venta !== exchangeData.tipoCambio) {
+        // Actualizar en DB y usar valor en vivo
+        refreshExchangeRate(tipoUsado).catch(() => {});
+        setCurrentRate(liveRate.venta);
+        if (onExchangeRateChange) onExchangeRateChange();
+      } else {
+        setCurrentRate(exchangeData.tipoCambio);
+      }
 
       // Guardar en cache
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -245,7 +259,7 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
 
   return (
     <div
-      className="p-4 sm:p-5 rounded-xl sm:rounded-2xl overflow-hidden"
+      className="p-4 sm:p-5 rounded-xl sm:rounded-2xl relative"
       style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
     >
       {/* Header */}
@@ -520,7 +534,7 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
         {/* Dropdown */}
         {showTypeSelector && (
           <div
-            className="absolute bottom-full left-0 right-0 mb-1 p-2 rounded-xl shadow-lg z-10 animate-scale-in overflow-hidden"
+            className="absolute bottom-full left-0 right-0 mb-1 p-2 rounded-xl shadow-lg z-[9998] animate-scale-in overflow-hidden"
             style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
           >
             {Object.entries(DOLLAR_TYPES).map(([key, { nombre, descripcion }]) => {

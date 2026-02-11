@@ -20,16 +20,16 @@ import { formatCurrency } from "../../utils/format";
 import { isEmoji, resolveIconPath } from "../../services/iconStorage";
 
 const COLORS = [
-  '#f43f5e', // Red
-  '#f97316', // Orange
-  '#eab308', // Yellow
   '#10b981', // Green
   '#14b8a6', // Teal
   '#0ea5e9', // Sky
   '#6366f1', // Indigo
-  '#ec4899', // Pink
-  '#84cc16', // Lime
+  '#f59e0b', // Amber
   '#8b5cf6', // Purple
+  '#84cc16', // Lime
+  '#ec4899', // Pink
+  '#f97316', // Orange
+  '#22d3ee', // Cyan
 ];
 
 const CategoryIcon = ({ icon, size = 14 }) => {
@@ -47,7 +47,7 @@ const CategoryIcon = ({ icon, size = 14 }) => {
   );
 };
 
-function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceClick }) {
+function IncomePieChart({ data, loading, currency = 'ARS', dateRange }) {
   const [activeIndex, setActiveIndex] = useState(null);
   const [chartPercent, setChartPercent] = useState(65);
   const [legendExpanded, setLegendExpanded] = useState(false);
@@ -101,24 +101,22 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Gastos por categoría</CardTitle>
+          <CardTitle>Ingresos por categoría</CardTitle>
           <CardDescription>No hay datos disponibles</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-60 flex items-center justify-center text-[var(--text-secondary)]">
-            <p>Sin gastos para mostrar</p>
+            <p>Sin ingresos para mostrar</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Calculate total for percentage in badge
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const topCategory = data[0];
   const topPercentage = topCategory ? (topCategory.value / total) * 100 : 0;
 
-  // Build chart config dynamically
   const chartConfig = data.reduce((config, item, index) => {
     config[item.name] = {
       label: item.name,
@@ -128,7 +126,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
     return config;
   }, {});
 
-  // Prepare data for recharts
   const chartData = data.map((item, index) => ({
     ...item,
     fill: COLORS[index % COLORS.length],
@@ -136,9 +133,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
 
   const CustomTooltipContent = ({ active, payload }) => {
     if (!active || !payload?.length) return null;
-
     const data = payload[0].payload;
-
     return (
       <div className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl bg-[var(--bg-tertiary)] border-[var(--border-subtle)]">
         <div className="flex items-center gap-1.5">
@@ -146,13 +141,13 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
           <span className="font-medium text-[var(--text-primary)]">{data.name}</span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--text-muted)]">Monto</span>
-          <span className="font-mono font-medium tabular-nums text-[var(--accent-red)]">
+          <span className="text-[var(--text-secondary)]">Monto</span>
+          <span className="font-mono font-medium tabular-nums text-[var(--accent-green)]">
             {formatCurrency(data.value)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-4 pt-0.5 border-t border-[var(--border-subtle)]">
-          <span className="text-[var(--text-muted)]">Porcentaje</span>
+          <span className="text-[var(--text-secondary)]">Porcentaje</span>
           <span className="font-medium text-[var(--text-primary)]">
             {data.percentage.toFixed(1)}%
           </span>
@@ -169,20 +164,18 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
   const LegendPanel = () => {
     return (
       <div className="flex flex-col gap-0.5">
-        {visibleData.map((entry, index) => {
+        {visibleData.map((entry) => {
           const realIndex = chartData.indexOf(entry);
           const percentage = ((entry.value / total) * 100).toFixed(1);
           const isActive = activeIndex === realIndex;
           return (
-            <button
+            <div
               key={`legend-${realIndex}`}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all duration-200 text-left ${
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all duration-200 ${
                 isActive ? 'bg-[var(--bg-tertiary)] scale-[1.02] shadow-sm' : 'hover:bg-[var(--bg-tertiary)]'
               }`}
-              onClick={() => onSliceClick?.(entry.name)}
               onMouseEnter={() => setActiveIndex(realIndex)}
               onMouseLeave={() => setActiveIndex(null)}
-              style={{ cursor: onSliceClick ? 'pointer' : 'default' }}
             >
               <div
                 className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform duration-200 ${isActive ? 'scale-125' : ''}`}
@@ -195,14 +188,14 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
                 <span className={`block truncate transition-colors duration-200 ${isActive ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-primary)]'}`}>
                   {entry.name}
                 </span>
-                <span className="block text-[10px] text-[var(--text-muted)] tabular-nums">
+                <span className="block text-[10px] text-[var(--text-secondary)] tabular-nums">
                   {formatCurrency(entry.value, currency)}
                 </span>
               </div>
               <span className={`tabular-nums font-medium flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
                 {percentage}%
               </span>
-            </button>
+            </div>
           );
         })}
         {needsExpand && (
@@ -227,16 +220,16 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
   };
 
   return (
-    <AnimatedChart delay={0.1}>
+    <AnimatedChart delay={0.15}>
       <Card>
         <CardHeader className="pb-0">
           <CardTitle className="flex items-center gap-2">
-            Gastos por categoría
+            Ingresos por categoría
             {topCategory && topPercentage > 0 && (
               <AnimatedBadge delay={0.4}>
                 <Badge
                   variant="outline"
-                  className="text-red-500 bg-red-500/10 border-none"
+                  className="text-green-500 bg-green-500/10 border-none"
                 >
                   <TrendingUp className="h-3 w-3" />
                   <span>{topPercentage.toFixed(0)}%</span>
@@ -249,9 +242,9 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
             <CardDescription className="flex items-center gap-1">
               {topCategory ? (
                 <>
-                  Mayor gasto: {topCategory.icon && <CategoryIcon icon={topCategory.icon} size={13} />} {topCategory.name}
+                  Mayor ingreso: {topCategory.icon && <CategoryIcon icon={topCategory.icon} size={13} />} {topCategory.name}
                 </>
-              ) : 'Distribución de gastos'}
+              ) : 'Distribución de ingresos'}
             </CardDescription>
             {dateRange?.from && dateRange?.to && (
               <span className="text-[11px] text-[var(--text-muted)]">
@@ -272,7 +265,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
       </CardHeader>
       <CardContent className="flex-1 pb-4">
         <div className="flex flex-col lg:flex-row lg:items-start" ref={containerRef}>
-          {/* Chart */}
           <div className="flex-shrink-0" style={{ width: `${chartPercent}%` }}>
             <ChartContainer
               config={chartConfig}
@@ -280,7 +272,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
             >
               <PieChart>
                 <defs>
-                  <filter id="pie-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <filter id="income-pie-glow" x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur stdDeviation="4" result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                   </filter>
@@ -300,8 +292,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
                   strokeWidth={2}
                   paddingAngle={3}
                   cornerRadius={6}
-                  style={{ cursor: onSliceClick ? 'pointer' : 'default' }}
-                  onClick={(data) => onSliceClick?.(data.name)}
                   onMouseEnter={onPieEnter}
                   onMouseLeave={onPieLeave}
                   activeIndex={activeIndex}
@@ -324,7 +314,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
                       key={`cell-${index}`}
                       fill={entry.fill}
                       stroke="var(--bg-secondary)"
-                      filter="url(#pie-glow)"
+                      filter="url(#income-pie-glow)"
                     />
                   ))}
 
@@ -342,7 +332,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
             </ChartContainer>
           </div>
 
-          {/* Draggable divider (desktop only) */}
           <div
             className="hidden lg:flex items-center justify-center cursor-col-resize select-none flex-shrink-0 group"
             style={{ width: '12px' }}
@@ -355,7 +344,6 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
             />
           </div>
 
-          {/* Legend panel */}
           <div className="min-w-0 mt-2 lg:mt-0" style={{ flex: `0 0 ${100 - chartPercent - 2}%` }}>
             <LegendPanel />
           </div>
@@ -366,4 +354,4 @@ function ExpensePieChart({ data, loading, currency = 'ARS', dateRange, onSliceCl
   );
 }
 
-export default ExpensePieChart;
+export default IncomePieChart;

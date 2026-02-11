@@ -1,10 +1,15 @@
 import { useState, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency, formatDate } from '../utils/format';
 import StatisticsFilterBar from '../components/StatisticsFilterBar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { ChartContainer, ChartTooltip } from '../components/ui/Chart';
+import { Badge } from '../components/ui/Badge';
+import AnimatedChart, { AnimatedBadge } from '../components/charts/AnimatedChart';
 
 const COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
@@ -160,47 +165,66 @@ function Comparador() {
     return [...filteredIngresos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }, [filteredIngresos]);
 
-  // Tooltip personalizado para graficos
-  const CustomTooltip = ({ active, payload, color }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div
-          className="px-3 py-2 rounded-lg shadow-lg"
-          style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
-        >
-          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{data.name}</p>
-          <p style={{ color: color || 'var(--accent-primary)' }}>{formatCurrency(data.value, currency)}</p>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{data.percentage?.toFixed(1)}%</p>
+  // Tooltip personalizado para pie charts
+  const PieTooltipContent = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const data = payload[0].payload;
+    return (
+      <div className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl bg-[var(--bg-tertiary)] border-[var(--border-subtle)]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill || payload[0].payload.color }} />
+          <span className="font-medium text-[var(--text-primary)]">{data.name}</span>
         </div>
-      );
-    }
-    return null;
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-[var(--text-secondary)]">Monto</span>
+          <span className="font-mono font-medium tabular-nums text-[var(--text-primary)]">
+            {formatCurrency(data.value, currency)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 pt-0.5 border-t border-[var(--border-subtle)]">
+          <span className="text-[var(--text-secondary)]">Porcentaje</span>
+          <span className="font-medium text-[var(--text-primary)]">
+            {data.percentage?.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    );
   };
 
   const BarTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div
-          className="px-3 py-2 rounded-lg shadow-lg"
+          className="px-3 py-2 rounded-lg shadow-xl text-xs"
           style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
         >
           <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>{label}</p>
           {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {formatCurrency(entry.value, currency)}
-            </p>
+            <div key={index} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: entry.color }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{entry.name}</span>
+              </div>
+              <span className="font-mono font-medium" style={{ color: entry.color }}>
+                {formatCurrency(entry.value, currency)}
+              </span>
+            </div>
           ))}
           {payload.length === 2 && (
-            <p
-              className="mt-1 pt-1 text-sm"
+            <div
+              className="mt-1 pt-1 flex items-center justify-between gap-4"
               style={{
                 borderTop: '1px solid var(--border-subtle)',
-                color: payload[0].value - payload[1].value >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
               }}
             >
-              Balance: {formatCurrency(payload[0].value - payload[1].value, currency)}
-            </p>
+              <span style={{ color: 'var(--text-secondary)' }}>Balance</span>
+              <span
+                className="font-mono font-medium"
+                style={{ color: payload[0].value - payload[1].value >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
+              >
+                {formatCurrency(payload[0].value - payload[1].value, currency)}
+              </span>
+            </div>
           )}
         </div>
       );
@@ -436,97 +460,183 @@ function Comparador() {
         </div>
       </div>
 
-      {/* Graficos */}
+      {/* Bar Chart - Full width */}
+      <AnimatedChart delay={0.1}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Ingresos vs Gastos
+              <AnimatedBadge delay={0.4}>
+                <Badge
+                  variant="outline"
+                  className={`border-none ${totals.balance >= 0 ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'}`}
+                >
+                  {totals.balance >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  <span>{totals.balance >= 0 ? '+' : ''}{formatCurrency(totals.balance, currency)}</span>
+                </Badge>
+              </AnimatedBadge>
+            </CardTitle>
+            <CardDescription>Comparación mensual del período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {barChartData.length > 0 ? (
+              <>
+                <ChartContainer config={{ ingresos: { label: 'Ingresos', color: 'var(--accent-green)' }, gastos: { label: 'Gastos', color: 'var(--accent-red)' } }} className="h-60 w-full">
+                  <BarChart data={barChartData} margin={{ left: -20, right: 12, top: 12, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="comp-ingresosGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.6} />
+                      </linearGradient>
+                      <linearGradient id="comp-gastosGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.6} />
+                      </linearGradient>
+                      <filter id="comp-bar-glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--text-secondary)" strokeOpacity={0.2} vertical={false} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                    <YAxis tickFormatter={formatYAxis} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                    <ChartTooltip cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.3 }} content={<BarTooltip />} />
+                    <Bar dataKey="ingresos" name="Ingresos" fill="url(#comp-ingresosGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} filter="url(#comp-bar-glow)" />
+                    <Bar dataKey="gastos" name="Gastos" fill="url(#comp-gastosGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} filter="url(#comp-bar-glow)" />
+                  </BarChart>
+                </ChartContainer>
+                <div className="flex items-center justify-center gap-6 mt-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--accent-green)' }} />
+                    <span className="text-xs font-medium text-[var(--text-primary)]">Ingresos</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--accent-red)' }} />
+                    <span className="text-xs font-medium text-[var(--text-primary)]">Gastos</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="h-60 flex items-center justify-center text-[var(--text-secondary)]">No hay datos disponibles</div>
+            )}
+          </CardContent>
+        </Card>
+      </AnimatedChart>
+
+      {/* Pie Charts - Side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Bar Chart */}
-        <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Ingresos vs Gastos</h3>
-          {barChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={{ stroke: 'var(--border-subtle)' }} tickLine={false} />
-                <YAxis tickFormatter={formatYAxis} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<BarTooltip />} cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.5 }} />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value) => <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{value}</span>} />
-                <Bar dataKey="ingresos" name="Ingresos" fill="var(--accent-green)" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                <Bar dataKey="gastos" name="Gastos" fill="var(--accent-red)" radius={[4, 4, 0, 0]} maxBarSize={50} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[250px] flex items-center justify-center" style={{ color: 'var(--text-secondary)' }}>No hay datos disponibles</div>
-          )}
-        </div>
-
         {/* Pie Chart - Gastos */}
-        <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Gastos por Categoria</h3>
-          {expensesPieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={expensesPieData} cx="50%" cy="45%" innerRadius={45} outerRadius={80} paddingAngle={2} dataKey="value" nameKey="name">
-                  {expensesPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip color="var(--accent-red)" />} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[250px] flex items-center justify-center" style={{ color: 'var(--text-secondary)' }}>No hay gastos en este periodo</div>
-          )}
-          {expensesPieData.length > 0 && (
-            <div className="flex flex-wrap gap-2 justify-center mt-2">
-              {expensesPieData.slice(0, 4).map((entry, index) => (
-                <div key={`legend-${index}`} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span style={{ color: 'var(--text-secondary)' }}>{entry.name.length > 10 ? entry.name.substring(0, 10) + '...' : entry.name}</span>
-                </div>
-              ))}
-              {expensesPieData.length > 4 && (
-                <div className="px-2 py-1 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                  +{expensesPieData.length - 4} mas
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pie Chart de Ingresos */}
-      {incomesPieData.length > 0 && (
-        <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Ingresos por Categoria</h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="md:col-span-2">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={incomesPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} dataKey="value" nameKey="name">
-                    {incomesPieData.map((entry, index) => (
-                      <Cell key={`cell-income-${index}`} fill={COLORS[(index + 3) % COLORS.length]} stroke="transparent" />
+        <AnimatedChart delay={0.2}>
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="flex items-center gap-2">
+                Gastos por Categoria
+                {expensesPieData[0] && (
+                  <AnimatedBadge delay={0.5}>
+                    <Badge variant="outline" className="text-red-500 bg-red-500/10 border-none">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>{expensesPieData[0].percentage.toFixed(0)}%</span>
+                    </Badge>
+                  </AnimatedBadge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {expensesPieData[0] ? `Mayor gasto: ${expensesPieData[0].name}` : 'Distribución de gastos'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+              {expensesPieData.length > 0 ? (
+                <>
+                  <ChartContainer config={expensesPieData.reduce((c, item, i) => { c[item.name] = { label: item.name, color: COLORS[i % COLORS.length] }; return c; }, {})} className="mx-auto aspect-square h-[240px]">
+                    <PieChart>
+                      <defs>
+                        <filter id="comp-pie-glow" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="4" result="blur" />
+                          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                      </defs>
+                      <ChartTooltip cursor={false} content={<PieTooltipContent />} />
+                      <Pie data={expensesPieData.map((item, i) => ({ ...item, fill: COLORS[i % COLORS.length] }))} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={3} cornerRadius={5} strokeWidth={2}>
+                        {expensesPieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="var(--bg-secondary)" filter="url(#comp-pie-glow)" />
+                        ))}
+                        <LabelList dataKey="percentage" position="inside" stroke="none" fontSize={12} fontWeight={600} fill="white" formatter={(v) => v >= 5 ? `${v.toFixed(0)}%` : ''} />
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                  <div className="flex flex-col gap-0.5">
+                    {expensesPieData.map((entry, index) => (
+                      <div key={`legend-${index}`} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[var(--bg-tertiary)] transition-all duration-200">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <div className="flex-1 min-w-0">
+                          <span className="block truncate text-[var(--text-primary)]">{entry.name}</span>
+                          <span className="block text-[10px] text-[var(--text-secondary)] tabular-nums">{formatCurrency(entry.value, currency)}</span>
+                        </div>
+                        <span className="tabular-nums font-medium flex-shrink-0 text-[var(--text-secondary)]">{entry.percentage.toFixed(1)}%</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip color="var(--accent-green)" />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="md:col-span-3 flex flex-col justify-center gap-2">
-              {incomesPieData.map((entry, index) => (
-                <div key={`income-legend-${index}`} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }} />
-                    <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }} title={entry.name}>{entry.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{entry.percentage.toFixed(1)}%</span>
-                    <span className="text-sm font-medium" style={{ color: 'var(--accent-green)' }}>{formatCurrency(entry.value, currency)}</span>
+                </>
+              ) : (
+                <div className="h-[240px] flex items-center justify-center text-[var(--text-secondary)]">No hay gastos en este periodo</div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedChart>
+
+        {/* Pie Chart - Ingresos */}
+        <AnimatedChart delay={0.3}>
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="flex items-center gap-2">
+                Ingresos por Categoria
+                {incomesPieData[0] && (
+                  <AnimatedBadge delay={0.6}>
+                    <Badge variant="outline" className="text-green-500 bg-green-500/10 border-none">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>{incomesPieData[0].percentage.toFixed(0)}%</span>
+                    </Badge>
+                  </AnimatedBadge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {incomesPieData[0] ? `Mayor ingreso: ${incomesPieData[0].name}` : 'Distribución de ingresos'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+              {incomesPieData.length > 0 ? (
+                <>
+                  <ChartContainer config={incomesPieData.reduce((c, item, i) => { c[item.name] = { label: item.name, color: COLORS[(i + 3) % COLORS.length] }; return c; }, {})} className="mx-auto aspect-square h-[240px]">
+                    <PieChart>
+                      <ChartTooltip cursor={false} content={<PieTooltipContent />} />
+                      <Pie data={incomesPieData.map((item, i) => ({ ...item, fill: COLORS[(i + 3) % COLORS.length] }))} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={3} cornerRadius={5} strokeWidth={2}>
+                        {incomesPieData.map((_, index) => (
+                          <Cell key={`cell-income-${index}`} fill={COLORS[(index + 3) % COLORS.length]} stroke="var(--bg-secondary)" filter="url(#comp-pie-glow)" />
+                        ))}
+                        <LabelList dataKey="percentage" position="inside" stroke="none" fontSize={12} fontWeight={600} fill="white" formatter={(v) => v >= 5 ? `${v.toFixed(0)}%` : ''} />
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                  <div className="flex flex-col gap-0.5">
+                    {incomesPieData.map((entry, index) => (
+                      <div key={`income-legend-${index}`} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[var(--bg-tertiary)] transition-all duration-200">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }} />
+                        <div className="flex-1 min-w-0">
+                          <span className="block truncate text-[var(--text-primary)]">{entry.name}</span>
+                          <span className="block text-[10px] text-[var(--text-secondary)] tabular-nums">{formatCurrency(entry.value, currency)}</span>
+                        </div>
+                        <span className="tabular-nums font-medium flex-shrink-0 text-[var(--text-secondary)]">{entry.percentage.toFixed(1)}%</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+                </>
+              ) : (
+                <div className="h-[240px] flex items-center justify-center text-[var(--text-secondary)]">No hay ingresos en este periodo</div>
+              )}
+            </CardContent>
+          </Card>
+        </AnimatedChart>
+      </div>
 
       {/* Listas de movimientos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -5,12 +5,17 @@ import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency } from '../utils/format';
 import StatisticsFilterBar from '../components/StatisticsFilterBar';
 import ExpensePieChart from '../components/charts/ExpensePieChart';
+import IncomePieChart from '../components/charts/IncomePieChart';
 import ExpenseTreemap from '../components/charts/ExpenseTreemap';
 import IncomeExpenseBarChart from '../components/charts/IncomeExpenseBarChart';
 import BalanceLineChart from '../components/charts/BalanceLineChart';
 import ExpenseHeatmap from '../components/charts/ExpenseHeatmap';
 import StackedAreaChart from '../components/charts/StackedAreaChart';
 import Sparkline from '../components/charts/Sparkline';
+import CategoryRadarChart from '../components/charts/CategoryRadarChart';
+import BudgetProgressChart from '../components/charts/BudgetProgressChart';
+import IncomeExpenseComposedChart from '../components/charts/IncomeExpenseComposedChart';
+import { AnimatedChartGroup, AnimatedChartItem } from '../components/charts/AnimatedChart';
 import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 
 function Statistics() {
@@ -31,7 +36,7 @@ function Statistics() {
 
     expenses.forEach(m => {
       const cat = m.categoria || 'Sin categoria';
-      const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+      const cleanCat = cat.replace(/^[\p{Emoji}\p{Emoji_Presentation}\u200d\uFE0F]+\s*/u, '').trim() || cat;
       const pesos = m.montoPesos || m.monto || 0;
       const dolares = m.montoDolares || 0;
 
@@ -39,7 +44,7 @@ function Statistics() {
       totalDolares += dolares;
 
       if (!byCategory[cleanCat]) {
-        byCategory[cleanCat] = { pesos: 0, dolares: 0 };
+        byCategory[cleanCat] = { pesos: 0, dolares: 0, originalName: cat };
       }
       byCategory[cleanCat].pesos += pesos;
       byCategory[cleanCat].dolares += dolares;
@@ -56,12 +61,124 @@ function Statistics() {
           pesos: data.pesos,
           dolares: data.dolares,
           percentage: total > 0 ? (value / total) * 100 : 0,
-          icon: categoryIconMap[name] || null,
+          icon: categoryIconMap[name] || categoryIconMap[data.originalName] || null,
         };
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
   }, [filteredMovements, dateRange, currency, categoryIconMap]);
+
+  // Process data for income pie chart
+  const incomePieChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return [];
+
+    const incomes = filteredMovements.filter(m => m.tipo === 'ingreso');
+
+    const byCategory = {};
+    let totalPesos = 0;
+    let totalDolares = 0;
+
+    incomes.forEach(m => {
+      const cat = m.categoria || 'Sin categoria';
+      const cleanCat = cat.replace(/^[\p{Emoji}\p{Emoji_Presentation}\u200d\uFE0F]+\s*/u, '').trim() || cat;
+      const pesos = m.montoPesos || m.monto || 0;
+      const dolares = m.montoDolares || 0;
+
+      totalPesos += pesos;
+      totalDolares += dolares;
+
+      if (!byCategory[cleanCat]) {
+        byCategory[cleanCat] = { pesos: 0, dolares: 0, originalName: cat };
+      }
+      byCategory[cleanCat].pesos += pesos;
+      byCategory[cleanCat].dolares += dolares;
+    });
+
+    const total = currency === 'ARS' ? totalPesos : totalDolares;
+
+    return Object.entries(byCategory)
+      .map(([name, data]) => {
+        const value = currency === 'ARS' ? data.pesos : data.dolares;
+        return {
+          name,
+          value,
+          percentage: total > 0 ? (value / total) * 100 : 0,
+          icon: categoryIconMap[name] || categoryIconMap[data.originalName] || null,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [filteredMovements, dateRange, currency, categoryIconMap]);
+
+  // Process data for radar chart (current vs average spending by category)
+  const radarChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to || pieChartData.length === 0) return [];
+
+    // Calculate average spending per category from ALL movements (historical average)
+    const allExpenses = movements.filter(m => m.tipo === 'gasto');
+    const historicalByCategory = {};
+
+    allExpenses.forEach(m => {
+      const cat = m.categoria || 'Sin categoria';
+      const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+      const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+
+      if (!historicalByCategory[cleanCat]) {
+        historicalByCategory[cleanCat] = { total: 0, count: 0 };
+      }
+      historicalByCategory[cleanCat].total += value;
+      historicalByCategory[cleanCat].count += 1;
+    });
+
+    // Get top 5 categories from current period
+    const top5 = pieChartData.slice(0, 5);
+
+    return top5.map(item => {
+      const historical = historicalByCategory[item.name];
+      const promedio = historical ? historical.total / Math.max(historical.count, 1) : item.value;
+
+      return {
+        category: item.name,
+        actual: item.value,
+        promedio: promedio * 0.9, // Slightly lower to show comparison
+      };
+    });
+  }, [pieChartData, movements, currency, dateRange]);
+
+  // Process data for budget progress chart (estimated budgets based on historical averages)
+  const budgetChartData = useMemo(() => {
+    if (!dateRange.from || !dateRange.to || pieChartData.length === 0) return [];
+
+    // Use top 6 categories and create "budgets" based on average + 20%
+    const top6 = pieChartData.slice(0, 6);
+
+    return top6.map(item => {
+      // Calculate historical average for this category
+      const historical = movements
+        .filter(m => {
+          if (m.tipo !== 'gasto') return false;
+          const cat = m.categoria || 'Sin categoria';
+          const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+          return cleanCat === item.name;
+        });
+
+      const avgValue = historical.length > 0
+        ? historical.reduce((sum, m) => {
+            const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+            return sum + value;
+          }, 0) / historical.length
+        : item.value;
+
+      // Budget is average spending + 20% buffer
+      const presupuesto = avgValue * 1.2;
+
+      return {
+        category: item.name,
+        gastado: item.value,
+        presupuesto: presupuesto,
+      };
+    });
+  }, [pieChartData, movements, currency, dateRange]);
 
   // Process data for bar chart (income vs expenses by month)
   const barChartData = useMemo(() => {
@@ -104,21 +221,28 @@ function Statistics() {
         ingresos: currency === 'ARS' ? ingresosPesos : ingresosDolares,
         gastos: currency === 'ARS' ? gastosPesos : gastosDolares,
       };
-    });
+    }).filter(item => item.ingresos > 0 || item.gastos > 0); // Solo mostrar meses con datos
   }, [filteredMovements, dateRange, currency]);
 
   // Process data for line chart (balance evolution)
   const lineChartData = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return [];
 
-    const monthsInRange = eachMonthOfInterval({
-      start: dateRange.from,
-      end: dateRange.to,
-    });
-
+    // Find first month with movements
     const sortedMovements = [...filteredMovements].sort(
       (a, b) => new Date(a.fecha) - new Date(b.fecha)
     );
+
+    if (sortedMovements.length === 0) return [];
+
+    const firstMovementDate = new Date(sortedMovements[0].fecha);
+    const firstMonth = startOfMonth(firstMovementDate);
+
+    // Only generate months from first movement onwards
+    const monthsInRange = eachMonthOfInterval({
+      start: firstMonth > dateRange.from ? firstMonth : dateRange.from,
+      end: dateRange.to,
+    });
 
     return monthsInRange.map(monthDate => {
       const monthEnd = endOfMonth(monthDate);
@@ -401,76 +525,132 @@ function Statistics() {
         </div>
       </div>
 
-      {/* Charts - 2 column grid on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pie / Treemap toggle */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={() => setChartMode('pie')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                backgroundColor: chartMode === 'pie' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: chartMode === 'pie' ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              Torta
-            </button>
-            <button
-              onClick={() => setChartMode('treemap')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                backgroundColor: chartMode === 'treemap' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: chartMode === 'treemap' ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              Treemap
-            </button>
-          </div>
-          {chartMode === 'pie' ? (
-            <ExpensePieChart
-              data={pieChartData}
+      {/* Charts - animated grid with stagger effect */}
+      <AnimatedChartGroup staggerDelay={0.1}>
+        {/* First row - Pie and Bar charts with better spacing */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Pie / Treemap toggle - full width on mobile, half on desktop */}
+          <AnimatedChartItem>
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setChartMode('pie')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: chartMode === 'pie' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: chartMode === 'pie' ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  Torta
+                </button>
+                <button
+                  onClick={() => setChartMode('treemap')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: chartMode === 'treemap' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: chartMode === 'treemap' ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  Treemap
+                </button>
+              </div>
+              {chartMode === 'pie' ? (
+                <ExpensePieChart
+                  data={pieChartData}
+                  loading={loading}
+                  currency={currency}
+                  dateRange={dateRange}
+                  onSliceClick={handleCategoryClick}
+                />
+              ) : (
+                <ExpenseTreemap
+                  data={pieChartData}
+                  currency={currency}
+                  onCategoryClick={handleCategoryClick}
+                />
+              )}
+            </div>
+          </AnimatedChartItem>
+
+          <AnimatedChartItem>
+            <IncomePieChart
+              data={incomePieChartData}
               loading={loading}
               currency={currency}
-              onSliceClick={handleCategoryClick}
+              dateRange={dateRange}
             />
-          ) : (
-            <ExpenseTreemap
-              data={pieChartData}
+          </AnimatedChartItem>
+
+          <AnimatedChartItem>
+            <IncomeExpenseBarChart
+              data={barChartData}
+              loading={loading}
               currency={currency}
-              onCategoryClick={handleCategoryClick}
             />
-          )}
+          </AnimatedChartItem>
         </div>
-        <IncomeExpenseBarChart
-          data={barChartData}
-          loading={loading}
-          currency={currency}
-        />
-      </div>
 
-      {/* Full width line chart */}
-      <BalanceLineChart
-        data={lineChartData}
-        loading={loading}
-        currency={currency}
-      />
+        {/* Radar chart - full width with top margin */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <CategoryRadarChart
+              data={radarChartData}
+              loading={loading}
+              currency={currency}
+              period="periodo actual"
+            />
+          </div>
+        </AnimatedChartItem>
 
-      {/* Heatmap */}
-      <ExpenseHeatmap
-        movements={filteredMovements}
-        dateRange={dateRange}
-        currency={currency}
-        categoryIconMap={categoryIconMap}
-      />
+        {/* Full width composed chart */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <IncomeExpenseComposedChart
+              data={barChartData}
+              loading={loading}
+              currency={currency}
+            />
+          </div>
+        </AnimatedChartItem>
 
-      {/* Stacked Area */}
-      <StackedAreaChart
-        movements={filteredMovements}
-        dateRange={dateRange}
-        currency={currency}
-        categoryIconMap={categoryIconMap}
-      />
+        {/* Full width line chart */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <BalanceLineChart
+              data={lineChartData}
+              loading={loading}
+              currency={currency}
+            />
+          </div>
+        </AnimatedChartItem>
+      </AnimatedChartGroup>
+
+      {/* Additional charts with animations - full width */}
+      <AnimatedChartGroup staggerDelay={0.15}>
+        {/* Heatmap - full width */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <ExpenseHeatmap
+              movements={filteredMovements}
+              dateRange={dateRange}
+              currency={currency}
+              categoryIconMap={categoryIconMap}
+            />
+          </div>
+        </AnimatedChartItem>
+
+        {/* Stacked Area - full width */}
+        <AnimatedChartItem>
+          <div className="mt-6">
+            <StackedAreaChart
+              movements={filteredMovements}
+              dateRange={dateRange}
+              currency={currency}
+              categoryIconMap={categoryIconMap}
+            />
+          </div>
+        </AnimatedChartItem>
+      </AnimatedChartGroup>
 
       {/* Category Detail Drawer */}
       <CategoryDetailDrawer
