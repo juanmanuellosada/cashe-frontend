@@ -5,6 +5,7 @@ import {
   rejectScheduledTransaction,
   deleteScheduledTransaction,
 } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 import { useError } from '../contexts/ErrorContext';
 import ScheduledCard from '../components/scheduled/ScheduledCard';
 import ScheduledModal from '../components/scheduled/ScheduledModal';
@@ -44,6 +45,9 @@ function ScheduledTransactions() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Re-fetch when data changes (approvals, executions from other contexts)
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => fetchData(false));
 
   // Filter scheduled based on current filters
   const filteredScheduled = useMemo(() => {
@@ -179,7 +183,7 @@ function ScheduledTransactions() {
 
         {/* Summary cards (only show when there are pending) */}
         {counts.pending > 0 && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div
               className="p-4 rounded-2xl"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
