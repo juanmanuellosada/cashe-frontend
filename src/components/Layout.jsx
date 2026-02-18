@@ -549,7 +549,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
         {/* Mobile Header */}
         {!isDesktop && (
           <header
@@ -649,7 +649,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
         <div className="flex-1 overflow-x-hidden overflow-y-auto">
           <main
             key={location.pathname}
-            className={`animate-fade-in ${isDesktop ? 'px-8 py-6' : 'px-2 xs:px-3 sm:px-4 py-3 sm:py-4 pb-24'}`}
+            className={`animate-fade-in overflow-x-hidden ${isDesktop ? 'px-8 py-6' : 'px-2 xs:px-3 sm:px-4 py-3 sm:py-4 pb-24'}`}
             style={{
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',

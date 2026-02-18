@@ -42,10 +42,10 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 xs:gap-3">
         {/* Ingresos del mes */}
         <div
-          className="rounded-2xl p-4 relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10 cursor-default"
+          className="rounded-xl sm:rounded-2xl p-3 sm:p-4 relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10 cursor-default"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* Gradient background */}
@@ -57,12 +57,12 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
           />
 
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)' }}
               >
-                <svg className="w-5 h-5" style={{ color: 'var(--accent-green)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: 'var(--accent-green)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
               </div>
@@ -70,7 +70,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
                 Ingresos
               </span>
             </div>
-            <p className="text-xl font-bold mb-1" style={{ color: 'var(--accent-green)' }}>
+            <p className="text-base xs:text-lg sm:text-xl font-bold mb-1 truncate" style={{ color: 'var(--accent-green)' }}>
               +{formatCurrency(Math.abs(ingresos), currency)}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
@@ -81,7 +81,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
 
         {/* Gastos del mes */}
         <div
-          className="rounded-2xl p-4 relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10 cursor-default"
+          className="rounded-xl sm:rounded-2xl p-3 sm:p-4 relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10 cursor-default"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* Gradient background */}
@@ -93,12 +93,12 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
           />
 
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
               >
-                <svg className="w-5 h-5" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: 'var(--accent-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
               </div>
@@ -106,7 +106,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
                 Gastos
               </span>
             </div>
-            <p className="text-xl font-bold mb-1" style={{ color: 'var(--accent-red)' }}>
+            <p className="text-base xs:text-lg sm:text-xl font-bold mb-1 truncate" style={{ color: 'var(--accent-red)' }}>
               -{formatCurrency(Math.abs(gastos), currency)}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>

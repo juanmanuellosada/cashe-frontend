@@ -75,7 +75,11 @@
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /PID 23284 /F\")",
       "Bash(powershell.exe -Command \"Stop-Process -Id 23284 -Force\")",
-      "Bash(npx vite build:*)"
+      "Bash(npx vite build:*)",
+      "Bash(npx playwright:*)",
+      "mcp__puppeteer__puppeteer_click",
+      "mcp__puppeteer__puppeteer_fill",
+      "mcp__puppeteer__puppeteer_evaluate"
     ]
   },
   "enableAllProjectMcpServers": true,

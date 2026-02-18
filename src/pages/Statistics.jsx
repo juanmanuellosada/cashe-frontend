@@ -429,29 +429,31 @@ function Statistics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between flex-wrap gap-2 min-w-0">
+        <h2 className="text-lg sm:text-xl font-bold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           Estadisticas
         </h2>
         <StatisticsFilterBar />
       </div>
 
       {/* Summary Cards with Sparklines */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3 lg:gap-4">
         {/* Total Ingresos */}
         <div
-          className="rounded-2xl p-4 lg:p-5"
+          className="rounded-xl sm:rounded-2xl p-2.5 xs:p-3 sm:p-4 lg:p-5 overflow-hidden"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-              Total Ingresos
+            <p className="text-[10px] xs:text-xs uppercase tracking-wide truncate mr-1" style={{ color: 'var(--text-secondary)' }}>
+              Ingresos
             </p>
-            {summaryStats.sparklines.ingresos.length >= 2 && (
-              <Sparkline data={summaryStats.sparklines.ingresos} color="var(--accent-green)" gradientId="spark-ingresos" />
-            )}
+            <div className="hidden sm:block flex-shrink-0">
+              {summaryStats.sparklines.ingresos.length >= 2 && (
+                <Sparkline data={summaryStats.sparklines.ingresos} color="var(--accent-green)" gradientId="spark-ingresos" />
+              )}
+            </div>
           </div>
-          <p className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>
+          <p className="text-sm xs:text-base sm:text-xl lg:text-2xl font-bold truncate" style={{ color: 'var(--accent-green)' }}>
             {loading ? '...' : formatCurrency(summaryStats.totalIngresos, currency)}
           </p>
           <VariationBadge value={summaryStats.variaciones.ingresos} label={`Comparado con ${summaryStats.periodoAnteriorLabel}`} />
@@ -459,18 +461,20 @@ function Statistics() {
 
         {/* Total Gastos */}
         <div
-          className="rounded-2xl p-4 lg:p-5"
+          className="rounded-xl sm:rounded-2xl p-2.5 xs:p-3 sm:p-4 lg:p-5 overflow-hidden"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-              Total Gastos
+            <p className="text-[10px] xs:text-xs uppercase tracking-wide truncate mr-1" style={{ color: 'var(--text-secondary)' }}>
+              Gastos
             </p>
-            {summaryStats.sparklines.gastos.length >= 2 && (
-              <Sparkline data={summaryStats.sparklines.gastos} color="var(--accent-red)" gradientId="spark-gastos" />
-            )}
+            <div className="hidden sm:block flex-shrink-0">
+              {summaryStats.sparklines.gastos.length >= 2 && (
+                <Sparkline data={summaryStats.sparklines.gastos} color="var(--accent-red)" gradientId="spark-gastos" />
+              )}
+            </div>
           </div>
-          <p className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--accent-red)' }}>
+          <p className="text-sm xs:text-base sm:text-xl lg:text-2xl font-bold truncate" style={{ color: 'var(--accent-red)' }}>
             {loading ? '...' : formatCurrency(summaryStats.totalGastos, currency)}
           </p>
           <VariationBadge value={summaryStats.variaciones.gastos} invertColor label={`Comparado con ${summaryStats.periodoAnteriorLabel}`} />
@@ -478,23 +482,25 @@ function Statistics() {
 
         {/* Balance */}
         <div
-          className="rounded-2xl p-4 lg:p-5"
+          className="rounded-xl sm:rounded-2xl p-2.5 xs:p-3 sm:p-4 lg:p-5 overflow-hidden"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-[10px] xs:text-xs uppercase tracking-wide truncate mr-1" style={{ color: 'var(--text-secondary)' }}>
               Balance
             </p>
-            {summaryStats.sparklines.balance.length >= 2 && (
-              <Sparkline
-                data={summaryStats.sparklines.balance}
-                color={summaryStats.balance >= 0 ? 'var(--accent-primary)' : 'var(--accent-red)'}
-                gradientId="spark-balance"
-              />
-            )}
+            <div className="hidden sm:block flex-shrink-0">
+              {summaryStats.sparklines.balance.length >= 2 && (
+                <Sparkline
+                  data={summaryStats.sparklines.balance}
+                  color={summaryStats.balance >= 0 ? 'var(--accent-primary)' : 'var(--accent-red)'}
+                  gradientId="spark-balance"
+                />
+              )}
+            </div>
           </div>
           <p
-            className="text-xl lg:text-2xl font-bold"
+            className="text-sm xs:text-base sm:text-xl lg:text-2xl font-bold truncate"
             style={{ color: summaryStats.balance >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
           >
             {loading ? '...' : formatCurrency(summaryStats.balance, currency)}
@@ -504,19 +510,21 @@ function Statistics() {
 
         {/* Tasa de Ahorro */}
         <div
-          className="rounded-2xl p-4 lg:p-5"
+          className="rounded-xl sm:rounded-2xl p-2.5 xs:p-3 sm:p-4 lg:p-5 overflow-hidden"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-              Tasa de Ahorro
+            <p className="text-[10px] xs:text-xs uppercase tracking-wide truncate mr-1" style={{ color: 'var(--text-secondary)' }}>
+              Ahorro
             </p>
-            {summaryStats.sparklines.ahorro.length >= 2 && (
-              <Sparkline data={summaryStats.sparklines.ahorro} color="var(--accent-primary)" gradientId="spark-ahorro" />
-            )}
+            <div className="hidden sm:block flex-shrink-0">
+              {summaryStats.sparklines.ahorro.length >= 2 && (
+                <Sparkline data={summaryStats.sparklines.ahorro} color="var(--accent-primary)" gradientId="spark-ahorro" />
+              )}
+            </div>
           </div>
           <p
-            className="text-xl lg:text-2xl font-bold"
+            className="text-sm xs:text-base sm:text-xl lg:text-2xl font-bold truncate"
             style={{ color: summaryStats.savingsRate >= 0 ? 'var(--accent-primary)' : 'var(--accent-red)' }}
           >
             {loading ? '...' : `${summaryStats.savingsRate.toFixed(1)}%`}

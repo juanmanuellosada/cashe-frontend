@@ -409,6 +409,12 @@ select {
   border: 1px solid var(--border-subtle);
 }
 
+@media (max-width: 639px) {
+  .card-glass {
+    padding: 6px;
+  }
+}
+
 .card-elevated {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);

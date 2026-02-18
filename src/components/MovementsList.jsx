@@ -634,11 +634,11 @@ function MovementsList({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           {title}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink min-w-0">
           {/* Add button */}
           {!selectionMode && (
             <button
@@ -939,26 +939,26 @@ function MovementsList({
 
           {type === 'transferencia' ? (
             /* Transfer totals - show both saliente and entrante */
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="overflow-hidden">
                 <p className="text-xs mb-1 flex items-center gap-1" style={{ color: 'var(--accent-red)' }}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
                   </svg>
-                  Total saliente
+                  Saliente
                 </p>
-                <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
+                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-red)' }}>
                   {formatCurrency(subtotals.totalSaliente, currency)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right overflow-hidden">
                 <p className="text-xs mb-1 flex items-center gap-1 justify-end" style={{ color: 'var(--accent-green)' }}>
-                  Total entrante
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  Entrante
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h14" />
                   </svg>
                 </p>
-                <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
+                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-green)' }}>
                   {formatCurrency(subtotals.totalEntrante, currency)}
                 </p>
               </div>
@@ -969,7 +969,7 @@ function MovementsList({
               <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Total
               </p>
-              <p className="text-2xl font-bold" style={{ color: getTypeColor() }}>
+              <p className="text-xl sm:text-2xl font-bold" style={{ color: getTypeColor() }}>
                 {formatCurrency(subtotals.total, currency)}
               </p>
             </div>
@@ -1157,7 +1157,7 @@ function MovementsList({
                   )}
 
                   {/* Amount and date */}
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right flex-shrink-0 max-w-[45%] sm:max-w-none">
                     {(() => {
                       // Determine currency based on the account's currency
                       const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
@@ -1166,13 +1166,13 @@ function MovementsList({
                       const amount = movement.monto || movement.montoSaliente;
 
                       return (
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           <img
                             src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
                             alt={currencyCode}
-                            className="w-4 h-4 rounded-sm"
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm flex-shrink-0"
                           />
-                          <p className="text-xl font-bold lg:text-lg" style={{ color: getTypeColor() }}>
+                          <p className="text-[15px] xs:text-base sm:text-lg font-bold truncate" style={{ color: getTypeColor() }}>
                             {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
                           </p>
                         </div>
