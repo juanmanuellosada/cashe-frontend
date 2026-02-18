@@ -1567,7 +1567,7 @@ function CreditCards() {
                       : viewingStatement.items;
                     selectedItems.size === itemsToShow.length ? setSelectedItems(new Set()) : selectAllItems(itemsToShow);
                   }}
-                  className="text-xs px-2 py-1 rounded-lg"
+                  className="text-xs px-2 py-1 min-h-[44px] rounded-lg"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
                 >
                   {(() => {
@@ -1585,7 +1585,7 @@ function CreditCards() {
                     <button
                       onClick={() => handleBulkMoveToStatement('prev')}
                       disabled={bulkProcessing || !hasPreviousStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
                       style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1596,7 +1596,7 @@ function CreditCards() {
                     <button
                       onClick={() => handleBulkMoveToStatement('next')}
                       disabled={bulkProcessing || !hasNextStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
                       style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
                     >
                       Resumen sig.
@@ -1609,7 +1609,7 @@ function CreditCards() {
                 <button
                   onClick={toggleSelectionMode}
                   disabled={bulkProcessing}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  className="px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                 >
                   Cancelar

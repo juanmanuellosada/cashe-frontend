@@ -499,7 +499,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         >
           <div className="flex items-center gap-2">
             <span
-              className="text-2xl sm:text-3xl font-bold"
+              className="text-xl sm:text-2xl md:text-3xl font-bold"
               style={{ color: 'var(--accent-red)' }}
             >
               {monedaGasto === 'USD' ? 'US$' : '$'}
@@ -512,7 +512,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
               placeholder="0"
               min="0"
               step="0.01"
-              className="flex-1 text-2xl sm:text-3xl font-bold bg-transparent outline-none"
+              className="flex-1 text-xl sm:text-2xl md:text-3xl font-bold bg-transparent outline-none"
               style={{ color: 'var(--text-primary)' }}
             />
           </div>

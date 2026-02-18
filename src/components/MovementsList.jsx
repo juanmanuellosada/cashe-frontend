@@ -559,7 +559,7 @@ function MovementsList({
               </span>
               <button
                 onClick={selectedItems.size === filteredMovements.length ? deselectAll : selectAll}
-                className="text-xs px-2 py-1 rounded-lg transition-colors"
+                className="text-xs px-2 py-1 min-h-[44px] rounded-lg transition-colors"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
               >
                 {selectedItems.size === filteredMovements.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
@@ -572,7 +572,7 @@ function MovementsList({
                   {/* Bulk Delete */}
                   <button
                     onClick={() => setBulkAction('delete')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -584,7 +584,7 @@ function MovementsList({
                   {/* Bulk Edit Account */}
                   <button
                     onClick={() => setBulkAction('editAccount')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(96, 165, 250, 0.15)', color: 'var(--accent-blue)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,7 +597,7 @@ function MovementsList({
                   {type !== 'transferencia' && (
                     <button
                       onClick={() => setBulkAction('editCategory')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                       style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,7 +610,7 @@ function MovementsList({
                   {/* Bulk Edit Date */}
                   <button
                     onClick={() => setBulkAction('editDate')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,7 +623,7 @@ function MovementsList({
               
               <button
                 onClick={toggleSelectionMode}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                className="px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
               >
                 Cancelar

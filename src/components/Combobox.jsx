@@ -151,7 +151,7 @@ function Combobox({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full pl-9 pr-3 py-2 rounded-lg text-sm"
+                className="w-full pl-10 pr-3 py-2.5 rounded-lg text-sm"
                 style={{
                   backgroundColor: 'var(--bg-tertiary)',
                   color: 'var(--text-primary)'
@@ -161,7 +161,7 @@ function Combobox({
           </div>
 
           {/* Options list */}
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-[50vh] sm:max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-sm text-center" style={{ color: 'var(--text-secondary)' }}>
                 {emptyMessage}

@@ -50,7 +50,7 @@ export default function SortDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+        className="flex items-center gap-2 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-medium transition-all duration-200"
         style={{
           backgroundColor: 'var(--bg-tertiary)',
           color: 'var(--text-secondary)',

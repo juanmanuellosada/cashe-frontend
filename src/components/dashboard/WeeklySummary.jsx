@@ -298,7 +298,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={account.nombre}
                     onClick={() => toggleFilter('cuentas', account.nombre)}
-                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 flex items-center gap-1"
+                    className="px-3 py-2 min-h-[44px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 flex items-center gap-1"
                     style={{
                       backgroundColor: selected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',
@@ -353,7 +353,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   <button
                     key={catValue}
                     onClick={() => toggleFilter('categorias', catValue)}
-                    className="px-3 py-2 min-h-[40px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
+                    className="px-3 py-2 min-h-[44px] rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95"
                     style={{
                       backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-secondary)',
                       color: selected ? 'white' : 'var(--text-secondary)',

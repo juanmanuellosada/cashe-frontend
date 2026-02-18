@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '../config/supabase';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StorageUsageIndicator from '../components/StorageUsageIndicator';
 import ImagePreviewModal from '../components/ImagePreviewModal';
@@ -13,11 +14,7 @@ export default function Attachments() {
   const [filter, setFilter] = useState('all');
   const [previewImage, setPreviewImage] = useState(null);
 
-  useEffect(() => {
-    loadAttachments();
-  }, []);
-
-  const loadAttachments = async () => {
+  const loadAttachments = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -120,7 +117,14 @@ export default function Attachments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAttachments();
+  }, [loadAttachments]);
+
+  // Re-fetch when movements/transfers change (new attachments added/removed)
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, loadAttachments);
 
   const filteredAttachments = useMemo(() => {
     if (filter === 'all') return attachments;
@@ -177,12 +181,12 @@ export default function Attachments() {
       </div>
 
       {/* Filtros - más compactos */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         {filters.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center ${
               filter === f.key ? 'text-white' : ''
             }`}
             style={{

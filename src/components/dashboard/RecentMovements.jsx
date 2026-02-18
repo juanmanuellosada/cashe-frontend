@@ -234,7 +234,7 @@ function RecentMovements({
                 {/* Clickable area for edit */}
                 <button
                   onClick={() => onMovementClick?.(movement)}
-                  className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left transition-transform duration-200"
+                  className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 sm:gap-3 flex-1 min-w-0 min-h-[48px] text-left transition-transform duration-200"
                   style={{ backgroundColor: 'transparent' }}
                 >
                   {/* Top row: Icon + Info */}

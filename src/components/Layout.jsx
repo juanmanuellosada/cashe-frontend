@@ -10,7 +10,7 @@ import NewMovementModal from './NewMovementModal';
 import Avatar from './Avatar';
 import OfflineIndicator from './OfflineIndicator';
 import { getAccounts, getCategories, updateMovement, deleteMovement, invalidateMovementCache } from '../services/supabaseApi';
-import { emit, DataEvents } from '../services/dataEvents';
+import { emit, DataEvents, useDataEvent } from '../services/dataEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useError } from '../contexts/ErrorContext';
 import { useHaptics } from '../hooks/useHaptics';
@@ -85,23 +85,30 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   }, []);
 
   // Load accounts and categories for edit modal
+  const loadAccountsAndCategories = useCallback(async () => {
+    try {
+      const [accountsData, categoriesData] = await Promise.all([
+        getAccounts(),
+        getCategories(),
+      ]);
+      setAccounts(accountsData.accounts || []);
+      setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
+    } catch (err) {
+      console.error('Error loading data for search:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [accountsData, categoriesData] = await Promise.all([
-          getAccounts(),
-          getCategories(),
-        ]);
-        setAccounts(accountsData.accounts || []);
-        setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
-      } catch (err) {
-        console.error('Error loading data for search:', err);
-      }
-    }
     if (user) {
-      loadData();
+      loadAccountsAndCategories();
     }
-  }, [user]);
+  }, [user, loadAccountsAndCategories]);
+
+  // Re-fetch accounts/categories when they change (keeps dropdowns in modals fresh)
+  useDataEvent(
+    [DataEvents.ACCOUNTS_CHANGED, DataEvents.CATEGORIES_CHANGED],
+    loadAccountsAndCategories
+  );
 
   // Global keyboard shortcuts (desktop only)
   useEffect(() => {
@@ -666,10 +673,10 @@ function Layout({ children, darkMode, toggleDarkMode }) {
             WebkitBackdropFilter: 'blur(16px)'
           }}
         >
-          <div className="flex items-center justify-around py-1.5 px-2 max-w-md mx-auto">
+          <div className="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
             <NavLink
               to="/"
-              className="flex flex-col items-center px-4 py-1.5 rounded-lg transition-colors duration-150 active:scale-95"
+              className="flex flex-col items-center px-4 py-2 rounded-lg transition-colors duration-150 active:scale-95 min-h-[48px]"
               style={({ isActive }) => ({
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
               })}
@@ -705,7 +712,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
 
             <button
               onClick={() => setMenuOpen(true)}
-              className="flex flex-col items-center px-4 py-1.5 rounded-lg transition-colors duration-150 active:scale-95"
+              className="flex flex-col items-center px-4 py-2 rounded-lg transition-colors duration-150 active:scale-95 min-h-[48px]"
               style={{
                 color: menuOpen ? 'var(--text-primary)' : 'var(--text-muted)',
               }}
@@ -728,7 +735,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
           />
 
           <div
-            className="absolute right-0 top-0 bottom-0 w-[260px] animate-slide-in-right overflow-hidden"
+            className="absolute right-0 top-0 bottom-0 w-[280px] max-w-[85vw] animate-slide-in-right overflow-hidden"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               borderLeft: '1px solid var(--border-subtle)'
@@ -750,13 +757,13 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               </button>
             </div>
 
-            <div className="p-2 space-y-0.5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+            <div className="p-2 space-y-0.5 overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 120px - env(safe-area-inset-bottom, 0px))' }}>
               {menuItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors duration-150 active:scale-[0.98]"
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors duration-150 active:scale-[0.98] min-h-[44px]"
                   style={({ isActive }) => ({
                     backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -852,7 +859,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
           onClick={() => setShortcutsOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl p-6 animate-fade-in"
+            className="w-full max-w-lg rounded-2xl p-4 sm:p-6 animate-fade-in max-h-[90vh] overflow-y-auto"
             style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -926,7 +933,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                 <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Navegación (Alt + Tecla)
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {keyboardShortcuts.filter(s => s.alt && !s.ctrl).map((shortcut, idx) => (
                     <div
                       key={idx}

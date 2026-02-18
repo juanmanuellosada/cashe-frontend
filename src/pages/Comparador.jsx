@@ -317,7 +317,7 @@ function Comparador() {
                     <button
                       key={cat || `expense-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      className="px-3 py-1.5 min-h-[44px] rounded-full text-xs font-medium transition-colors flex items-center"
                       style={{
                         backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
@@ -345,7 +345,7 @@ function Comparador() {
                     <button
                       key={cat || `income-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      className="px-3 py-1.5 min-h-[44px] rounded-full text-xs font-medium transition-colors flex items-center"
                       style={{
                         backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
@@ -364,7 +364,7 @@ function Comparador() {
                   setSelectedExpenseCategories([]);
                   setSelectedIncomeCategories([]);
                 }}
-                className="text-xs font-medium"
+                className="text-xs font-medium min-h-[44px] flex items-center"
                 style={{ color: 'var(--accent-primary)' }}
               >
                 Limpiar filtros de categorias

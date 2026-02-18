@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getGoalsWithProgress } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 
 export function useGoals() {
   const [goals, setGoals] = useState([]);
@@ -23,6 +24,12 @@ export function useGoals() {
   useEffect(() => {
     fetchGoals();
   }, [fetchGoals]);
+
+  // Re-fetch when movements change (goal progress depends on income/expenses/savings)
+  useDataEvent(
+    [DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
+    fetchGoals
+  );
 
   const refetch = async () => {
     try {

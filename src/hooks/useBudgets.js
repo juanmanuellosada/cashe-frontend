@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getBudgetsWithProgress } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 
 export function useBudgets() {
   const [budgets, setBudgets] = useState([]);
@@ -23,6 +24,12 @@ export function useBudgets() {
   useEffect(() => {
     fetchBudgets();
   }, [fetchBudgets]);
+
+  // Re-fetch when expenses/incomes change (budget progress depends on movements)
+  useDataEvent(
+    [DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED],
+    fetchBudgets
+  );
 
   const refetch = async () => {
     try {

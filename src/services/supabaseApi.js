@@ -800,7 +800,6 @@ export const addCategory = async ({ nombre, tipo, icon, icon_catalog_id }) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -820,7 +819,6 @@ export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_ca
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -832,7 +830,6 @@ export const deleteCategory = async (idOrRowIndex) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -844,7 +841,6 @@ export const bulkDeleteCategories = async (categoryIds) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -2529,7 +2525,6 @@ export const registerStatementPayment = async ({ accountId, statementPeriod, cur
 
   // Invalidar cache para que próximo resumen se recalcule
   invalidateCache('accounts');
-  emit(DataEvents.ACCOUNTS_CHANGED);
 
   return data;
 };
@@ -2557,8 +2552,6 @@ export const cancelStatementPayment = async (paymentId, transferId) => {
 
   invalidateCache('transfers');
   invalidateCache('accounts');
-  emit(DataEvents.TRANSFERS_CHANGED);
-  emit(DataEvents.ACCOUNTS_CHANGED);
 
   return { success: true };
 };
@@ -4568,7 +4561,6 @@ export const createAutoRule = async ({ name, logicOperator = 'AND', priority = 0
   }
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule };
 };
 
@@ -4632,7 +4624,6 @@ export const updateAutoRule = async (id, { name, logicOperator, priority, isActi
   }
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule };
 };
 
@@ -4648,7 +4639,6 @@ export const deleteAutoRule = async (id) => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true };
 };
 
@@ -4669,7 +4659,6 @@ export const toggleAutoRule = async (id, isActive) => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule: data };
 };
 
@@ -4688,7 +4677,6 @@ export const reorderAutoRules = async (rules) => {
   await Promise.all(updates);
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true };
 };
 
@@ -4707,7 +4695,6 @@ export const generateAllAutoRules = async () => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rulesCreated: data?.[0]?.generate_auto_rules_for_user_v2 || 0 };
 };
 
