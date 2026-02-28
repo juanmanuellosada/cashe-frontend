@@ -38,6 +38,7 @@ const ScheduledTransactions = lazy(() => import('./pages/ScheduledTransactions')
 const Calendar = lazy(() => import('./pages/Calendar'))
 const Settings = lazy(() => import('./pages/Settings'))
 const AutoRules = lazy(() => import('./pages/AutoRules'))
+const MonthlyReport = lazy(() => import('./pages/MonthlyReport'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -125,6 +126,13 @@ function App() {
                 }
               />
             ))}
+
+            {/* Monthly report - no StatisticsProvider needed */}
+            <Route path="/resumen-mensual" element={
+              <ProtectedPage>
+                <MonthlyReport />
+              </ProtectedPage>
+            } />
 
             {/* Analysis routes - wrapped with StatisticsProvider */}
             {[

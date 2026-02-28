@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, subDays, differenceInDays, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency } from '../utils/format';
 import StatisticsFilterBar from '../components/StatisticsFilterBar';
@@ -19,6 +20,7 @@ import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 
 function Statistics() {
   const { filteredMovements, dateRange, currency, loading, movements, categoryIconMap } = useStatistics();
+  const navigate = useNavigate();
   const [chartMode, setChartMode] = useState('pie'); // 'pie' | 'treemap'
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCategory, setDrawerCategory] = useState(null);
@@ -387,9 +389,25 @@ function Statistics() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          Estadisticas
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            Estadisticas
+          </h2>
+          <button
+            onClick={() => {
+              const now = new Date();
+              navigate(`/resumen-mensual?mes=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+            title="Ver resumen mensual"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Resumen mensual
+          </button>
+        </div>
         <StatisticsFilterBar />
       </div>
 

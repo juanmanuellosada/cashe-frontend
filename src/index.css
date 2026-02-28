@@ -1030,3 +1030,61 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT STYLES — Resumen mensual exportable
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Ocultar sidebar, header y controles del reporte */
+  aside,
+  header,
+  .bottom-nav,
+  .report-controls,
+  nav[class*="fixed"] {
+    display: none !important;
+  }
+
+  /* El content ocupa toda la página */
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Resetear el margen del layout */
+  .ml-\[68px\],
+  .ml-\[240px\] {
+    margin-left: 0 !important;
+  }
+
+  /* Contenido del reporte ocupa la hoja completa */
+  .report-content {
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Evitar cortes dentro de secciones */
+  .report-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Las tablas tampoco se cortan */
+  table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Forzar fondos y colores para impresión */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Los gráficos SVG se renderizan bien */
+  .print-charts {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
