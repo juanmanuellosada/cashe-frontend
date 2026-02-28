@@ -246,7 +246,7 @@ function BalanceCard({
                   : 'Seleccionar todos'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
               {visibleAccountsList.map((account) => {
                 const selected = isSelected(account.nombre);
                 return (

@@ -174,10 +174,10 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-80">
+          <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
             <ComposedChart
               data={enrichedData}
-              margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
+              margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
             >
               <defs>
                 {/* Background pattern */}

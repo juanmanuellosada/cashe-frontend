@@ -497,7 +497,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                 key={opt.id}
                 type="button"
                 onClick={() => setMonedaGasto(opt.id)}
-                className="flex-1 py-2 rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
                 style={{
                   backgroundColor: monedaGasto === opt.id ? 'var(--bg-elevated)' : 'transparent',
                   color: monedaGasto === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -586,7 +586,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                   key={option}
                   type="button"
                   onClick={() => setCantidadCuotas(option)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                     cantidadCuotas === option
                       ? 'ring-2 ring-[var(--accent-purple)]'
                       : 'opacity-60 hover:opacity-100'

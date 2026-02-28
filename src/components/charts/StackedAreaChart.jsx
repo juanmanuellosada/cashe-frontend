@@ -64,7 +64,8 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
       .sort(([, a], [, b]) => b - a);
 
     const topCats = sortedCats.slice(0, 8).map(([name]) => name);
-    const hasOtros = sortedCats.length > 8;
+    // Only add "Otros" bucket if there are more than 8 cats AND "Otros" isn't already a top cat
+    const hasOtros = sortedCats.length > 8 && !topCats.includes('Otros');
     const allCats = hasOtros ? [...topCats, 'Otros'] : topCats;
     const topCat = sortedCats[0] ? { name: sortedCats[0][0], value: sortedCats[0][1] } : null;
 
@@ -216,10 +217,10 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[280px]">
+        <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <AreaChart
             data={chartData}
-            margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
+            margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
           >
             <defs>
               {/* Background pattern */}

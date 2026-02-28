@@ -108,7 +108,9 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
   }
 
   const numWeeks = weeks.length || 1;
-  const gridColumns = `20px repeat(${numWeeks}, 1fr)`;
+  const MIN_CELL_PX = 9;
+  const gridColumns = `16px repeat(${numWeeks}, 1fr)`;
+  const minGridWidth = 16 + numWeeks * (MIN_CELL_PX + 2);
 
   return (
     <div
@@ -120,86 +122,92 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
       </h3>
 
       <div className="heatmap-container relative">
-        {/* Month labels row */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: gridColumns,
-            gap: '0 2px',
-            marginBottom: '4px',
-          }}
-        >
-          <div /> {/* spacer for day-label column */}
-          {weeks.map((week, weekIdx) => {
-            const monthLabel = monthLabels.find(m => m.col === weekIdx);
-            return (
-              <div
-                key={weekIdx}
-                className="text-[10px] font-medium truncate"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                {monthLabel
-                  ? monthLabel.label.charAt(0).toUpperCase() + monthLabel.label.slice(1)
-                  : ''}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Data grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: gridColumns,
-            gap: '2px',
-          }}
-        >
-          {DAY_LABELS.map((dayLabel, dayIdx) => (
-            <Fragment key={dayLabel}>
-              {/* Day label */}
-              <div
-                className="flex items-center justify-end pr-0.5"
-                style={{
-                  fontSize: '9px',
-                  color: 'var(--text-muted)',
-                  visibility: dayIdx % 2 === 0 ? 'visible' : 'hidden',
-                }}
-              >
-                {dayLabel}
-              </div>
-
-              {/* Cells for this day across all weeks */}
+        {/* Scrollable wrapper — prevents cells from compressing below MIN_CELL_PX */}
+        <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+          <div style={{ minWidth: `${minGridWidth}px` }}>
+            {/* Month labels row */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: gridColumns,
+                gap: '0 2px',
+                marginBottom: '4px',
+              }}
+            >
+              <div /> {/* spacer for day-label column */}
               {weeks.map((week, weekIdx) => {
-                const day = week[dayIdx];
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const isInRange = day >= dateRange.from && day <= dateRange.to;
-                const isHovered = hoveredDay === dateStr;
-                const isSelected = selectedDay === dateStr;
-
+                const monthLabel = monthLabels.find(m => m.col === weekIdx);
                 return (
                   <div
-                    key={dateStr}
-                    className="cursor-pointer transition-all duration-150"
-                    style={{
-                      aspectRatio: '1',
-                      borderRadius: '20%',
-                      backgroundColor: isInRange ? getCellColor(dateStr) : 'transparent',
-                      opacity: isInRange ? 1 : 0.15,
-                      outline: isSelected
-                        ? '2px solid var(--accent-primary)'
-                        : isHovered
-                          ? '1px solid var(--text-muted)'
-                          : 'none',
-                      outlineOffset: '1px',
-                    }}
-                    onMouseEnter={(e) => handleMouseEnter(dateStr, e)}
-                    onMouseLeave={() => setHoveredDay(null)}
-                    onClick={() => handleDayClick(dateStr)}
-                  />
+                    key={weekIdx}
+                    className="text-[10px] font-medium"
+                    style={{ color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                  >
+                    {monthLabel
+                      ? monthLabel.label.charAt(0).toUpperCase()
+                      : ''}
+                  </div>
                 );
               })}
-            </Fragment>
-          ))}
+            </div>
+
+            {/* Data grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: gridColumns,
+                gap: '2px',
+              }}
+            >
+              {DAY_LABELS.map((dayLabel, dayIdx) => (
+                <Fragment key={dayLabel}>
+                  {/* Day label */}
+                  <div
+                    className="flex items-center justify-end pr-0.5"
+                    style={{
+                      fontSize: '9px',
+                      color: 'var(--text-muted)',
+                      visibility: dayIdx % 2 === 0 ? 'visible' : 'hidden',
+                    }}
+                  >
+                    {dayLabel}
+                  </div>
+
+                  {/* Cells for this day across all weeks */}
+                  {weeks.map((week, weekIdx) => {
+                    const day = week[dayIdx];
+                    const dateStr = format(day, 'yyyy-MM-dd');
+                    const isInRange = day >= dateRange.from && day <= dateRange.to;
+                    const isHovered = hoveredDay === dateStr;
+                    const isSelected = selectedDay === dateStr;
+
+                    return (
+                      <div
+                        key={dateStr}
+                        className="cursor-pointer transition-all duration-150"
+                        style={{
+                          aspectRatio: '1',
+                          minWidth: 0,
+                          borderRadius: '20%',
+                          backgroundColor: isInRange ? getCellColor(dateStr) : 'transparent',
+                          opacity: isInRange ? 1 : 0.15,
+                          outline: isSelected
+                            ? '2px solid var(--accent-primary)'
+                            : isHovered
+                              ? '1px solid var(--text-muted)'
+                              : 'none',
+                          outlineOffset: '1px',
+                        }}
+                        onMouseEnter={(e) => handleMouseEnter(dateStr, e)}
+                        onMouseLeave={() => setHoveredDay(null)}
+                        onClick={() => handleDayClick(dateStr)}
+                      />
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Tooltip */}

@@ -112,7 +112,7 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
               <button
                 key={type.id}
                 onClick={() => setMovementType(type.id)}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-150"
+                className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-md text-xs sm:text-sm font-medium transition-all duration-150"
                 style={{
                   backgroundColor: isActive ? type.bgDim : 'transparent',
                   color: isActive ? type.color : 'var(--text-muted)',

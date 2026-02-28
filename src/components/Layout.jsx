@@ -542,7 +542,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
+      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
         {/* Mobile Header */}
         {!isDesktop && (
           <header
@@ -648,6 +648,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
               transformOrigin: 'top left',
               width: `${100 / zoom}%`,
               minHeight: zoom < 1 ? `${100 / zoom}%` : 'auto',
+              overflowX: 'hidden',
             }}
           >
             {children}

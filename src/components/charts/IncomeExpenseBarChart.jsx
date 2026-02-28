@@ -37,7 +37,7 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
           <div className="h-3 w-24 skeleton rounded" />
         </CardHeader>
         <CardContent>
-          <div className="h-60 flex items-center justify-center">
+          <div className="h-64 sm:h-80 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         </CardContent>
@@ -53,7 +53,7 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
           <CardDescription>No hay datos disponibles</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-60 flex items-center justify-center text-[var(--text-secondary)]">
+          <div className="h-64 sm:h-80 flex items-center justify-center text-[var(--text-secondary)]">
             <p>Sin movimientos para mostrar</p>
           </div>
         </CardContent>
@@ -161,10 +161,10 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-80 w-full">
+        <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
           <BarChart
             data={data}
-            margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
+            margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
           >
             <defs>
               {/* Background pattern */}

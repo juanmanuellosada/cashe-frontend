@@ -39,7 +39,7 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
           <div className="h-3 w-24 skeleton rounded" />
         </CardHeader>
         <CardContent>
-          <div className="h-80 flex items-center justify-center">
+          <div className="h-[260px] sm:h-[300px] flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         </CardContent>
@@ -66,9 +66,11 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
   // Calculate if current spending is higher than average
   const totalActual = data.reduce((sum, item) => sum + item.actual, 0);
   const totalPromedio = data.reduce((sum, item) => sum + item.promedio, 0);
-  const percentageDiff = totalPromedio > 0
+  const rawPercentageDiff = totalPromedio > 0
     ? ((totalActual - totalPromedio) / totalPromedio) * 100
     : 0;
+  // Cap at ±999% to avoid astronomical values when promedio is near 0
+  const percentageDiff = Math.abs(rawPercentageDiff) > 999 ? 0 : rawPercentageDiff;
   const isHigher = percentageDiff > 0;
 
   // Find category with highest variance
@@ -151,7 +153,7 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="h-[260px] sm:h-[300px] w-full">
             <RadarChart data={data}>
               <defs>
                 {/* Glow effect */}

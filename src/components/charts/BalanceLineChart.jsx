@@ -59,9 +59,11 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
   // Calculate trend
   const firstBalance = data[0]?.balance || 0;
   const lastBalance = data[data.length - 1]?.balance || 0;
-  const percentageChange = firstBalance !== 0
+  const rawPercentage = firstBalance !== 0
     ? ((lastBalance - firstBalance) / Math.abs(firstBalance)) * 100
     : 0;
+  // Cap at ±999% to avoid astronomical values when firstBalance is near 0
+  const percentageChange = Math.abs(rawPercentage) > 999 ? 0 : rawPercentage;
   const isPositiveTrend = percentageChange >= 0;
 
   // Calculate min/max for better Y axis
@@ -129,10 +131,10 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
         <CardDescription>Últimos meses</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-60">
+        <ChartContainer config={chartConfig} className="h-60 w-full">
           <LineChart
             data={data}
-            margin={{ left: -20, right: 12, top: 12, bottom: 0 }}
+            margin={{ left: -10, right: 8, top: 8, bottom: 0 }}
           >
             {/* Background pattern */}
             <defs>

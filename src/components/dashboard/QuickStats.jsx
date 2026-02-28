@@ -17,7 +17,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
         >
           <button
             onClick={() => setCurrency('ARS')}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5 min-h-[36px]"
             style={{
               backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
               color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
@@ -29,7 +29,7 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
           </button>
           <button
             onClick={() => setCurrency('USD')}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5 min-h-[36px]"
             style={{
               backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
               color: currency === 'USD' ? 'white' : 'var(--text-secondary)',

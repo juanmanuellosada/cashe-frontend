@@ -492,7 +492,7 @@ function Statistics() {
               <div className="flex items-center gap-2 mb-3">
                 <button
                   onClick={() => setChartMode('pie')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  className="px-3 py-2.5 rounded-lg text-xs font-semibold transition-all min-h-[40px]"
                   style={{
                     backgroundColor: chartMode === 'pie' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                     color: chartMode === 'pie' ? 'white' : 'var(--text-secondary)',
@@ -502,7 +502,7 @@ function Statistics() {
                 </button>
                 <button
                   onClick={() => setChartMode('treemap')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  className="px-3 py-2.5 rounded-lg text-xs font-semibold transition-all min-h-[40px]"
                   style={{
                     backgroundColor: chartMode === 'treemap' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                     color: chartMode === 'treemap' ? 'white' : 'var(--text-secondary)',

@@ -134,7 +134,7 @@ function FilterBar({
                   : 'Seleccionar todos'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
               {accounts.map((account) => {
                 const selected = isSelected('cuentas', account.nombre);
                 const isHidden = account.ocultaDelBalance;

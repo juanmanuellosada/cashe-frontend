@@ -286,14 +286,14 @@ function Comparador() {
                 </svg>
                 Categorias de gastos
               </p>
-              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
                 {categories.gastos.map((cat, index) => {
                   const selected = selectedExpenseCategories.includes(cat);
                   return (
                     <button
                       key={cat || `expense-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      className="px-3 py-2 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
@@ -314,14 +314,14 @@ function Comparador() {
                 </svg>
                 Categorias de ingresos
               </p>
-              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
                 {categories.ingresos.map((cat, index) => {
                   const selected = selectedIncomeCategories.includes(cat);
                   return (
                     <button
                       key={cat || `income-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      className="px-3 py-2 rounded-full text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',

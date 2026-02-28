@@ -190,7 +190,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[350px]"
+          className="mx-auto aspect-square w-full max-w-[320px] sm:max-w-[350px]"
         >
           <PieChart>
             <defs>

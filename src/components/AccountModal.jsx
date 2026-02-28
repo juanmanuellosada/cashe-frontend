@@ -251,7 +251,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                 { value: 'Tarjeta de crédito', icon: '💳', label: 'Crédito' },
                 { value: 'Billetera virtual', icon: '📱', label: 'Billetera' },
                 { value: 'Efectivo', icon: '💵', label: 'Efectivo' },
-                { value: 'Inversiones', icon: '📈', label: 'Inversión' },
+                { value: 'Inversión', icon: '📈', label: 'Inversión' },
               ].map((tipo) => {
                 const isSelected = formData.tipo === tipo.value;
                 const isCreditCard = tipo.value === 'Tarjeta de crédito';
@@ -274,7 +274,7 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
                     }}
                   >
                     <span className="text-base">{tipo.icon}</span>
-                    <span className="text-[10px] leading-tight">{tipo.label}</span>
+                    <span className="text-xs leading-tight">{tipo.label}</span>
                   </button>
                 );
               })}

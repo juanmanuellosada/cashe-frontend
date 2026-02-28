@@ -290,7 +290,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                   : 'Seleccionar todos'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
               {accounts.map((account) => {
                 const selected = isSelected('cuentas', account.nombre);
                 const isHidden = account.ocultaDelBalance;
@@ -344,7 +344,7 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
                 );
               })()}
             </div>
-            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
               {expenseCategories.map((cat) => {
                 const catValue = typeof cat === 'string' ? cat : cat.value;
                 const catLabel = typeof cat === 'string' ? cat : cat.label;
