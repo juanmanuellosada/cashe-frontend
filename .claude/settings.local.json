@@ -75,7 +75,12 @@
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /PID 23284 /F\")",
       "Bash(powershell.exe -Command \"Stop-Process -Id 23284 -Force\")",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(gh api:*)",
+      "mcp__cloudflare-cashe-ar__list_dns_records",
+      "Bash(gh workflow:*)",
+      "Bash(del:*)",
+      "Bash(powershell.exe:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
