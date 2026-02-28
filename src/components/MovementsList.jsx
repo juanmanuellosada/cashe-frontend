@@ -559,7 +559,7 @@ function MovementsList({
               </span>
               <button
                 onClick={selectedItems.size === filteredMovements.length ? deselectAll : selectAll}
-                className="text-xs px-2 py-1 rounded-lg transition-colors"
+                className="text-xs px-2 py-1 min-h-[44px] rounded-lg transition-colors"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
               >
                 {selectedItems.size === filteredMovements.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
@@ -572,7 +572,7 @@ function MovementsList({
                   {/* Bulk Delete */}
                   <button
                     onClick={() => setBulkAction('delete')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -584,7 +584,7 @@ function MovementsList({
                   {/* Bulk Edit Account */}
                   <button
                     onClick={() => setBulkAction('editAccount')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(96, 165, 250, 0.15)', color: 'var(--accent-blue)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,7 +597,7 @@ function MovementsList({
                   {type !== 'transferencia' && (
                     <button
                       onClick={() => setBulkAction('editCategory')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                       style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,7 +610,7 @@ function MovementsList({
                   {/* Bulk Edit Date */}
                   <button
                     onClick={() => setBulkAction('editDate')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                     style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,7 +623,7 @@ function MovementsList({
               
               <button
                 onClick={toggleSelectionMode}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                className="px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
               >
                 Cancelar
@@ -634,11 +634,11 @@ function MovementsList({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           {title}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink min-w-0">
           {/* Add button */}
           {!selectionMode && (
             <button
@@ -939,26 +939,26 @@ function MovementsList({
 
           {type === 'transferencia' ? (
             /* Transfer totals - show both saliente and entrante */
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="overflow-hidden">
                 <p className="text-xs mb-1 flex items-center gap-1" style={{ color: 'var(--accent-red)' }}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
                   </svg>
-                  Total saliente
+                  Saliente
                 </p>
-                <p className="text-xl font-bold" style={{ color: 'var(--accent-red)' }}>
+                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-red)' }}>
                   {formatCurrency(subtotals.totalSaliente, currency)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right overflow-hidden">
                 <p className="text-xs mb-1 flex items-center gap-1 justify-end" style={{ color: 'var(--accent-green)' }}>
-                  Total entrante
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  Entrante
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h14" />
                   </svg>
                 </p>
-                <p className="text-xl font-bold" style={{ color: 'var(--accent-green)' }}>
+                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-green)' }}>
                   {formatCurrency(subtotals.totalEntrante, currency)}
                 </p>
               </div>
@@ -969,7 +969,7 @@ function MovementsList({
               <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Total
               </p>
-              <p className="text-2xl font-bold" style={{ color: getTypeColor() }}>
+              <p className="text-xl sm:text-2xl font-bold" style={{ color: getTypeColor() }}>
                 {formatCurrency(subtotals.total, currency)}
               </p>
             </div>
@@ -1157,7 +1157,7 @@ function MovementsList({
                   )}
 
                   {/* Amount and date */}
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right flex-shrink-0 max-w-[45%] sm:max-w-none">
                     {(() => {
                       // Determine currency based on the account's currency
                       const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
@@ -1166,13 +1166,13 @@ function MovementsList({
                       const amount = movement.monto || movement.montoSaliente;
 
                       return (
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           <img
                             src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
                             alt={currencyCode}
-                            className="w-4 h-4 rounded-sm"
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm flex-shrink-0"
                           />
-                          <p className="text-xl font-bold lg:text-lg" style={{ color: getTypeColor() }}>
+                          <p className="text-[15px] xs:text-base sm:text-lg font-bold truncate" style={{ color: getTypeColor() }}>
                             {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
                           </p>
                         </div>
@@ -1185,19 +1185,19 @@ function MovementsList({
                 </button>
 
                 {/* Attachment indicator */}
-                {movement.attachmentUrl && !selectionMode && (
+                {(movement.attachmentUrl || movement.attachmentUrl2) && !selectionMode && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      downloadAttachment(movement.attachmentUrl, movement.attachmentName);
+                      downloadAttachment(movement.attachmentUrl || movement.attachmentUrl2, movement.attachmentName || movement.attachmentName2);
                     }}
-                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105"
+                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 relative"
                     style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                    title={movement.attachmentName ? `Descargar: ${movement.attachmentName}` : 'Descargar adjunto'}
+                    title={movement.attachmentUrl && movement.attachmentUrl2 ? '2 adjuntos' : (movement.attachmentName || movement.attachmentName2 || 'Descargar adjunto')}
                   >
-                    {isImageFile(movement.attachmentName) ? (
+                    {isImageFile(movement.attachmentName || movement.attachmentName2) ? (
                       <img
-                        src={movement.attachmentUrl}
+                        src={movement.attachmentUrl || movement.attachmentUrl2}
                         alt="Adjunto"
                         className="w-6 h-6 rounded object-cover"
                       />
@@ -1211,6 +1211,14 @@ function MovementsList({
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
+                    )}
+                    {movement.attachmentUrl && movement.attachmentUrl2 && (
+                      <span
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                        style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+                      >
+                        2
+                      </span>
                     )}
                   </button>
                 )}

@@ -51,6 +51,8 @@ function EditMovementModal({
   // Estados para adjuntos
   const [newAttachment, setNewAttachment] = useState(null);
   const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
+  const [newAttachment2, setNewAttachment2] = useState(null);
+  const [removeExistingAttachment2, setRemoveExistingAttachment2] = useState(false);
 
   // Estado para convertir a recurrente
   const [showRecurringModal, setShowRecurringModal] = useState(false);
@@ -103,6 +105,8 @@ function EditMovementModal({
       // Reset attachment states
       setNewAttachment(null);
       setRemoveExistingAttachment(false);
+      setNewAttachment2(null);
+      setRemoveExistingAttachment2(false);
       // Reset recurring account to movement's account
       setRecurringAccount(movement.cuenta || '');
     }
@@ -176,6 +180,8 @@ function EditMovementModal({
         monto: parseFloat(formData.monto),
         newAttachment,
         removeAttachment: removeExistingAttachment && !newAttachment,
+        newAttachment2: movement?.tipo === 'gasto' ? newAttachment2 : undefined,
+        removeAttachment2: movement?.tipo === 'gasto' ? (removeExistingAttachment2 && !newAttachment2) : undefined,
       };
 
       // If it's an installment with subsequent installments, ask user
@@ -642,7 +648,30 @@ function EditMovementModal({
                   setNewAttachment(null);
                 }}
                 disabled={loading}
+                label={movement?.tipo === 'gasto' ? 'Adjunto 1' : undefined}
               />
+
+              {/* Segundo adjunto - solo gastos */}
+              {movement?.tipo === 'gasto' && (
+                <AttachmentInput
+                  value={newAttachment2}
+                  existingAttachment={
+                    !removeExistingAttachment2 && movement?.attachmentUrl2
+                      ? { url: movement.attachmentUrl2, name: movement.attachmentName2 }
+                      : null
+                  }
+                  onChange={(file) => {
+                    setNewAttachment2(file);
+                    if (file) setRemoveExistingAttachment2(true);
+                  }}
+                  onRemoveExisting={() => {
+                    setRemoveExistingAttachment2(true);
+                    setNewAttachment2(null);
+                  }}
+                  disabled={loading}
+                  label="Adjunto 2"
+                />
+              )}
             </>
           )}
         </form>

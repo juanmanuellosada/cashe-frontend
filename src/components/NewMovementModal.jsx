@@ -267,7 +267,7 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
 
         {/* Toast */}
         {toast && (
-          <div className="absolute bottom-3 left-3 right-3">
+          <div className="absolute bottom-3 sm:bottom-3 left-3 right-3">
             <Toast
               message={toast.message}
               type={toast.type}

@@ -161,7 +161,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
         {/* Arrow */}
         <div className="flex justify-center my-1.5 sm:my-2">
           <div
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'var(--accent-blue-dim)' }}
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: 'var(--accent-blue)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +202,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
         style={{ backgroundColor: 'var(--bg-tertiary)' }}
       >
         <div
-          className={`w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 flex-shrink-0 ${!sameAmount ? 'border-2' : ''}`}
+          className={`w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 flex-shrink-0 ${!sameAmount ? 'border-2' : ''}`}
           style={{
             backgroundColor: sameAmount ? 'var(--accent-primary)' : 'transparent',
             borderColor: 'var(--text-secondary)'
@@ -221,7 +221,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
       </button>
 
       {/* Montos */}
-      <div className={sameAmount ? '' : 'grid grid-cols-2 gap-2 sm:gap-3'}>
+      <div className={sameAmount ? '' : 'grid grid-cols-2 gap-3 sm:gap-4'}>
         <div>
           <label
             className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"

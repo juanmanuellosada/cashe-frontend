@@ -193,13 +193,13 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                 <button
                   key={account.nombre}
                   onClick={() => handleAccountClick(account)}
-                  className="w-full px-3 py-2.5 flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99] group"
+                  className="w-full px-3 py-2.5 text-left transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.99] group"
                   style={{
                     borderBottom: index < visibleAccounts.length - 1 ? '1px solid var(--border-subtle)' : 'none'
                   }}
                 >
-                  {/* Top row: Icon + Name */}
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {/* Icon + Name + Balance in a single row */}
+                  <div className="flex items-center gap-2.5 w-full min-w-0">
                     {/* Account icon or currency fallback */}
                     <div
                       className="w-8 h-8 rounded-md min-[400px]:rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -224,49 +224,40 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
 
                     {/* Account info */}
                     <div className="flex-1 min-w-0">
-                      <p
-                        className="font-medium text-sm leading-tight"
-                        style={{
-                          color: 'var(--text-primary)',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
-                        }}
-                      >
+                      <p className="font-medium text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
                         {account.nombre}
                       </p>
                       <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                         {isCreditCard ? 'Próximo resumen' : (isARS ? 'Pesos' : 'Dólares')}
                       </p>
                     </div>
-                  </div>
 
-                  {/* Balance or Credit Card Statement - below on <400px, right on 400px+ */}
-                  <div className="text-left min-[400px]:text-right flex-shrink-0 pl-10 min-[400px]:pl-0">
-                    {isCreditCard ? (
-                      <div className="flex flex-col min-[400px]:items-end gap-0.5">
-                        {account.proximoResumenPesos > 0 && (
-                          <p className="font-bold text-sm" style={{ color: 'var(--accent-red)' }}>
-                            -{formatCurrency(account.proximoResumenPesos, 'ARS')}
-                          </p>
-                        )}
-                        {account.proximoResumenDolares > 0 && (
-                          <p className="font-bold text-sm" style={{ color: '#3CB371' }}>
-                            -{formatCurrency(account.proximoResumenDolares, 'USD')}
-                          </p>
-                        )}
-                        {account.proximoResumenPesos === 0 && account.proximoResumenDolares === 0 && (
-                          <p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>
-                            $0
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="font-bold text-sm" style={{ color: currencyColor }}>
-                        {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
-                      </p>
-                    )}
+                    {/* Balance or Credit Card Statement */}
+                    <div className="text-right flex-shrink-0 ml-auto">
+                      {isCreditCard ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          {account.proximoResumenPesos > 0 && (
+                            <p className="font-bold text-[13px]" style={{ color: 'var(--accent-red)' }}>
+                              -{formatCurrency(account.proximoResumenPesos, 'ARS')}
+                            </p>
+                          )}
+                          {account.proximoResumenDolares > 0 && (
+                            <p className="font-bold text-[13px]" style={{ color: '#3CB371' }}>
+                              -{formatCurrency(account.proximoResumenDolares, 'USD')}
+                            </p>
+                          )}
+                          {account.proximoResumenPesos === 0 && account.proximoResumenDolares === 0 && (
+                            <p className="font-bold text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                              $0
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-bold text-[13px]" style={{ color: currencyColor }}>
+                          {formatCurrency(account.balanceActual, isARS ? 'ARS' : 'USD')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </button>
               );

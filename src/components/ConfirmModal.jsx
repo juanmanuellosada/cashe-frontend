@@ -108,7 +108,7 @@ function ConfirmModal({
         onClick={loading ? undefined : onClose}
       />
       <div
-        className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
+        className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           transform: `translateY(${dragY}px)`,
@@ -145,11 +145,11 @@ function ConfirmModal({
 
           {children}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={onClose}
               disabled={loading}
-              className="flex-1 py-3 rounded-xl font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium transition-colors hover:opacity-80 disabled:opacity-50"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
             >
               {cancelText}
@@ -157,7 +157,7 @@ function ConfirmModal({
             <button
               onClick={onConfirm}
               disabled={loading}
-              className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ backgroundColor: colors.button }}
             >
               {loading ? (

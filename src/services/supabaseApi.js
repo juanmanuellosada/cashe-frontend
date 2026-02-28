@@ -283,6 +283,8 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
       esTarjetaCredito: account.is_credit_card,
       diaCierre: account.closing_day,
       diaVencimiento: account.due_day,
+      fechaCierre: account.closing_date || null,
+      fechaVencimiento: account.due_date || null,
       balanceActual: balanceData.balance,
       totalIngresos: balanceData.totalIngresos,
       totalGastos: balanceData.totalGastos,
@@ -476,7 +478,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
   };
 };
 
-export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, icon, ocultaDelBalance }) => {
+export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
   const userId = await getUserId();
 
   const { data, error } = await supabase
@@ -491,6 +493,8 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
       due_day: diaVencimiento || null,
+      closing_date: fechaCierre || null,
+      due_date: fechaVencimiento || null,
       icon: icon || null,
       hidden_from_balance: ocultaDelBalance || false
     })
@@ -502,7 +506,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
   return { success: true, account: data };
 };
 
-export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, icon, ocultaDelBalance }) => {
+export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
   const accountId = id || rowIndex;
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
@@ -518,6 +522,8 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       is_credit_card: esTarjetaCredito || false,
       closing_day: diaCierre || null,
       due_day: diaVencimiento || null,
+      closing_date: fechaCierre || null,
+      due_date: fechaVencimiento || null,
       icon: icon || null,
       hidden_from_balance: ocultaDelBalance || false
     })
@@ -540,14 +546,17 @@ const deleteAccountAttachments = async (accountId) => {
   // 1. Eliminar adjuntos de movimientos de esta cuenta
   const { data: movements } = await supabase
     .from('movements')
-    .select('attachment_url')
+    .select('attachment_url, attachment_url_2')
     .eq('user_id', userId)
     .eq('account_id', accountId)
-    .not('attachment_url', 'is', null);
+    .or('attachment_url.not.is.null,attachment_url_2.not.is.null');
 
   for (const m of (movements || [])) {
     if (m.attachment_url) {
       await deleteAttachment(m.attachment_url);
+    }
+    if (m.attachment_url_2) {
+      await deleteAttachment(m.attachment_url_2);
     }
   }
 
@@ -791,7 +800,6 @@ export const addCategory = async ({ nombre, tipo, icon, icon_catalog_id }) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -811,7 +819,6 @@ export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_ca
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true, category: data };
 };
 
@@ -823,7 +830,6 @@ export const deleteCategory = async (idOrRowIndex) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -835,7 +841,6 @@ export const bulkDeleteCategories = async (categoryIds) => {
 
   if (error) throw error;
   invalidateCache('categories');
-  emit(DataEvents.CATEGORIES_CHANGED);
   return { success: true };
 };
 
@@ -871,6 +876,8 @@ const mapMovementFromDB = (m, accounts, categories) => {
     // Attachment info
     attachmentUrl: m.attachment_url,
     attachmentName: m.attachment_name,
+    attachmentUrl2: m.attachment_url_2 || null,
+    attachmentName2: m.attachment_name_2 || null,
     // Future transaction indicator
     isFuture: m.is_future || false,
     // Recurring indicator
@@ -933,7 +940,7 @@ export const getIncomes = async (forceRefresh = false) => {
   return result;
 };
 
-export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment, moneda }) => {
+export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attachment, attachment2, moneda }) => {
   const userId = await getUserId();
 
   // Get account and category IDs - include is_credit_card to check for future transactions
@@ -972,14 +979,22 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
     }
   }
 
-  // Subir adjunto si existe
+  // Subir adjuntos si existen
   let attachmentUrl = null;
   let attachmentName = null;
+  let attachmentUrl2 = null;
+  let attachmentName2 = null;
 
   if (attachment) {
     const result = await uploadAttachment(attachment, userId, 'movements');
     attachmentUrl = result.url;
     attachmentName = result.name;
+  }
+
+  if (attachment2) {
+    const result2 = await uploadAttachment(attachment2, userId, 'movements');
+    attachmentUrl2 = result2.url;
+    attachmentName2 = result2.name;
   }
 
   // Determinar si es transacción futura
@@ -1003,6 +1018,8 @@ export const addExpense = async ({ fecha, monto, cuenta, categoria, nota, attach
       note: nota || null,
       attachment_url: attachmentUrl,
       attachment_name: attachmentName,
+      attachment_url_2: attachmentUrl2,
+      attachment_name_2: attachmentName2,
       is_future: isFuture,
       original_currency: originalCurrency,
     })
@@ -1116,13 +1133,11 @@ export const updateMovement = async (movement) => {
 
   const id = movement.id || movement.rowIndex;
 
-  // Manejar adjuntos
+  // Manejar adjunto 1
   let attachmentUrl = movement.attachmentUrl;
   let attachmentName = movement.attachmentName;
 
-  // Si hay nuevo archivo, subir
   if (movement.newAttachment) {
-    // Eliminar adjunto anterior si existe
     if (movement.attachmentUrl) {
       await deleteAttachment(movement.attachmentUrl);
     }
@@ -1131,13 +1146,33 @@ export const updateMovement = async (movement) => {
     attachmentName = result.name;
   }
 
-  // Si se marcó para eliminar
   if (movement.removeAttachment) {
     if (movement.attachmentUrl) {
       await deleteAttachment(movement.attachmentUrl);
     }
     attachmentUrl = null;
     attachmentName = null;
+  }
+
+  // Manejar adjunto 2 (solo gastos)
+  let attachmentUrl2 = movement.attachmentUrl2;
+  let attachmentName2 = movement.attachmentName2;
+
+  if (movement.newAttachment2) {
+    if (movement.attachmentUrl2) {
+      await deleteAttachment(movement.attachmentUrl2);
+    }
+    const result2 = await uploadAttachment(movement.newAttachment2, userId, 'movements');
+    attachmentUrl2 = result2.url;
+    attachmentName2 = result2.name;
+  }
+
+  if (movement.removeAttachment2) {
+    if (movement.attachmentUrl2) {
+      await deleteAttachment(movement.attachmentUrl2);
+    }
+    attachmentUrl2 = null;
+    attachmentName2 = null;
   }
 
   // Redondear monto a 2 decimales para evitar errores de precisión de punto flotante
@@ -1153,6 +1188,8 @@ export const updateMovement = async (movement) => {
     note: movement.nota || null,
     attachment_url: attachmentUrl,
     attachment_name: attachmentName,
+    attachment_url_2: attachmentUrl2,
+    attachment_name_2: attachmentName2,
     // Guardar moneda original si se especifica (para tarjetas de crédito)
     ...(movement.moneda && { original_currency: movement.moneda }),
   };
@@ -1187,9 +1224,12 @@ export const updateMovement = async (movement) => {
 export const deleteMovement = async (movement) => {
   const id = movement.id || movement.rowIndex;
 
-  // Eliminar adjunto si existe
+  // Eliminar adjuntos si existen
   if (movement.attachmentUrl) {
     await deleteAttachment(movement.attachmentUrl);
+  }
+  if (movement.attachmentUrl2) {
+    await deleteAttachment(movement.attachmentUrl2);
   }
 
   const { error } = await supabase
@@ -1206,9 +1246,10 @@ export const deleteMultipleMovements = async (movements) => {
   const ids = movements.map(m => m.id || m.rowIndex);
 
   // Eliminar adjuntos de los movimientos que los tengan
-  const deletePromises = movements
-    .filter(m => m.attachmentUrl)
-    .map(m => deleteAttachment(m.attachmentUrl));
+  const deletePromises = [
+    ...movements.filter(m => m.attachmentUrl).map(m => deleteAttachment(m.attachmentUrl)),
+    ...movements.filter(m => m.attachmentUrl2).map(m => deleteAttachment(m.attachmentUrl2)),
+  ];
 
   await Promise.all(deletePromises);
 
@@ -2484,7 +2525,6 @@ export const registerStatementPayment = async ({ accountId, statementPeriod, cur
 
   // Invalidar cache para que próximo resumen se recalcule
   invalidateCache('accounts');
-  emit(DataEvents.ACCOUNTS_CHANGED);
 
   return data;
 };
@@ -2512,8 +2552,6 @@ export const cancelStatementPayment = async (paymentId, transferId) => {
 
   invalidateCache('transfers');
   invalidateCache('accounts');
-  emit(DataEvents.TRANSFERS_CHANGED);
-  emit(DataEvents.ACCOUNTS_CHANGED);
 
   return { success: true };
 };
@@ -4523,7 +4561,6 @@ export const createAutoRule = async ({ name, logicOperator = 'AND', priority = 0
   }
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule };
 };
 
@@ -4587,7 +4624,6 @@ export const updateAutoRule = async (id, { name, logicOperator, priority, isActi
   }
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule };
 };
 
@@ -4603,7 +4639,6 @@ export const deleteAutoRule = async (id) => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true };
 };
 
@@ -4624,7 +4659,6 @@ export const toggleAutoRule = async (id, isActive) => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rule: data };
 };
 
@@ -4643,7 +4677,6 @@ export const reorderAutoRules = async (rules) => {
   await Promise.all(updates);
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true };
 };
 
@@ -4662,7 +4695,6 @@ export const generateAllAutoRules = async () => {
   if (error) throw error;
 
   invalidateCache('autoRules');
-  emit(DataEvents.RULES_CHANGED);
   return { success: true, rulesCreated: data?.[0]?.generate_auto_rules_for_user_v2 || 0 };
 };
 

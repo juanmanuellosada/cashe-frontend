@@ -234,7 +234,7 @@ function RecentMovements({
                 {/* Clickable area for edit */}
                 <button
                   onClick={() => onMovementClick?.(movement)}
-                  className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 sm:gap-3 flex-1 min-w-0 text-left transition-transform duration-200"
+                  className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 sm:gap-3 flex-1 min-w-0 min-h-[48px] text-left transition-transform duration-200"
                   style={{ backgroundColor: 'transparent' }}
                 >
                   {/* Top row: Icon + Info */}
@@ -288,7 +288,7 @@ function RecentMovements({
                   </div>
 
                   {/* Amount and date - below on <400px, right on 400px+ */}
-                  <div className="text-left min-[400px]:text-right flex-shrink-0 pl-11 min-[400px]:pl-0">
+                  <div className="text-left min-[400px]:text-right flex-shrink-0 pl-11 min-[400px]:pl-0 max-w-[45%] sm:max-w-none">
                     {(() => {
                       // Determine currency based on the account's currency
                       const isUSD = isUSDMovement(movement);
@@ -296,13 +296,13 @@ function RecentMovements({
                       const amount = movement.monto || movement.montoSaliente;
 
                       return (
-                        <div className="flex items-center gap-1.5 min-[400px]:justify-end">
+                        <div className="flex items-center gap-1 min-[400px]:justify-end">
                           <img
                             src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
                             alt={currencyCode}
-                            className="w-4 h-4 rounded-sm"
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm flex-shrink-0"
                           />
-                          <p className="font-bold text-sm sm:text-lg" style={{ color: styles.color }}>
+                          <p className="font-bold text-[13px] xs:text-sm sm:text-lg truncate" style={{ color: styles.color }}>
                             {styles.prefix}{formatCurrency(amount, currencyCode)}
                           </p>
                         </div>

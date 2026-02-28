@@ -1,4 +1,16 @@
-import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
+import { Treemap } from 'recharts';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/Card";
+import {
+  ChartContainer,
+  ChartTooltip,
+} from "../ui/Chart";
+import AnimatedChart from "./AnimatedChart";
 import { formatCurrency } from '../../utils/format';
 import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
@@ -70,17 +82,17 @@ const CustomTreemapContent = ({ x, y, width, height, name, value, percentage, in
 function ExpenseTreemap({ data, currency = 'ARS', onCategoryClick }) {
   if (!data || data.length === 0) {
     return (
-      <div
-        className="rounded-xl p-4"
-        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
-      >
-        <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
-          Gastos por categoria
-        </h3>
-        <div className="h-64 flex items-center justify-center" style={{ color: 'var(--text-secondary)' }}>
-          <p>No hay datos disponibles</p>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gastos por categoría</CardTitle>
+          <CardDescription>No hay datos disponibles</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center text-[var(--text-secondary)]">
+            <p>Sin gastos para mostrar</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -90,60 +102,72 @@ function ExpenseTreemap({ data, currency = 'ARS', onCategoryClick }) {
     color: COLORS[index % COLORS.length],
   }));
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const d = payload[0].payload;
-      return (
-        <div
-          className="px-3 py-2 rounded-lg shadow-lg"
-          style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
-        >
-          <div className="flex items-center gap-1.5">
-            {d.icon && (
-              isEmoji(d.icon)
-                ? <span style={{ fontSize: '14px', lineHeight: 1 }}>{d.icon}</span>
-                : <img src={resolveIconPath(d.icon)} alt="" className="w-3.5 h-3.5 rounded-sm" />
-            )}
-            <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-              {d.name}
-            </p>
-          </div>
-          <p className="text-sm" style={{ color: 'var(--accent-red)' }}>
-            {formatCurrency(d.value, currency)}
-          </p>
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            {d.percentage?.toFixed(1)}% del total
-          </p>
+  const chartConfig = treemapData.reduce((config, item, index) => {
+    config[item.name] = {
+      label: item.name,
+      color: COLORS[index % COLORS.length],
+    };
+    return config;
+  }, {});
+
+  const CustomTooltipContent = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    return (
+      <div className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl bg-[var(--bg-tertiary)] border-[var(--border-subtle)]">
+        <div className="flex items-center gap-1.5">
+          {d.icon && (
+            isEmoji(d.icon)
+              ? <span style={{ fontSize: '14px', lineHeight: 1 }}>{d.icon}</span>
+              : <img src={resolveIconPath(d.icon)} alt="" className="w-3.5 h-3.5 rounded-sm" />
+          )}
+          <span className="font-medium text-[var(--text-primary)]">{d.name}</span>
         </div>
-      );
-    }
-    return null;
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-[var(--text-secondary)]">Monto</span>
+          <span className="font-mono font-medium tabular-nums text-[var(--accent-red)]">
+            {formatCurrency(d.value, currency)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 pt-0.5 border-t border-[var(--border-subtle)]">
+          <span className="text-[var(--text-secondary)]">Porcentaje</span>
+          <span className="font-medium text-[var(--text-primary)]">
+            {d.percentage?.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div
-      className="rounded-xl p-4"
-      style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
-    >
-      <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
-        Gastos por categoria
-      </h3>
-      <ResponsiveContainer width="100%" height={280}>
-        <Treemap
-          data={treemapData}
-          dataKey="value"
-          nameKey="name"
-          content={
-            <CustomTreemapContent
-              currency={currency}
-              onClick={onCategoryClick}
-            />
-          }
-        >
-          <Tooltip content={<CustomTooltip />} />
-        </Treemap>
-      </ResponsiveContainer>
-    </div>
+    <AnimatedChart delay={0.15}>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>Gastos por categoría</CardTitle>
+          <CardDescription>Vista treemap</CardDescription>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <ChartContainer config={chartConfig} className="w-full h-[280px]">
+            <Treemap
+              data={treemapData}
+              dataKey="value"
+              nameKey="name"
+              content={
+                <CustomTreemapContent
+                  currency={currency}
+                  onClick={onCategoryClick}
+                />
+              }
+            >
+              <ChartTooltip
+                cursor={false}
+                content={<CustomTooltipContent />}
+              />
+            </Treemap>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+    </AnimatedChart>
   );
 }
 

@@ -16,7 +16,8 @@ export default function AttachmentInput({
   existingAttachment,
   onChange,
   onRemoveExisting,
-  disabled = false
+  disabled = false,
+  label
 }) {
   const inputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -95,7 +96,7 @@ export default function AttachmentInput({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-        Adjunto (opcional)
+        {label || 'Adjunto'} (opcional)
       </label>
 
       {/* Input oculto */}

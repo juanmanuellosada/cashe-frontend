@@ -39,7 +39,7 @@ function Sparkline({ data, color = 'var(--accent-primary)', width = 80, height =
     const firstPoint = points[0];
     const areaPath = `${linePath} L ${lastPoint.x},${height} L ${firstPoint.x},${height} Z`;
 
-    return { linePath, areaPath };
+    return { linePath, areaPath, lastX: lastPoint.x, lastY: lastPoint.y };
   }, [data, width, height]);
 
   if (!pathData) return null;
@@ -50,12 +50,13 @@ function Sparkline({ data, color = 'var(--accent-primary)', width = 80, height =
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="flex-shrink-0">
       <defs>
         <linearGradient id={gId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.2} />
-          <stop offset="100%" stopColor={color} stopOpacity={0} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.05} />
         </linearGradient>
       </defs>
       <path d={pathData.areaPath} fill={`url(#${gId})`} />
-      <path d={pathData.linePath} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <path d={pathData.linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <circle cx={pathData.lastX} cy={pathData.lastY} r={2.5} fill={color} />
     </svg>
   );
 }

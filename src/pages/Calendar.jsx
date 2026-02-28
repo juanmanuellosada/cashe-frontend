@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, addWeeks, subWeeks, isSameMonth, isSameWeek, isSameDay, isToday, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getCalendarEvents } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 import { useError } from '../contexts/ErrorContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatCurrency } from '../utils/format';
@@ -16,37 +17,40 @@ function Calendar() {
   const [viewMode, setViewMode] = useState('month'); // month, week
 
   // Fetch events for the current period
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        let start, end;
+  const fetchEvents = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      let start, end;
 
-        if (viewMode === 'month') {
-          const monthStart = startOfMonth(currentDate);
-          const monthEnd = endOfMonth(currentDate);
-          start = startOfWeek(monthStart, { weekStartsOn: 1 });
-          end = endOfWeek(monthEnd, { weekStartsOn: 1 });
-        } else {
-          start = startOfWeek(currentDate, { weekStartsOn: 1 });
-          end = endOfWeek(currentDate, { weekStartsOn: 1 });
-        }
-
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-
-        const data = await getCalendarEvents(startStr, endStr);
-        setEvents(data || []);
-      } catch (err) {
-        console.error('Error fetching calendar events:', err);
-        showError('Error', 'No se pudieron cargar los eventos del calendario');
-      } finally {
-        setLoading(false);
+      if (viewMode === 'month') {
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        start = startOfWeek(monthStart, { weekStartsOn: 1 });
+        end = endOfWeek(monthEnd, { weekStartsOn: 1 });
+      } else {
+        start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        end = endOfWeek(currentDate, { weekStartsOn: 1 });
       }
-    };
 
+      const startStr = format(start, 'yyyy-MM-dd');
+      const endStr = format(end, 'yyyy-MM-dd');
+
+      const data = await getCalendarEvents(startStr, endStr);
+      setEvents(data || []);
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+      showError('Error', 'No se pudieron cargar los eventos del calendario');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDate, viewMode, showError]);
+
+  useEffect(() => {
     fetchEvents();
-  }, [currentDate, viewMode]);
+  }, [fetchEvents]);
+
+  // Re-fetch when movements/transfers change
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => fetchEvents(false));
 
   // Filter events based on selected filter
   const filteredEvents = useMemo(() => {
@@ -468,7 +472,7 @@ function Calendar() {
                   key={idx}
                   onClick={() => setSelectedDate(day)}
                   className={`
-                    relative min-h-[200px] p-2 text-left transition-all flex flex-col
+                    relative min-h-[120px] sm:min-h-[200px] p-2 text-left transition-all flex flex-col
                     ${isSelected ? 'ring-2 ring-inset' : ''}
                   `}
                   style={{
@@ -763,7 +767,7 @@ function Calendar() {
           <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
             Resumen {viewMode === 'month' ? 'del mes' : 'de la semana'}
           </h4>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
                 Ingresos

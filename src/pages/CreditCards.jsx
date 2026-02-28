@@ -925,7 +925,8 @@ function CreditCards() {
                                      (hasDolares && isDolaresPaid && hasPesos && !isPesosPaid);
 
             // El resumen "actual" es el primer resumen no completamente pagado
-            const isActualCurrent = !isFullyPaid && !statement.isFuture &&
+            // (puede ser futuro por calendario si ya se pagaron los anteriores)
+            const isActualCurrent = !isFullyPaid &&
               statements.slice(0, index).every(s => {
                 const sPesosPaid = !!statementPayments[`${s.id}_ARS`];
                 const sDolaresPaid = !!statementPayments[`${s.id}_USD`];
@@ -1004,7 +1005,7 @@ function CreditCards() {
                             Actual
                           </span>
                         )}
-                        {statement.isFuture && !isFullyPaid && (
+                        {statement.isFuture && !isFullyPaid && !isActualCurrent && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
@@ -1566,7 +1567,7 @@ function CreditCards() {
                       : viewingStatement.items;
                     selectedItems.size === itemsToShow.length ? setSelectedItems(new Set()) : selectAllItems(itemsToShow);
                   }}
-                  className="text-xs px-2 py-1 rounded-lg"
+                  className="text-xs px-2 py-1 min-h-[44px] rounded-lg"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-primary)' }}
                 >
                   {(() => {
@@ -1584,7 +1585,7 @@ function CreditCards() {
                     <button
                       onClick={() => handleBulkMoveToStatement('prev')}
                       disabled={bulkProcessing || !hasPreviousStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
                       style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1595,7 +1596,7 @@ function CreditCards() {
                     <button
                       onClick={() => handleBulkMoveToStatement('next')}
                       disabled={bulkProcessing || !hasNextStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
                       style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
                     >
                       Resumen sig.
@@ -1608,7 +1609,7 @@ function CreditCards() {
                 <button
                   onClick={toggleSelectionMode}
                   disabled={bulkProcessing}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  className="px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium"
                   style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                 >
                   Cancelar

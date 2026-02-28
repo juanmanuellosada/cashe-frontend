@@ -11,7 +11,7 @@ import { formatCurrency } from '../../utils/format';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
 import { useDebounce } from '../../hooks/useDebounce';
-import { evaluateAutoRules } from '../../services/supabaseApi';
+import { evaluateAutoRules, getStatementPayments } from '../../services/supabaseApi';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
 
@@ -110,7 +110,10 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [attachment2, setAttachment2] = useState(null);
   const [periodoResumen, setPeriodoResumen] = useState(''); // Período para tarjetas de crédito
+  const [cardPayments, setCardPayments] = useState({}); // Pagos de la tarjeta seleccionada
+  const [paymentsLoaded, setPaymentsLoaded] = useState(false); // Flag para esperar carga de pagos
   const [ruleSuggestion, setRuleSuggestion] = useState(null);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
@@ -132,46 +135,84 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     return generarPeriodosResumen(diaCierre);
   }, [esTarjetaCredito, diaCierre]);
 
-  // Calcular info de cierre de tarjeta
-  // En Argentina, los resúmenes se nombran por el mes de VENCIMIENTO (no de cierre)
-  // Ej: Si cierra el 29 de enero, el resumen "vence" en febrero, se llama "Resumen de Febrero"
-  // Los gastos del 30/ene al 28/feb van al resumen que vence en marzo = "Resumen de Marzo"
-  const infoCierreTarjeta = useMemo(() => {
-    if (!esTarjetaCredito) return null;
+  // Cargar pagos de la tarjeta seleccionada
+  useEffect(() => {
+    if (esTarjetaCredito && selectedAccount?.id) {
+      setPaymentsLoaded(false);
+      setPeriodoResumen(''); // Reset para que se re-calcule con datos nuevos
+      getStatementPayments(selectedAccount.id)
+        .then(data => {
+          setCardPayments(data);
+          setPaymentsLoaded(true);
+        })
+        .catch(err => {
+          console.error('Error loading card payments:', err);
+          setPaymentsLoaded(true); // Continuar aunque falle
+        });
+    } else {
+      setCardPayments({});
+      setPaymentsLoaded(false);
+    }
+  }, [esTarjetaCredito, selectedAccount?.id]);
 
+  // Calcular el primer período no pagado (desde el actual en adelante, no mira hacia atrás)
+  const primerPeriodoNoPagado = useMemo(() => {
+    if (!esTarjetaCredito || periodosResumen.length === 0) return null;
+    // Empezar desde el período calendario actual (isCurrent), ignorar anteriores
+    const currentIndex = periodosResumen.findIndex(p => p.isCurrent);
+    const startIndex = currentIndex >= 0 ? currentIndex : 0;
+    const periodosDesdeActual = periodosResumen.slice(startIndex);
+    return periodosDesdeActual.find(p => {
+      const hasPesosPayment = !!cardPayments[`${p.value}_ARS`];
+      const hasDolaresPayment = !!cardPayments[`${p.value}_USD`];
+      return !hasPesosPayment && !hasDolaresPayment;
+    })?.value || null;
+  }, [esTarjetaCredito, periodosResumen, cardPayments]);
+
+  // Leer fecha de cierre directamente de la cuenta
+  const infoCierreTarjeta = useMemo(() => {
+    if (!esTarjetaCredito || !selectedAccount) return null;
+
+    // Usar la fecha completa guardada en la cuenta
+    if (selectedAccount.fechaCierre) {
+      const [y, m, d] = selectedAccount.fechaCierre.split('-').map(Number);
+      const fechaCierre = new Date(y, m - 1, d);
+      return {
+        fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
+      };
+    }
+
+    // Fallback: calcular desde el día de cierre si no hay fecha completa
     const today = new Date();
     const currentDay = today.getDate();
-
-    // Calcular el mes de vencimiento del resumen actual
-    // Si estamos antes del cierre: el resumen cierra este mes, vence el próximo
-    // Si estamos después del cierre: el resumen cierra el próximo mes, vence en 2 meses
-    let mesVencimiento = new Date(today.getFullYear(), today.getMonth(), 1);
-    if (currentDay < diaCierre) {
-      // Todavía no cerró este mes, el resumen vence el próximo mes
-      mesVencimiento = addMonths(mesVencimiento, 1);
-    } else {
-      // Ya cerró este mes, el resumen vence en 2 meses
-      mesVencimiento = addMonths(mesVencimiento, 2);
+    let year = today.getFullYear();
+    let month = today.getMonth();
+    if (currentDay > diaCierre) {
+      month += 1;
+      if (month > 11) { month = 0; year += 1; }
     }
-
-    const periodoLabel = format(mesVencimiento, "MMMM yyyy", { locale: es });
-    const periodoCapitalized = periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const fechaCierre = new Date(year, month, Math.min(diaCierre, lastDay));
 
     return {
-      diaCierre,
-      periodoCorrespondiente: periodoCapitalized,
+      fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
     };
-  }, [esTarjetaCredito, diaCierre]);
+  }, [esTarjetaCredito, selectedAccount, diaCierre]);
 
-  // Establecer período actual por defecto cuando se selecciona una tarjeta
+  // Establecer período por defecto: primer período no pagado (espera a que carguen pagos)
   useEffect(() => {
-    if (esTarjetaCredito && periodosResumen.length > 0 && !periodoResumen) {
-      const periodoActual = periodosResumen.find(p => p.isCurrent);
-      if (periodoActual) {
-        setPeriodoResumen(periodoActual.value);
+    if (esTarjetaCredito && periodosResumen.length > 0 && !periodoResumen && paymentsLoaded) {
+      if (primerPeriodoNoPagado) {
+        setPeriodoResumen(primerPeriodoNoPagado);
+      } else {
+        // Fallback: período calendario actual
+        const periodoActual = periodosResumen.find(p => p.isCurrent);
+        if (periodoActual) {
+          setPeriodoResumen(periodoActual.value);
+        }
       }
     }
-  }, [esTarjetaCredito, periodosResumen, periodoResumen]);
+  }, [esTarjetaCredito, periodosResumen, periodoResumen, primerPeriodoNoPagado, paymentsLoaded]);
 
   // Actualizar la fecha automáticamente cuando cambia el período
   useEffect(() => {
@@ -311,12 +352,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         monto: parseFloat(formData.monto),
         moneda: esTarjetaCredito ? monedaGasto : undefined, // Solo para tarjetas de credito
         attachment,
+        attachment2,
       },
     });
 
     if (result !== false) {
       setShowSuccess(true);
-      setAttachment(null); // Limpiar adjunto despues de guardar
+      setAttachment(null);
+      setAttachment2(null);
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };
@@ -398,7 +441,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                 >
                   {periodosResumen.map((periodo) => (
                     <option key={periodo.value} value={periodo.value}>
-                      {periodo.label} {periodo.isCurrent ? '(actual)' : ''}
+                      {periodo.label} {periodo.value === primerPeriodoNoPagado ? '(actual)' : (cardPayments[`${periodo.value}_ARS`] || cardPayments[`${periodo.value}_USD`] ? '(pagado)' : '')}
                     </option>
                   ))}
                 </select>
@@ -424,7 +467,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>
-                    Cierra el día {infoCierreTarjeta.diaCierre}. Hoy corresponde al resumen de <strong>{infoCierreTarjeta.periodoCorrespondiente}</strong>
+                    Próximo cierre: <strong>{infoCierreTarjeta.fechaCierre}</strong>
                   </span>
                 </div>
               )}
@@ -456,7 +499,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         >
           <div className="flex items-center gap-2">
             <span
-              className="text-2xl sm:text-3xl font-bold"
+              className="text-xl sm:text-2xl md:text-3xl font-bold"
               style={{ color: 'var(--accent-red)' }}
             >
               {monedaGasto === 'USD' ? 'US$' : '$'}
@@ -469,7 +512,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
               placeholder="0"
               min="0"
               step="0.01"
-              className="flex-1 text-2xl sm:text-3xl font-bold bg-transparent outline-none"
+              className="flex-1 text-xl sm:text-2xl md:text-3xl font-bold bg-transparent outline-none"
               style={{ color: 'var(--text-primary)' }}
             />
           </div>
@@ -690,13 +733,22 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         />
       </div>
 
-      {/* Adjunto - Solo para gastos sin cuotas */}
+      {/* Adjuntos - Solo para gastos sin cuotas */}
       {!(esTarjetaCredito && cantidadCuotas > 1) && (
-        <AttachmentInput
-          value={attachment}
-          onChange={setAttachment}
-          disabled={loading}
-        />
+        <>
+          <AttachmentInput
+            value={attachment}
+            onChange={setAttachment}
+            disabled={loading}
+            label="Adjunto 1"
+          />
+          <AttachmentInput
+            value={attachment2}
+            onChange={setAttachment2}
+            disabled={loading}
+            label="Adjunto 2"
+          />
+        </>
       )}
 
       {/* Impacto en presupuestos y metas */}

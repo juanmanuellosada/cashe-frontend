@@ -264,12 +264,20 @@ body {
 
 input, select, textarea {
   font-family: 'Satoshi', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   transition: all 0.15s var(--ease-out-expo);
+  min-height: 44px;
+}
+
+@media (min-width: 1024px) {
+  input, select, textarea {
+    font-size: 14px;
+    min-height: unset;
+  }
 }
 
 input:hover, select:hover, textarea:hover {
@@ -315,6 +323,10 @@ select {
   border: none;
   cursor: pointer;
   transition: all 0.2s var(--ease-out-expo);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -343,6 +355,10 @@ select {
   border: 1px solid var(--border-medium);
   cursor: pointer;
   transition: all 0.2s var(--ease-out-expo);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -391,6 +407,12 @@ select {
   border-radius: var(--radius-lg);
   padding: 16px;
   border: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 639px) {
+  .card-glass {
+    padding: 6px;
+  }
 }
 
 .card-elevated {
@@ -889,20 +911,24 @@ select {
 
 @media (max-width: 640px) {
   .card {
-    border-radius: var(--radius-lg);
-    padding: 16px;
+    border-radius: var(--radius-md);
+    padding: 12px;
+  }
+
+  .card-elevated {
+    padding: 14px;
   }
 
   .mobile-full-width {
-    margin-left: -16px;
-    margin-right: -16px;
+    margin-left: -12px;
+    margin-right: -12px;
     border-radius: 0;
     border-left: none;
     border-right: none;
   }
 
-  /* Better touch targets */
-  button, a {
+  /* Better touch targets on mobile */
+  button, a, [role="button"] {
     min-height: 44px;
   }
 
@@ -911,6 +937,58 @@ select {
     overflow-x: hidden;
     max-width: 100vw;
   }
+
+  /* Prevent iOS input zoom */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .card {
+    padding: 10px;
+  }
+
+  .card-elevated {
+    padding: 12px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHART COLORS - EvilCharts Integration
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Chart palette - mapped to Cashé colors */
+  --chart-1: var(--accent-primary);     /* Teal */
+  --chart-2: var(--accent-purple);      /* Purple */
+  --chart-3: var(--accent-blue);        /* Blue */
+  --chart-4: var(--accent-yellow);      /* Amber */
+  --chart-5: var(--accent-cyan);        /* Cyan */
+
+  /* Chart semantic colors */
+  --chart-income: var(--accent-green);
+  --chart-expense: var(--accent-red);
+  --chart-transfer: var(--accent-blue);
+
+  /* Chart backgrounds */
+  --chart-bg: var(--bg-secondary);
+  --chart-grid: var(--border-subtle);
+}
+
+.light {
+  /* Chart colors remain consistent in light mode */
+  --chart-1: var(--accent-primary);
+  --chart-2: var(--accent-purple);
+  --chart-3: var(--accent-blue);
+  --chart-4: var(--accent-yellow);
+  --chart-5: var(--accent-cyan);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

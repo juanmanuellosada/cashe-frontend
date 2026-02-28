@@ -85,7 +85,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-sm flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
+        className="px-2.5 sm:px-3 py-1.5 sm:py-2 min-h-[44px] rounded-lg sm:rounded-xl text-sm flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >
         <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +119,7 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
               <button
                 key={preset.label}
                 onClick={() => handlePresetClick(preset)}
-                className="px-2.5 sm:px-3 py-1.5 sm:py-1.5 rounded-md min-[400px]:rounded-lg text-xs font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] hover:text-[var(--accent-primary)] active:scale-95"
+                className="px-2.5 sm:px-3 py-2 sm:py-1.5 min-h-[36px] rounded-md sm:rounded-lg text-xs font-semibold transition-all duration-200 hover:bg-[var(--accent-primary-dim)] hover:text-[var(--accent-primary)] active:scale-95"
                 style={{
                   backgroundColor: 'var(--bg-tertiary)',
                   color: 'var(--text-secondary)',
@@ -150,13 +150,13 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
               month_caption: 'flex justify-center relative items-center h-8 sm:h-10 mb-1 sm:mb-2',
               caption_label: 'text-xs sm:text-sm font-bold font-display',
               nav: 'flex items-center',
-              button_previous: 'absolute left-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
-              button_next: 'absolute right-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
+              button_previous: 'absolute left-0 h-9 w-9 sm:h-10 sm:w-10 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
+              button_next: 'absolute right-0 h-9 w-9 sm:h-10 sm:w-10 bg-transparent p-0 inline-flex items-center justify-center rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors',
               month_grid: 'w-full border-collapse',
               weekdays: 'flex w-full',
-              weekday: 'w-8 h-8 sm:w-9 sm:h-9 font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider flex items-center justify-center',
+              weekday: 'w-9 h-9 sm:w-10 sm:h-10 font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider flex items-center justify-center',
               week: 'flex w-full',
-              day: 'w-8 h-8 sm:w-9 sm:h-9 text-center text-xs sm:text-sm p-0',
+              day: 'w-9 h-9 sm:w-10 sm:h-10 text-center text-xs sm:text-sm p-0',
               day_button: 'w-full h-full rounded-lg sm:rounded-xl hover:bg-[var(--accent-primary)] hover:bg-opacity-20 flex items-center justify-center cursor-pointer transition-all duration-200 font-medium',
               selected: 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]',
               range_start: 'rounded-lg sm:rounded-xl bg-[var(--accent-primary)] text-white',

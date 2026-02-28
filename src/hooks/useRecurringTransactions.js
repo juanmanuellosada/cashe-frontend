@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getRecurringWithStats, getPendingOccurrences } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 
 export function useRecurringTransactions() {
   const [recurring, setRecurring] = useState([]);
@@ -28,6 +29,9 @@ export function useRecurringTransactions() {
   useEffect(() => {
     fetchRecurring();
   }, [fetchRecurring]);
+
+  // Re-fetch when data changes (occurrences confirmed, recurring created/modified)
+  useDataEvent(DataEvents.ALL_DATA_CHANGED, fetchRecurring);
 
   const refetch = async () => {
     try {

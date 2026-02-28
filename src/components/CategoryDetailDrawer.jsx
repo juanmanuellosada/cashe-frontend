@@ -54,7 +54,7 @@ function CategoryDetailDrawer({ isOpen, onClose, categoryName, categoryIcon, mov
       <div
         className="fixed z-50
           bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl
-          lg:bottom-auto lg:left-1/2 lg:top-[35%] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:max-w-lg lg:w-full lg:max-h-[70vh]"
+          lg:bottom-auto lg:left-1/2 lg:top-[25%] lg:-translate-x-1/2 lg:-translate-y-1/4 lg:rounded-2xl lg:max-w-lg lg:w-full lg:max-h-[70vh]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)',

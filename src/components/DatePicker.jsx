@@ -43,7 +43,7 @@ function DatePicker({ value, onChange, name, compact = false }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-left flex items-center ${compact ? 'px-2.5 py-2 rounded-lg gap-1.5 text-xs' : 'px-4 py-3 rounded-xl gap-3 text-sm'}`}
+        className={`w-full text-left flex items-center min-h-[44px] ${compact ? 'px-2.5 py-2 rounded-lg gap-1.5 text-xs' : 'px-4 py-3 rounded-xl gap-3 text-sm'}`}
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >
         <svg
@@ -92,13 +92,13 @@ function DatePicker({ value, onChange, name, compact = false }) {
               month_caption: 'flex justify-center relative items-center h-8 sm:h-10 mb-1 sm:mb-2',
               caption_label: 'text-xs sm:text-sm font-semibold',
               nav: 'flex items-center',
-              button_previous: 'absolute left-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
-              button_next: 'absolute right-0 h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
+              button_previous: 'absolute left-0 h-9 w-9 sm:h-10 sm:w-10 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
+              button_next: 'absolute right-0 h-9 w-9 sm:h-10 sm:w-10 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
               month_grid: 'w-full border-collapse',
               weekdays: 'flex w-full',
-              weekday: 'w-8 h-8 sm:w-9 sm:h-9 font-medium text-[10px] sm:text-xs flex items-center justify-center',
+              weekday: 'w-9 h-9 sm:w-10 sm:h-10 font-medium text-[10px] sm:text-xs flex items-center justify-center',
               week: 'flex w-full',
-              day: 'w-8 h-8 sm:w-9 sm:h-9 text-center text-xs sm:text-sm p-0',
+              day: 'w-9 h-9 sm:w-10 sm:h-10 text-center text-xs sm:text-sm p-0',
               day_button: 'w-full h-full rounded-full hover:bg-[var(--accent-primary)] hover:bg-opacity-20 flex items-center justify-center cursor-pointer transition-colors',
               selected: 'rounded-full bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]',
               today: 'font-bold',

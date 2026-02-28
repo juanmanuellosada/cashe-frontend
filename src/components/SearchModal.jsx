@@ -222,7 +222,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Buscar por categoria, cuenta, nota o monto..."
-              className="w-full pl-12 pr-4 py-3 rounded-xl text-base"
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-base"
               style={{
                 backgroundColor: 'var(--bg-tertiary)',
                 color: 'var(--text-primary)',
@@ -273,7 +273,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
                     onMovementClick(movement);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors hover:bg-[var(--bg-tertiary)]"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors hover:bg-[var(--bg-tertiary)] min-h-[52px]"
                 >
                   {/* Type Icon */}
                   <div
