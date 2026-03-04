@@ -96,6 +96,52 @@ const invalidateCache = (type) => {
 };
 
 // ============================================
+// HELPER: Advance date by frequency with month-end clamping
+// ============================================
+const advanceDateByFrequency = (date, freq) => {
+  const d = new Date(date);
+  const originalDay = d.getDate();
+  switch (freq.type) {
+    case 'daily':
+      d.setDate(d.getDate() + 1);
+      break;
+    case 'weekly':
+      d.setDate(d.getDate() + 7);
+      break;
+    case 'biweekly':
+      d.setDate(d.getDate() + 14);
+      break;
+    case 'monthly':
+      d.setMonth(d.getMonth() + 1);
+      if (d.getDate() !== originalDay) d.setDate(0);
+      break;
+    case 'bimonthly':
+      d.setMonth(d.getMonth() + 2);
+      if (d.getDate() !== originalDay) d.setDate(0);
+      break;
+    case 'quarterly':
+      d.setMonth(d.getMonth() + 3);
+      if (d.getDate() !== originalDay) d.setDate(0);
+      break;
+    case 'biannual':
+      d.setMonth(d.getMonth() + 6);
+      if (d.getDate() !== originalDay) d.setDate(0);
+      break;
+    case 'yearly':
+      d.setFullYear(d.getFullYear() + 1);
+      if (d.getDate() !== originalDay) d.setDate(0);
+      break;
+    case 'custom_days':
+      d.setDate(d.getDate() + (freq.interval || 30));
+      break;
+    default:
+      d.setMonth(d.getMonth() + 1);
+      if (d.getDate() !== originalDay) d.setDate(0);
+  }
+  return d;
+};
+
+// ============================================
 // HELPER: Get current user ID
 // ============================================
 const getUserId = async () => {
@@ -362,10 +408,10 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
   // Function to get statement period for a date
   // Format: "YYYY-MM" (1-indexed month with zero padding) to match CreditCards.jsx
   const getStatementPeriod = (dateStr) => {
-    const d = new Date(dateStr);
-    const day = d.getDate();
-    let year = d.getFullYear();
-    let month = d.getMonth();
+    const [y, m, dayNum] = dateStr.split('-').map(Number);
+    const day = dayNum;
+    let year = y;
+    let month = m - 1; // 0-indexed like getMonth()
 
     if (day >= diaCierre) {
       month += 1;
@@ -394,8 +440,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     expensesByPeriod[period][currency] += amount;
 
     // For monthly average (group by month)
-    const expenseDate = new Date(expense.date);
-    const monthKey = `${expenseDate.getFullYear()}-${expenseDate.getMonth()}`;
+    const monthKey = expense.date.substring(0, 7);
     if (!expensesByMonth[monthKey]) {
       expensesByMonth[monthKey] = 0;
     }
@@ -2094,13 +2139,17 @@ export const addInstallmentPurchase = async ({ descripcion, montoTotal, cuotas, 
   const movements = [];
 
   for (let i = 0; i < cuotas; i++) {
-    const date = new Date(fechaInicio);
-    date.setMonth(date.getMonth() + i);
+    const [year, month, day] = fechaInicio.split('-').map(Number);
+    const targetDate = new Date(year, month - 1 + i, day);
+    // If day overflowed (e.g., Jan 31 + 1 month = Mar 3), clamp to end of month
+    if (targetDate.getDate() !== day) {
+      targetDate.setDate(0);
+    }
 
     movements.push({
       user_id: userId,
       type: 'expense',
-      date: date.toISOString().split('T')[0],
+      date: targetDate.toISOString().split('T')[0],
       amount: installmentAmount,
       account_id: account?.id,
       category_id: categoryData?.id,
@@ -2698,39 +2747,8 @@ const calculateProjectedRecurringExpenses = async (budget, startDate, endDate) =
         totalProjected += parseFloat(recurring.amount);
       }
 
-      // Calculate next occurrence
-      const freq = recurring.frequency;
-      switch (freq.type) {
-        case 'daily':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 1));
-          break;
-        case 'weekly':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 7));
-          break;
-        case 'biweekly':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 14));
-          break;
-        case 'monthly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
-          break;
-        case 'bimonthly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 2));
-          break;
-        case 'quarterly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 3));
-          break;
-        case 'biannual':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 6));
-          break;
-        case 'yearly':
-          nextDate = new Date(nextDate.setFullYear(nextDate.getFullYear() + 1));
-          break;
-        case 'custom_days':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + (freq.interval || 30)));
-          break;
-        default:
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
-      }
+      // Calculate next occurrence with month-end clamping
+      nextDate = advanceDateByFrequency(nextDate, recurring.frequency);
     }
   }
 
@@ -3350,7 +3368,8 @@ export const processFutureTransactions = async () => {
   const count = (updatedMovements?.length || 0) + (updatedTransfers?.length || 0);
 
   if (count > 0) {
-    invalidateCache('all');
+    clearCache();
+    emit(DataEvents.ALL_DATA_CHANGED);
   }
 
   return {
@@ -4034,36 +4053,8 @@ export const getCalendarEvents = async (startDate, endDate) => {
         });
       }
 
-      // Calculate next occurrence (simplified - just add based on frequency type)
-      const freq = r.frequency;
-      switch (freq.type) {
-        case 'daily':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 1));
-          break;
-        case 'weekly':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 7));
-          break;
-        case 'biweekly':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + 14));
-          break;
-        case 'monthly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
-          break;
-        case 'bimonthly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 2));
-          break;
-        case 'quarterly':
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 3));
-          break;
-        case 'yearly':
-          nextDate = new Date(nextDate.setFullYear(nextDate.getFullYear() + 1));
-          break;
-        case 'custom_days':
-          nextDate = new Date(nextDate.setDate(nextDate.getDate() + (freq.interval || 30)));
-          break;
-        default:
-          nextDate = new Date(nextDate.setMonth(nextDate.getMonth() + 1));
-      }
+      // Calculate next occurrence with month-end clamping
+      nextDate = advanceDateByFrequency(nextDate, r.frequency);
     }
   });
 

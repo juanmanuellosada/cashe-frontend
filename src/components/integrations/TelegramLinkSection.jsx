@@ -374,9 +374,9 @@ function TelegramLinkSection() {
               </button>
             </div>
 
-            {/* Open Telegram button */}
+            {/* Open Telegram button with deep link */}
             <a
-              href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
+              href={getTelegramDeepLink(verificationCode)}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2 mb-4"

@@ -260,7 +260,7 @@ function CreditCards() {
     });
     
     // Ordenar por fecha de cierre (más reciente primero)
-    return result.sort((a, b) => a.closeDate - b.closeDate);
+    return result.sort((a, b) => b.closeDate - a.closeDate);
   }, [selectedCard, allExpenses]);
 
   // Actualizar viewingStatement cuando hay un refresh pendiente

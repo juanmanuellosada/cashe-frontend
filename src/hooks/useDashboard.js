@@ -22,7 +22,7 @@ export function useDashboard() {
         getRecentMovements(5),
       ]);
 
-      setDashboard(dashboardData.dashboard);
+      setDashboard(dashboardData);
       setMovements(movementsData.movimientos || []);
     } catch (err) {
       setError(err.message);
