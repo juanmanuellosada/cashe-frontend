@@ -109,6 +109,13 @@ function EditMovementModal({
       setRemoveExistingAttachment(false);
       setNewAttachment2(null);
       setRemoveExistingAttachment2(false);
+      // Reset sub-modal states to prevent leaks between movements
+      setShowDeleteConfirm(false);
+      setShowInstallmentConfirm(false);
+      setPendingSaveData(null);
+      setShowRecurringModal(false);
+      setRecurringFrequency('monthly');
+      setConvertingToRecurring(false);
       // Reset recurring account to movement's account
       setRecurringAccount(movement.cuenta || '');
     }

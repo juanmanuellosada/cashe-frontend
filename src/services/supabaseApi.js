@@ -3553,12 +3553,15 @@ export const addRecurringTransaction = async (data) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // If start date is today or in the past, calculate next execution
+  // If start date is today or in the past, advance until we reach a future date
   // Otherwise, next execution is the start date
   let nextExecutionDate = data.startDate;
-  if (startDate <= today) {
-    // We'll let the database function calculate this, or set it to start_date for now
-    nextExecutionDate = data.startDate;
+  if (startDate < today) {
+    let nextDate = new Date(data.startDate + 'T12:00:00');
+    while (nextDate < today) {
+      nextDate = advanceDateByFrequency(nextDate, data.frequency);
+    }
+    nextExecutionDate = nextDate.toISOString().split('T')[0];
   }
 
   const { data: result, error } = await supabase
@@ -3751,12 +3754,17 @@ export const skipNextOccurrence = async (recurringId) => {
 
   if (occurrenceError) throw occurrenceError;
 
-  // Update next_execution_date (the database function will calculate it)
-  // For now, we'll just mark the last_generated_date
+  // Advance next_execution_date based on frequency
+  const nextDate = advanceDateByFrequency(
+    new Date(recurring.next_execution_date + 'T12:00:00'),
+    recurring.frequency
+  );
+
   const { data, error: updateError } = await supabase
     .from('recurring_transactions')
     .update({
       last_generated_date: recurring.next_execution_date,
+      next_execution_date: nextDate.toISOString().split('T')[0],
     })
     .eq('id', recurringId)
     .select()
@@ -4431,7 +4439,8 @@ export const approveScheduledTransaction = async (id) => {
   const { error: updateError } = await supabase
     .from('scheduled_transactions')
     .update({ status: 'executed' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (updateError) throw updateError;
   invalidateCache('scheduled');
@@ -4589,10 +4598,12 @@ export const updateAutoRule = async (id, { name, logicOperator, priority, isActi
   if (priority !== undefined) updateData.priority = priority;
   if (isActive !== undefined) updateData.is_active = isActive;
 
+  const userId = await getUserId();
   const { data: rule, error: ruleError } = await supabase
     .from('auto_rules')
     .update(updateData)
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single();
 
