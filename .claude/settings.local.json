@@ -81,7 +81,8 @@
       "Bash(gh workflow:*)",
       "Bash(del:*)",
       "Bash(powershell.exe:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "mcp__claude_ai_Supabase__execute_sql"
     ]
   },
   "enableAllProjectMcpServers": true,
