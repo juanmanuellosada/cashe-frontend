@@ -117,8 +117,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       // Check each shortcut
       for (const shortcut of keyboardShortcuts) {
         const ctrlMatch = shortcut.ctrl ? (e.ctrlKey || e.metaKey) : !(e.ctrlKey || e.metaKey);
-        const altMatch = shortcut.alt ? e.altKey : !shortcut.alt || !e.altKey;
-        const shiftMatch = shortcut.shift ? e.shiftKey : !shortcut.shift || !e.shiftKey;
+        const altMatch = shortcut.alt ? e.altKey : !e.altKey;
+        const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey;
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase() || e.key === shortcut.key;
 
         if (ctrlMatch && altMatch && shiftMatch && keyMatch) {

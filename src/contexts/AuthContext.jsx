@@ -224,21 +224,25 @@ export const AuthProvider = ({ children }) => {
   // Sign out
   const signOut = async () => {
     try {
-      // Clear local state
-      setUser(null);
-      setProfile(null);
-
-      // Clear all data event listeners
+      // Clear all data event listeners first to prevent refetches during signout
       clearDataListeners();
 
-      // Then sign out from Supabase
+      // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);
       }
+
+      // Then clear local state
+      setUser(null);
+      setProfile(null);
+
       return { error };
     } catch (err) {
       console.error('Error in signOut:', err);
+      // Still clear state on error to avoid stuck auth state
+      setUser(null);
+      setProfile(null);
       return { error: err };
     }
   };

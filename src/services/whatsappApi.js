@@ -98,7 +98,9 @@ export const getWhatsAppStatus = async () => {
 // ============================================
 export const generateVerificationCode = async () => {
   const userId = await getUserId();
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  const code = (100000 + (array[0] % 900000)).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
   const { data, error } = await supabase

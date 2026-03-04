@@ -11,10 +11,15 @@ const PRESETS = [
   { label: 'Ultimos 3 meses', getValue: () => ({ from: startOfMonth(subMonths(new Date(), 2)), to: endOfMonth(new Date()) }) },
 ];
 
-// Helper to ensure date is a Date object
+// Helper to ensure date is a Date object (manual parsing to avoid timezone issues)
 const ensureDate = (date) => {
   if (!date) return null;
   if (date instanceof Date) return date;
+  // Manual parse for yyyy-MM-dd strings to avoid UTC interpretation
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
   return new Date(date);
 };
 
@@ -58,8 +63,8 @@ function DateRangePicker({ value, onChange, presets = PRESETS, defaultPreset = '
   const formatDisplayDate = () => {
     if (!range?.from) return 'Fechas';
     // Ensure dates are Date objects
-    const fromDate = range.from instanceof Date ? range.from : new Date(range.from);
-    const toDate = range.to ? (range.to instanceof Date ? range.to : new Date(range.to)) : null;
+    const fromDate = ensureDate(range.from);
+    const toDate = range.to ? ensureDate(range.to) : null;
 
     if (!toDate) return format(fromDate, 'd/M');
     // Formato ultra compacto: solo días si es mismo mes

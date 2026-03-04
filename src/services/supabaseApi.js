@@ -89,8 +89,11 @@ const invalidateCache = (type) => {
     emit(DataEvents.ACCOUNTS_CHANGED);
   } else if (type.includes('categor')) {
     emit(DataEvents.CATEGORIES_CHANGED);
+  } else if (type.includes('budget') || type.includes('goal') || type.includes('recurring') || type.includes('scheduled') || type.includes('rule') || type.includes('autoRule')) {
+    // These types don't have specific events — just invalidate their cache keys silently
+    // No need to emit ALL_DATA_CHANGED which would cause every component to refetch
   } else {
-    // Para otros tipos, emitir evento general
+    // Para otros tipos desconocidos, emitir evento general
     emit(DataEvents.ALL_DATA_CHANGED);
   }
 };

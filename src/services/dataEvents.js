@@ -54,8 +54,11 @@ export const useDataEvent = (events, callback) => {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
+  // Stabilize the events array so inline arrays don't cause re-subscriptions
+  const eventsKey = Array.isArray(events) ? events.join(',') : events;
+
   useEffect(() => {
-    const eventList = Array.isArray(events) ? events : [events];
+    const eventList = eventsKey.split(',').filter(Boolean);
     const unsubscribes = eventList.map(event =>
       subscribe(event, () => callbackRef.current())
     );
@@ -63,5 +66,5 @@ export const useDataEvent = (events, callback) => {
     return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [events]);
+  }, [eventsKey]);
 };

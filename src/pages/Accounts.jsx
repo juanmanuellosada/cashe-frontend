@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAccounts, clearCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
+import { getAccounts, invalidateMovementCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
 import SortDropdown from '../components/SortDropdown';
@@ -97,9 +97,9 @@ function Accounts() {
   const fetchAccounts = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      // Limpiar caché antes de obtener datos frescos
+      // Invalidar solo cache de cuentas antes de obtener datos frescos
       if (forceRefresh) {
-        clearCache();
+        invalidateMovementCache('accounts');
       }
       const data = await getAccounts();
       setAccounts(data.accounts || []);
