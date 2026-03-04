@@ -9,6 +9,10 @@ export const DataEvents = {
   TRANSFERS_CHANGED: 'transfers_changed',
   ACCOUNTS_CHANGED: 'accounts_changed',
   CATEGORIES_CHANGED: 'categories_changed',
+  BUDGETS_CHANGED: 'budgets_changed',
+  GOALS_CHANGED: 'goals_changed',
+  RECURRING_CHANGED: 'recurring_changed',
+  SCHEDULED_CHANGED: 'scheduled_changed',
   RULES_CHANGED: 'rules_changed',
   ALL_DATA_CHANGED: 'all_data_changed',
 };

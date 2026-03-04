@@ -10,7 +10,7 @@ import NewMovementModal from './NewMovementModal';
 import Avatar from './Avatar';
 import OfflineIndicator from './OfflineIndicator';
 import { getAccounts, getCategories, updateMovement, deleteMovement, invalidateMovementCache } from '../services/supabaseApi';
-import { emit, DataEvents } from '../services/dataEvents';
+import { emit, DataEvents, useDataEvent } from '../services/dataEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useError } from '../contexts/ErrorContext';
 import { useHaptics } from '../hooks/useHaptics';
@@ -85,23 +85,29 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   }, []);
 
   // Load accounts and categories for edit modal
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [accountsData, categoriesData] = await Promise.all([
-          getAccounts(),
-          getCategories(),
-        ]);
-        setAccounts(accountsData.accounts || []);
-        setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
-      } catch (err) {
-        console.error('Error loading data for search:', err);
-      }
-    }
-    if (user) {
-      loadData();
+  const loadAccountsAndCategories = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [accountsData, categoriesData] = await Promise.all([
+        getAccounts(),
+        getCategories(),
+      ]);
+      setAccounts(accountsData.accounts || []);
+      setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
+    } catch (err) {
+      console.error('Error loading data for search:', err);
     }
   }, [user]);
+
+  useEffect(() => {
+    loadAccountsAndCategories();
+  }, [loadAccountsAndCategories]);
+
+  // Refresh accounts/categories when they change elsewhere
+  useDataEvent(
+    [DataEvents.ACCOUNTS_CHANGED, DataEvents.CATEGORIES_CHANGED],
+    loadAccountsAndCategories
+  );
 
   // Global keyboard shortcuts (desktop only)
   useEffect(() => {

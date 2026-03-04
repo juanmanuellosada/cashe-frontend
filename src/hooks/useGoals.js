@@ -25,9 +25,9 @@ export function useGoals() {
     fetchGoals();
   }, [fetchGoals]);
 
-  // Re-fetch when movements change (goal progress depends on income/expenses/savings)
+  // Re-fetch when goals are CRUDed or when movements change (progress depends on movements)
   useDataEvent(
-    [DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
+    [DataEvents.GOALS_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
     fetchGoals
   );
 

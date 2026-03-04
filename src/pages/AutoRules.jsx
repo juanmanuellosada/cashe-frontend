@@ -4,6 +4,7 @@ import { Plus, Bot, Sparkles, CheckSquare, X, Trash2 } from 'lucide-react';
 import { useAutoRules } from '../hooks/useAutoRules';
 import { useError } from '../contexts/ErrorContext';
 import { getAccounts, getCategories, createAutoRule, updateAutoRule, deleteAutoRule, toggleAutoRule, generateAllAutoRules } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 import RuleFormModal from '../components/rules/RuleFormModal';
 import RuleMobileCard from '../components/rules/RuleMobileCard';
 import ConfirmModal from '../components/ConfirmModal';
@@ -50,6 +51,12 @@ function AutoRules() {
   useEffect(() => {
     loadData();
   }, [loadData, location.key]);
+
+  // Refresh accounts/categories when they change elsewhere
+  useDataEvent(
+    [DataEvents.ACCOUNTS_CHANGED, DataEvents.CATEGORIES_CHANGED],
+    loadData
+  );
 
   // Handlers
   const handleOpenModal = (rule = null) => {

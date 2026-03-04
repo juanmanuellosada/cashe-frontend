@@ -25,9 +25,9 @@ export function useBudgets() {
     fetchBudgets();
   }, [fetchBudgets]);
 
-  // Re-fetch when expenses/incomes change (budget progress depends on movements)
+  // Re-fetch when budgets are CRUDed or when movements change (progress depends on movements)
   useDataEvent(
-    [DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED],
+    [DataEvents.BUDGETS_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED],
     fetchBudgets
   );
 

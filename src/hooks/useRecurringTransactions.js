@@ -30,8 +30,11 @@ export function useRecurringTransactions() {
     fetchRecurring();
   }, [fetchRecurring]);
 
-  // Re-fetch when data changes (occurrences confirmed, recurring created/modified)
-  useDataEvent(DataEvents.ALL_DATA_CHANGED, fetchRecurring);
+  // Re-fetch when recurring are CRUDed or when movements change (occurrences confirmed)
+  useDataEvent(
+    [DataEvents.RECURRING_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
+    fetchRecurring
+  );
 
   const refetch = async () => {
     try {

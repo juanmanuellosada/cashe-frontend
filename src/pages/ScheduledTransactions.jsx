@@ -46,8 +46,11 @@ function ScheduledTransactions() {
     fetchData();
   }, [fetchData]);
 
-  // Re-fetch when data changes (approvals, executions from other contexts)
-  useDataEvent(DataEvents.ALL_DATA_CHANGED, () => fetchData(false));
+  // Re-fetch when scheduled transactions change or when approved (creates real movements)
+  useDataEvent(
+    [DataEvents.SCHEDULED_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
+    () => fetchData(false)
+  );
 
   // Filter scheduled based on current filters
   const filteredScheduled = useMemo(() => {

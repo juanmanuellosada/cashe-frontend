@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getExpenses, getIncomes, getTransfers, getAccounts } from '../services/supabaseApi';
+import { DataEvents, useDataEvent } from '../services/dataEvents';
 import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
 import { generateMarkdownReport, downloadMarkdown } from '../utils/reportExporter';
 import ExpensePieChart from '../components/charts/ExpensePieChart';
@@ -78,8 +79,8 @@ export default function MonthlyReport() {
     return new Date().getMonth();
   });
 
-  // Load all data once
-  useEffect(() => {
+  // Load all data
+  const fetchReportData = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     Promise.all([getExpenses(), getIncomes(), getTransfers(), getAccounts()])
@@ -97,6 +98,16 @@ export default function MonthlyReport() {
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
+
+  // Refresh when movements or accounts change
+  useDataEvent(
+    [DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED, DataEvents.ACCOUNTS_CHANGED],
+    fetchReportData
+  );
 
   const monthLabel = `${MONTHS_ES[selectedMonth]} ${selectedYear}`;
 
