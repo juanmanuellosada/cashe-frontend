@@ -81,12 +81,13 @@ function Statistics() {
       const cat = m.categoria || 'Sin categoria';
       const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
       const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+      const monthKey = m.fecha ? m.fecha.substring(0, 7) : '';
 
       if (!historicalByCategory[cleanCat]) {
-        historicalByCategory[cleanCat] = { total: 0, count: 0 };
+        historicalByCategory[cleanCat] = { total: 0, months: new Set() };
       }
       historicalByCategory[cleanCat].total += value;
-      historicalByCategory[cleanCat].count += 1;
+      if (monthKey) historicalByCategory[cleanCat].months.add(monthKey);
     });
 
     // Get top 5 categories from current period
@@ -94,7 +95,8 @@ function Statistics() {
 
     return top5.map(item => {
       const historical = historicalByCategory[item.name];
-      const promedio = historical ? historical.total / Math.max(historical.count, 1) : item.value;
+      const monthCount = historical ? Math.max(historical.months.size, 1) : 1;
+      const promedio = historical ? historical.total / monthCount : item.value;
 
       return {
         category: item.name,
@@ -121,12 +123,17 @@ function Statistics() {
           return cleanCat === item.name;
         });
 
-      const avgValue = historical.length > 0
-        ? historical.reduce((sum, m) => {
-            const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
-            return sum + value;
-          }, 0) / historical.length
-        : item.value;
+      // Group historical movements by month to get monthly average
+      const monthTotals = {};
+      historical.forEach(m => {
+        const monthKey = m.fecha ? m.fecha.substring(0, 7) : '';
+        if (!monthKey) return;
+        const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+        monthTotals[monthKey] = (monthTotals[monthKey] || 0) + value;
+      });
+      const monthCount = Object.keys(monthTotals).length;
+      const totalValue = Object.values(monthTotals).reduce((sum, v) => sum + v, 0);
+      const avgValue = monthCount > 0 ? totalValue / monthCount : item.value;
 
       // Budget is average spending + 20% buffer
       const presupuesto = avgValue * 1.2;

@@ -177,7 +177,7 @@ export default function MonthlyReport() {
   const gastoDiario = diasDelMes > 0 ? totalGastos / diasDelMes : 0;
 
   const topGastos = useMemo(() =>
-    [...monthExpenses].sort((a, b) => b.monto - a.monto).slice(0, 5),
+    [...monthExpenses].sort((a, b) => (b.montoPesos || b.monto || 0) - (a.montoPesos || a.monto || 0)).slice(0, 5),
     [monthExpenses]
   );
 
@@ -196,7 +196,7 @@ export default function MonthlyReport() {
     const byDay = {};
     monthExpenses.forEach(m => {
       if (!byDay[m.fecha]) byDay[m.fecha] = 0;
-      byDay[m.fecha] += m.monto || 0;
+      byDay[m.fecha] += m.montoPesos || m.monto || 0;
     });
     const entries = Object.entries(byDay).sort((a, b) => b[1] - a[1]);
     if (entries.length === 0) return null;

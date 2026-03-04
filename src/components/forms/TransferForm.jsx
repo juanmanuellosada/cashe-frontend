@@ -34,7 +34,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
 
   // Sincronizar montos cuando sameAmount está activo
   useEffect(() => {
-    if (sameAmount && formData.montoSaliente) {
+    if (sameAmount) {
       setFormData((prev) => ({
         ...prev,
         montoEntrante: prev.montoSaliente,

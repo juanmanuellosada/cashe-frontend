@@ -3082,9 +3082,9 @@ const calculateGoalProgress = async (goal, startDate, endDate) => {
       const currentSpending = (expenses || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
 
       // For reduction goals, we want to spend LESS than target
-      // Return the "saved" amount vs baseline
+      // Return the "saved" amount vs baseline, clamped to 0
       const baseline = goal.baseline_amount || goal.target_amount;
-      return baseline - currentSpending;
+      return Math.max(0, baseline - currentSpending);
     }
 
     default:
@@ -3137,7 +3137,10 @@ export const getGoalsWithProgress = async () => {
       const currentAmount = await calculateGoalProgress(goal, periodDates.start, periodDates.end);
       const percentageAchieved = goal.target_amount > 0 ? (currentAmount / goal.target_amount) * 100 : 0;
       const daysRemaining = calculateDaysRemaining(periodDates.end);
-      const isOnTrack = percentageAchieved >= ((new Date() - new Date(periodDates.start)) / (new Date(periodDates.end) - new Date(periodDates.start))) * 100;
+      const periodDuration = new Date(periodDates.end) - new Date(periodDates.start);
+      const elapsed = new Date() - new Date(periodDates.start);
+      const expectedProgress = periodDuration > 0 ? Math.min((elapsed / periodDuration) * 100, 100) : 100;
+      const isOnTrack = percentageAchieved >= expectedProgress;
 
       return {
         ...goal,

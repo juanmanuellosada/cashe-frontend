@@ -302,7 +302,8 @@ function EditMovementModal({
 
   const isValidIncomeExpense = formData.monto && formData.cuenta && formData.categoria;
   const isValidTransfer = transferData.montoSaliente && transferData.montoEntrante &&
-    transferData.cuentaSaliente && transferData.cuentaEntrante;
+    transferData.cuentaSaliente && transferData.cuentaEntrante &&
+    transferData.cuentaSaliente !== transferData.cuentaEntrante;
   const isValid = isTransfer ? isValidTransfer : isValidIncomeExpense;
 
   const getTitle = () => {

@@ -156,10 +156,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                         DataEvents.TRANSFERS_CHANGED;
       emit(eventType);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      // Notify data change instead of reloading
+      // Notify data change — events propagate reactively, no navigate needed
       notifyDataChange();
-      // Navigate to trigger page refresh if needed
-      navigate(location.pathname, { replace: true });
     } catch (err) {
       console.error('Error updating movement:', err);
       showError('No se pudo guardar el movimiento', err.message);
@@ -183,10 +181,8 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                         DataEvents.TRANSFERS_CHANGED;
       emit(eventType);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      // Notify data change instead of reloading
+      // Notify data change — events propagate reactively, no navigate needed
       notifyDataChange();
-      // Navigate to trigger page refresh if needed
-      navigate(location.pathname, { replace: true });
     } catch (err) {
       console.error('Error deleting movement:', err);
       showError('No se pudo eliminar el movimiento', err.message);

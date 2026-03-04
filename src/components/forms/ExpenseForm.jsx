@@ -680,11 +680,15 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                   Ultima cuota:
                 </span>
                 <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {fechaPrimeraCuota && format(
-                    new Date(fechaPrimeraCuota.getFullYear(), fechaPrimeraCuota.getMonth() + cantidadCuotas - 1, fechaPrimeraCuota.getDate()),
-                    "MMMM yyyy",
-                    { locale: es }
-                  )}
+                  {fechaPrimeraCuota && (() => {
+                    const targetMonth = fechaPrimeraCuota.getMonth() + cantidadCuotas - 1;
+                    const lastCuotaDate = new Date(fechaPrimeraCuota.getFullYear(), targetMonth, fechaPrimeraCuota.getDate());
+                    // Clamp to end of month if day overflowed
+                    if (lastCuotaDate.getDate() !== fechaPrimeraCuota.getDate()) {
+                      lastCuotaDate.setDate(0);
+                    }
+                    return format(lastCuotaDate, "MMMM yyyy", { locale: es });
+                  })()}
                 </span>
               </div>
             </div>

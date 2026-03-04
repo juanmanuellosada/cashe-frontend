@@ -53,12 +53,14 @@ function CategorySummary() {
         name,
         pesos: data.pesos,
         dolares: data.dolares,
-        percentage: totalPesos > 0 ? (data.pesos / totalPesos) * 100 : 0,
+        percentage: currency === 'ARS'
+          ? (totalPesos > 0 ? (data.pesos / totalPesos) * 100 : 0)
+          : (totalDolares > 0 ? (data.dolares / totalDolares) * 100 : 0),
       }))
-      .sort((a, b) => b.pesos - a.pesos);
+      .sort((a, b) => currency === 'ARS' ? b.pesos - a.pesos : b.dolares - a.dolares);
 
     return { categories, totalPesos, totalDolares };
-  }, [filteredMovements]);
+  }, [filteredMovements, currency]);
 
   // Datos para el grafico de barras
   const chartData = useMemo(() => {
