@@ -68,6 +68,12 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
       return;
     }
 
+    const parsedSaliente = parseFloat(formData.montoSaliente);
+    const parsedEntrante = parseFloat(formData.montoEntrante);
+    if (!parsedSaliente || parsedSaliente <= 0 || !parsedEntrante || parsedEntrante <= 0) {
+      return;
+    }
+
     const result = await onSubmit({
       type: 'transfer',
       data: {

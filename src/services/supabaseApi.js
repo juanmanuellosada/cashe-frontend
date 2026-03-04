@@ -511,6 +511,7 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
   }
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('accounts')
     .update({
@@ -528,6 +529,7 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       hidden_from_balance: ocultaDelBalance || false
     })
     .eq('id', accountId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -2157,11 +2159,13 @@ export const getPendingInstallments = async () => {
 };
 
 export const deleteInstallmentPurchase = async (purchaseId) => {
+  const userId = await getUserId();
   // Delete all movements associated with this purchase
   const { error: movementsError } = await supabase
     .from('movements')
     .delete()
-    .eq('installment_purchase_id', purchaseId);
+    .eq('installment_purchase_id', purchaseId)
+    .eq('user_id', userId);
 
   if (movementsError) throw movementsError;
 
@@ -2169,7 +2173,8 @@ export const deleteInstallmentPurchase = async (purchaseId) => {
   const { error: purchaseError } = await supabase
     .from('installment_purchases')
     .delete()
-    .eq('id', purchaseId);
+    .eq('id', purchaseId)
+    .eq('user_id', userId);
 
   if (purchaseError) throw purchaseError;
 
@@ -2863,6 +2868,7 @@ export const addBudget = async (budgetData) => {
 };
 
 export const updateBudget = async (budgetData) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('budgets')
     .update({
@@ -2882,6 +2888,7 @@ export const updateBudget = async (budgetData) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', budgetData.id)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -2891,10 +2898,12 @@ export const updateBudget = async (budgetData) => {
 };
 
 export const deleteBudget = async (budgetId) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('budgets')
     .delete()
-    .eq('id', budgetId);
+    .eq('id', budgetId)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('budgets');
@@ -3184,6 +3193,7 @@ export const addGoal = async (goalData) => {
 };
 
 export const updateGoal = async (goalData) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('goals')
     .update({
@@ -3208,6 +3218,7 @@ export const updateGoal = async (goalData) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', goalData.id)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -3217,10 +3228,12 @@ export const updateGoal = async (goalData) => {
 };
 
 export const deleteGoal = async (goalId) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('goals')
     .delete()
-    .eq('id', goalId);
+    .eq('id', goalId)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('goals');
@@ -3228,6 +3241,7 @@ export const deleteGoal = async (goalId) => {
 };
 
 export const completeGoal = async (goalId, completed = true) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('goals')
     .update({
@@ -3236,6 +3250,7 @@ export const completeGoal = async (goalId, completed = true) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', goalId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -3650,10 +3665,12 @@ export const updateRecurringTransaction = async (data) => {
 };
 
 export const deleteRecurringTransaction = async (recurringId) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('recurring_transactions')
     .delete()
-    .eq('id', recurringId);
+    .eq('id', recurringId)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('recurring');
@@ -3661,10 +3678,12 @@ export const deleteRecurringTransaction = async (recurringId) => {
 };
 
 export const pauseRecurringTransaction = async (recurringId) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('recurring_transactions')
     .update({ is_paused: true })
     .eq('id', recurringId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -3674,10 +3693,12 @@ export const pauseRecurringTransaction = async (recurringId) => {
 };
 
 export const resumeRecurringTransaction = async (recurringId) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('recurring_transactions')
     .update({ is_paused: false })
     .eq('id', recurringId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -3845,13 +3866,15 @@ export const confirmOccurrence = async (occurrenceId, actualAmount = null) => {
 };
 
 export const skipOccurrence = async (occurrenceId) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('recurring_occurrences')
     .update({
       status: 'skipped',
       skipped_at: new Date().toISOString(),
     })
-    .eq('id', occurrenceId);
+    .eq('id', occurrenceId)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('recurring');
@@ -4631,10 +4654,12 @@ export const updateAutoRule = async (id, { name, logicOperator, priority, isActi
  * Eliminar una regla (CASCADE elimina condiciones y acciones)
  */
 export const deleteAutoRule = async (id) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('auto_rules')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (error) throw error;
 
@@ -4646,6 +4671,7 @@ export const deleteAutoRule = async (id) => {
  * Activar/desactivar una regla
  */
 export const toggleAutoRule = async (id, isActive) => {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('auto_rules')
     .update({
@@ -4653,6 +4679,7 @@ export const toggleAutoRule = async (id, isActive) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -4667,11 +4694,13 @@ export const toggleAutoRule = async (id, isActive) => {
  * @param {Array<{id: string, priority: number}>} rules - Array de reglas con nuevas prioridades
  */
 export const reorderAutoRules = async (rules) => {
+  const userId = await getUserId();
   const updates = rules.map(({ id, priority }) =>
     supabase
       .from('auto_rules')
       .update({ priority, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('user_id', userId)
   );
 
   await Promise.all(updates);

@@ -21,6 +21,8 @@ function EditMovementModal({
   onConvertedToRecurring,
   loading = false
 }) {
+  const { showError } = useError();
+
   // Form data for income/expense
   const [formData, setFormData] = useState({
     fecha: '',
@@ -161,23 +163,31 @@ function EditMovementModal({
 
     let saveData;
     if (isTransfer) {
+      const parsedSaliente = parseFloat(transferData.montoSaliente);
+      const parsedEntrante = parseFloat(transferData.montoEntrante);
+      if (!parsedSaliente || parsedSaliente <= 0 || !parsedEntrante || parsedEntrante <= 0) return;
+      if (transferData.cuentaSaliente === transferData.cuentaEntrante) return;
+
       saveData = {
         ...movement,
         fecha: transferData.fecha,
         cuentaSaliente: transferData.cuentaSaliente,
         cuentaEntrante: transferData.cuentaEntrante,
-        montoSaliente: parseFloat(transferData.montoSaliente),
-        montoEntrante: parseFloat(transferData.montoEntrante),
+        montoSaliente: parsedSaliente,
+        montoEntrante: parsedEntrante,
         nota: transferData.nota,
         newAttachment,
         removeAttachment: removeExistingAttachment && !newAttachment,
       };
       onSave?.(saveData);
     } else {
+      const parsedMonto = parseFloat(formData.monto);
+      if (!parsedMonto || parsedMonto <= 0) return;
+
       saveData = {
         ...movement,
         ...formData,
-        monto: parseFloat(formData.monto),
+        monto: parsedMonto,
         newAttachment,
         removeAttachment: removeExistingAttachment && !newAttachment,
         newAttachment2: movement?.tipo === 'gasto' ? newAttachment2 : undefined,
@@ -227,8 +237,6 @@ function EditMovementModal({
 
   // Can convert to recurring? (not installment, not already recurring, not transfer)
   const canConvertToRecurring = !isInstallment && !movement?.isRecurring && !isTransfer && movement?.id;
-
-  const { showError } = useError();
 
   const handleDeleteClick = (e) => {
     e.preventDefault();

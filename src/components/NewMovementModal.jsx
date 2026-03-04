@@ -26,6 +26,14 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [formKey, setFormKey] = useState(0);
+  const closeTimeoutRef = useRef(null);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
 
   // Drag to dismiss state
   const [dragY, setDragY] = useState(0);
@@ -143,7 +151,7 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
       refetchAccounts();
 
       // Cerrar el modal después de un momento
-      setTimeout(() => {
+      closeTimeoutRef.current = setTimeout(() => {
         onClose();
       }, 1500);
 

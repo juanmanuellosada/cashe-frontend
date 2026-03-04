@@ -104,8 +104,7 @@ function AutoRules() {
       setGenerating(true);
       const result = await generateAllAutoRules();
       await refetch();
-      // Mostrar toast de éxito (opcional)
-      console.log(`✅ ${result.rulesCreated} reglas generadas exitosamente`);
+      // Success is shown by the updated rules list after refetch
     } catch (err) {
       showError('Error al generar reglas', err.message);
     } finally {
@@ -142,11 +141,15 @@ function AutoRules() {
   const handleBulkDelete = async () => {
     try {
       const idsToDelete = Array.from(selectedIds);
-      await Promise.all(idsToDelete.map(id => deleteAutoRule(id)));
+      const results = await Promise.allSettled(idsToDelete.map(id => deleteAutoRule(id)));
+      const failures = results.filter(r => r.status === 'rejected');
       setBulkDeleteConfirm(false);
       setSelectedIds(new Set());
       setSelectionMode(false);
       await refetch();
+      if (failures.length > 0) {
+        showError('Algunas reglas no se pudieron eliminar', `${failures.length} error(es)`);
+      }
     } catch (err) {
       showError('Error al eliminar', err.message);
     }

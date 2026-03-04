@@ -224,33 +224,30 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   // Evaluar reglas automáticas cuando cambia nota o monto (debounced)
   useEffect(() => {
-    const checkRules = async () => {
-      // No evaluar si ya seleccionó categoría o si descartó sugerencia
-      if (formData.categoria || suggestionDismissed) {
-        setRuleSuggestion(null);
-        return;
-      }
+    // No evaluar si ya seleccionó categoría o si descartó sugerencia
+    if (formData.categoria || suggestionDismissed) {
+      setRuleSuggestion(null);
+      return;
+    }
 
-      // No evaluar si no hay datos suficientes
-      if (!debouncedNota && !debouncedMonto) {
-        setRuleSuggestion(null);
-        return;
-      }
+    // No evaluar si no hay datos suficientes
+    if (!debouncedNota && !debouncedMonto) {
+      setRuleSuggestion(null);
+      return;
+    }
 
-      try {
-        const suggestion = await evaluateAutoRules({
-          type: 'expense',
-          note: debouncedNota,
-          amount: parseFloat(debouncedMonto) || 0,
-          accountId: selectedAccount?.id || '',
-        });
-        setRuleSuggestion(suggestion);
-      } catch (err) {
-        console.error('Error evaluating rules:', err);
-      }
-    };
+    let cancelled = false;
 
-    checkRules();
+    evaluateAutoRules({
+      type: 'expense',
+      note: debouncedNota,
+      amount: parseFloat(debouncedMonto) || 0,
+      accountId: selectedAccount?.id || '',
+    }).then(suggestion => {
+      if (!cancelled) setRuleSuggestion(suggestion);
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
   }, [debouncedNota, debouncedMonto, selectedAccount?.id, formData.categoria, suggestionDismissed]);
 
   // Reset dismissed state cuando se limpia el formulario
@@ -331,6 +328,11 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     e.preventDefault();
 
     if (!formData.monto || !formData.cuenta || !formData.categoria) {
+      return;
+    }
+
+    const parsedAmount = parseFloat(formData.monto);
+    if (!parsedAmount || parsedAmount <= 0) {
       return;
     }
 
