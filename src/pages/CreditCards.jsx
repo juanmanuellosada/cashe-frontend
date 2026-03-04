@@ -290,7 +290,9 @@ function CreditCards() {
   // Manejar agregar impuesto de sellos
   const handleAddTax = async () => {
     if (!selectedStatement || !taxAmount || !selectedCard) return;
-    
+    const parsedTax = parseFloat(taxAmount);
+    if (!parsedTax || parsedTax <= 0) return;
+
     try {
       setSaving(true);
       
@@ -814,9 +816,9 @@ function CreditCards() {
               onClick={() => setCurrency('USD')}
               className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
               style={{
-                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+                backgroundColor: currency === 'USD' ? 'var(--accent-blue)' : 'transparent',
                 color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
-                boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
+                boxShadow: currency === 'USD' ? '0 4px 12px var(--accent-blue-glow)' : 'none',
               }}
             >
               <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
@@ -1196,7 +1198,7 @@ function CreditCards() {
               </button>
               <button
                 onClick={handleAddTax}
-                disabled={saving || !taxAmount}
+                disabled={saving || !taxAmount || parseFloat(taxAmount) <= 0}
                 className="flex-1 py-3 rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--accent-yellow)' }}
               >
@@ -1359,6 +1361,7 @@ function CreditCards() {
                       value: acc.nombre,
                       label: acc.nombre,
                       icon: acc.icon || null,
+                      badge: 'ARS',
                     }))}
                     placeholder="Seleccionar cuenta en pesos..."
                   />
@@ -1381,6 +1384,7 @@ function CreditCards() {
                       value: acc.nombre,
                       label: acc.nombre,
                       icon: acc.icon || null,
+                      badge: 'USD',
                     }))}
                     placeholder="Seleccionar cuenta en dólares..."
                   />

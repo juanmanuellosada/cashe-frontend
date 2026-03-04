@@ -31,9 +31,9 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
             onClick={() => setCurrency('USD')}
             className="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5 min-h-[36px]"
             style={{
-              backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
+              backgroundColor: currency === 'USD' ? 'var(--accent-blue)' : 'transparent',
               color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
-              boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
+              boxShadow: currency === 'USD' ? '0 4px 12px var(--accent-blue-glow)' : 'none',
             }}
           >
             <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />

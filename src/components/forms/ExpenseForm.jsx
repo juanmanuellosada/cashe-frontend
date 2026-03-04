@@ -3,6 +3,7 @@ import { format, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
+import { CurrencyIcon, AccountIcon, CategoryIcon, NoteIcon, InstallmentsIcon } from './FormIcons';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
 import BudgetGoalImpact from '../common/BudgetGoalImpact';
@@ -105,6 +106,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     nota: prefillData?.nota || '',
   });
 
+  const [errors, setErrors] = useState({});
   const [cantidadCuotas, setCantidadCuotas] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [monedaGasto, setMonedaGasto] = useState('ARS'); // Moneda para gastos en tarjeta de crédito
@@ -281,6 +283,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
 
     // Sync amount with parent for tab persistence
     if (name === 'monto' && onAmountChange) {
@@ -327,14 +330,18 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.monto || !formData.cuenta || !formData.categoria) {
+    const newErrors = {};
+    if (!formData.monto) newErrors.monto = 'Ingresa un monto';
+    else if (parseFloat(formData.monto) <= 0) newErrors.monto = 'El monto debe ser mayor a cero';
+    if (!formData.cuenta) newErrors.cuenta = 'Selecciona una cuenta';
+    if (!formData.categoria) newErrors.categoria = 'Selecciona una categoría';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     const parsedAmount = parseFloat(formData.monto);
-    if (!parsedAmount || parsedAmount <= 0) {
-      return;
-    }
 
     // Determinar si usar cuotas o gasto normal
     const usarCuotas = esTarjetaCredito && cantidadCuotas > 1;
@@ -368,40 +375,11 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   const isValid = formData.monto && formData.cuenta && formData.categoria;
 
-  // Icon for currency
-  const currencyIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-
-  // Icon for accounts
-  const accountIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  );
-
-  // Icon for category
-  const categoryIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-    </svg>
-  );
-
-  // Icon for note
-  const noteIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  );
-
-  // Icon for installments
-  const installmentsIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    </svg>
-  );
+  const currencyIcon = CurrencyIcon;
+  const accountIcon = AccountIcon;
+  const categoryIcon = CategoryIcon;
+  const noteIcon = NoteIcon;
+  const installmentsIcon = InstallmentsIcon;
 
   // Texto dinámico del botón
   const getButtonText = () => {
@@ -441,11 +419,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                     color: 'var(--text-primary)',
                   }}
                 >
-                  {periodosResumen.map((periodo) => (
-                    <option key={periodo.value} value={periodo.value}>
-                      {periodo.label} {periodo.value === primerPeriodoNoPagado ? '(actual)' : (cardPayments[`${periodo.value}_ARS`] || cardPayments[`${periodo.value}_USD`] ? '(pagado)' : '')}
-                    </option>
-                  ))}
+                  {periodosResumen.map((periodo) => {
+                    const suffix = periodo.value === primerPeriodoNoPagado ? ' ●' : (cardPayments[`${periodo.value}_ARS`] || cardPayments[`${periodo.value}_USD`] ? ' ✓' : '');
+                    return (
+                      <option key={periodo.value} value={periodo.value}>
+                        {periodo.label}{suffix}
+                      </option>
+                    );
+                  })}
                 </select>
                 <div
                   className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -520,6 +501,9 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
             />
           </div>
         </div>
+        {errors.monto && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.monto}</p>
+        )}
       </div>
 
       {/* Selector de moneda - Full width - Solo para tarjetas de crédito */}
@@ -543,7 +527,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
                 key={opt.id}
                 type="button"
                 onClick={() => setMonedaGasto(opt.id)}
-                className="flex-1 py-2.5 rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 min-h-[44px] rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
                 style={{
                   backgroundColor: monedaGasto === opt.id ? 'var(--bg-elevated)' : 'transparent',
                   color: monedaGasto === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -581,6 +565,9 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
           icon={accountIcon}
           emptyMessage="No hay cuentas"
         />
+        {errors.cuenta && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.cuenta}</p>
+        )}
       </div>
 
       {/* Selector de Cuotas - Solo visible si es tarjeta de crédito */}
@@ -718,6 +705,9 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
           createNewLabel="Crear categoría"
           defaultOptionIcon="🏷️"
         />
+        {errors.categoria && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.categoria}</p>
+        )}
       </div>
 
       {/* Nota */}

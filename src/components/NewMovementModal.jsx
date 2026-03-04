@@ -39,6 +39,8 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
+  const modalRef = useRef(null);
+  const isDraggingRef = useRef(false);
 
   // Reset drag state when modal opens
   useEffect(() => {
@@ -81,14 +83,8 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
     if (e.target.closest('[data-drag-handle]')) {
       startY.current = e.touches[0].clientY;
       setIsDragging(true);
+      isDraggingRef.current = true;
     }
-  };
-
-  // Handle touch move
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    const diff = e.touches[0].clientY - startY.current;
-    if (diff > 0) setDragY(diff);
   };
 
   // Handle touch end
@@ -97,7 +93,22 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
     if (dragY > 100 && !submitting) onClose();
     setDragY(0);
     setIsDragging(false);
+    isDraggingRef.current = false;
   };
+
+  // Register non-passive touchmove to allow preventDefault during drag
+  useEffect(() => {
+    const el = modalRef.current;
+    if (!el) return;
+    const onTouchMove = (e) => {
+      if (!isDraggingRef.current) return;
+      e.preventDefault();
+      const diff = e.touches[0].clientY - startY.current;
+      if (diff > 0) setDragY(diff);
+    };
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, [isOpen]);
 
   const handleSubmit = async ({ type, data }) => {
     setSubmitting(true);
@@ -215,8 +226,8 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           opacity: shouldClose ? 0.5 : 1,
         }}
+        ref={modalRef}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {/* Drag indicator - mobile only */}

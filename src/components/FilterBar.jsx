@@ -49,6 +49,8 @@ function FilterBar({
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-lg min-[400px]:rounded-xl text-sm transition-all duration-200 hover:bg-[var(--bg-tertiary)] active:scale-[0.98]"
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+        aria-expanded={isExpanded}
+        aria-label={`Filtros${activeFiltersCount > 0 ? ` (${activeFiltersCount} activos)` : ''}`}
       >
         <svg className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -75,6 +77,78 @@ function FilterBar({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
+
+      {/* Active Filter Badges */}
+      {!isExpanded && activeFiltersCount > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {filters.tipos?.length > 0 && filters.tipos.length < 3 && (
+            filters.tipos.map(tipo => {
+              const typeLabels = { ingreso: 'Ingresos', gasto: 'Gastos', transferencia: 'Transferencias' };
+              const typeColors = { ingreso: 'var(--accent-green)', gasto: 'var(--accent-red)', transferencia: 'var(--accent-blue)' };
+              return (
+                <span
+                  key={tipo}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ backgroundColor: `color-mix(in srgb, ${typeColors[tipo]} 15%, transparent)`, color: typeColors[tipo] }}
+                >
+                  {typeLabels[tipo]}
+                  <button
+                    onClick={() => toggleArrayFilter('tipos', tipo)}
+                    className="ml-0.5 p-0.5 rounded hover:opacity-70 transition-opacity"
+                    aria-label={`Quitar filtro ${typeLabels[tipo]}`}
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </span>
+              );
+            })
+          )}
+          {filters.cuentas?.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+              style={{ backgroundColor: 'var(--accent-primary-dim)', color: 'var(--accent-primary)' }}
+            >
+              {filters.cuentas.length === 1 ? filters.cuentas[0] : `${filters.cuentas.length} cuentas`}
+              <button
+                onClick={() => onFilterChange?.({ ...filters, cuentas: [] })}
+                className="ml-0.5 p-0.5 rounded hover:opacity-70 transition-opacity"
+                aria-label="Quitar filtro de cuentas"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+          {filters.categorias?.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+              style={{ backgroundColor: 'rgba(168, 85, 247, 0.12)', color: 'var(--accent-purple)' }}
+            >
+              {filters.categorias.length === 1 ? filters.categorias[0] : `${filters.categorias.length} categorias`}
+              <button
+                onClick={() => onFilterChange?.({ ...filters, categorias: [] })}
+                className="ml-0.5 p-0.5 rounded hover:opacity-70 transition-opacity"
+                aria-label="Quitar filtro de categorias"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+          <button
+            onClick={clearFilters}
+            className="px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:opacity-80 active:scale-95"
+            style={{ color: 'var(--text-muted)' }}
+            aria-label="Limpiar todos los filtros"
+          >
+            Limpiar
+          </button>
+        </div>
+      )}
 
       {/* Filters Panel */}
       {isExpanded && (

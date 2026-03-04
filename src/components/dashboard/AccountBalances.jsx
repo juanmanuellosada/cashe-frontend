@@ -23,7 +23,34 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
   }
 
   if (!visibleAccounts || visibleAccounts.length === 0) {
-    return null;
+    return (
+      <div className="card-glass p-6 sm:p-8 text-center rounded-lg min-[400px]:rounded-xl">
+        <div
+          className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-lg min-[400px]:rounded-xl sm:rounded-2xl flex items-center justify-center"
+          style={{ backgroundColor: 'var(--accent-primary-dim)' }}
+        >
+          <svg className="w-7 h-7 sm:w-8 sm:h-8" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+        </div>
+        <p className="font-semibold text-base mb-1" style={{ color: 'var(--text-primary)' }}>
+          Sin cuentas
+        </p>
+        <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+          Agrega tu primera cuenta para empezar a registrar movimientos.
+        </p>
+        <button
+          onClick={() => navigate('/cuentas')}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+          style={{ backgroundColor: 'var(--accent-primary)', boxShadow: '0 4px 16px var(--accent-primary-glow)' }}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Crear cuenta
+        </button>
+      </div>
+    );
   }
 
   const handleAccountClick = (account) => {
@@ -139,7 +166,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                     <p className="font-semibold truncate text-[15px]" style={{ color: 'var(--text-primary)' }}>
                       {account.nombre}
                     </p>
-                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                       {isCreditCard ? 'Próximo resumen' : (
                         <>
                           {isARS ? 'Pesos' : 'Dólares'}
@@ -227,7 +254,7 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
                       <p className="font-medium text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
                         {account.nombre}
                       </p>
-                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                         {isCreditCard ? 'Próximo resumen' : (isARS ? 'Pesos' : 'Dólares')}
                       </p>
                     </div>

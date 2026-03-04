@@ -64,10 +64,12 @@ export default function SortDropdown({
         {/* Order indicator */}
         <span
           onClick={toggleOrder}
-          className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
+          className="p-1.5 -mr-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
           title={value.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
           role="button"
           tabIndex={0}
+          aria-label={`Orden: ${value.sortOrder === 'asc' ? 'ascendente' : 'descendente'}`}
+          aria-pressed={value.sortOrder === 'asc'}
           onKeyDown={(e) => e.key === 'Enter' && toggleOrder(e)}
         >
           <svg

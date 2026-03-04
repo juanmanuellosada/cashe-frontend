@@ -649,6 +649,7 @@ function MovementsList({
               className="p-2 rounded-xl transition-colors"
               style={{ backgroundColor: getTypeColor(), color: 'white' }}
               title={`Agregar ${type === 'transferencia' ? 'transferencia' : type}`}
+              aria-label={`Agregar ${type === 'transferencia' ? 'transferencia' : type}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -663,6 +664,7 @@ function MovementsList({
               className="p-2 rounded-xl transition-colors"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
               title="Selección múltiple"
+              aria-label="Selección múltiple"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
@@ -708,9 +710,10 @@ function MovementsList({
             {(dateRange.from || dateRange.to) && (
               <button
                 onClick={() => setDateRange({ from: null, to: null })}
-                className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+                className="p-2 min-w-[44px] min-h-[44px] rounded-lg transition-colors hover:opacity-80 flex items-center justify-center"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
                 title="Limpiar fechas"
+                aria-label="Limpiar fechas"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -44,8 +44,10 @@ function Combobox({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const optionsRef = useRef(null);
 
   // Find selected option
   const selectedOption = options.find(opt =>
@@ -68,7 +70,49 @@ function Combobox({
     onChange({ target: { name, value: optValue } });
     setSearch('');
     setIsOpen(false);
+    setHighlightedIndex(-1);
   };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!isOpen) return;
+    const count = filteredOptions.length;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev + 1) % count);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev - 1 + count) % count);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < count) {
+          handleSelect(filteredOptions[highlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setIsOpen(false);
+        setSearch('');
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Reset highlight when search changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [search]);
+
+  // Scroll highlighted option into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && optionsRef.current) {
+      const items = optionsRef.current.querySelectorAll('[data-option]');
+      items[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
 
   // Close on click outside
   useEffect(() => {
@@ -153,6 +197,7 @@ function Combobox({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Buscar..."
                 className="w-full pl-10 pr-3 py-2.5 rounded-lg text-sm"
                 style={{
@@ -164,7 +209,7 @@ function Combobox({
           </div>
 
           {/* Options list */}
-          <div className="max-h-[50vh] sm:max-h-48 overflow-y-auto">
+          <div ref={optionsRef} className="max-h-[50vh] sm:max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-sm text-center" style={{ color: 'var(--text-secondary)' }}>
                 {emptyMessage}
@@ -176,27 +221,25 @@ function Combobox({
                 const optIcon = typeof opt === 'object' ? opt.icon : null;
                 const isSelected = optValue === value;
 
+                const isHighlighted = index === highlightedIndex;
+
                 return (
                   <button
                     key={optValue}
                     type="button"
+                    data-option
                     onClick={() => handleSelect(opt)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
                     className={`w-full px-4 py-3 min-h-[44px] text-left text-sm transition-colors ${
                       isSelected ? 'font-medium' : ''
                     }`}
                     style={{
-                      backgroundColor: isSelected ? 'var(--accent-primary-dim)' : 'transparent',
+                      backgroundColor: isSelected
+                        ? 'var(--accent-primary-dim)'
+                        : isHighlighted
+                          ? 'var(--bg-tertiary)'
+                          : 'transparent',
                       color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
                     }}
                   >
                     <div className="flex items-center gap-2">

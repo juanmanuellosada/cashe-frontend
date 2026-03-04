@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
+import { CurrencyIcon, AccountIcon, CategoryIcon, NoteIcon } from './FormIcons';
 import CreateCategoryModal from '../CreateCategoryModal';
 import AttachmentInput from '../AttachmentInput';
 import BudgetGoalImpact from '../common/BudgetGoalImpact';
@@ -32,6 +33,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
     nota: prefillData?.nota || '',
   });
 
+  const [errors, setErrors] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [attachment, setAttachment] = useState(null);
@@ -95,6 +97,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
 
     // Sincronizar monto con el estado compartido
     if (name === 'monto' && onAmountChange) {
@@ -132,14 +135,18 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.monto || !formData.cuenta || !formData.categoria) {
+    const newErrors = {};
+    if (!formData.monto) newErrors.monto = 'Ingresa un monto';
+    else if (parseFloat(formData.monto) <= 0) newErrors.monto = 'El monto debe ser mayor a cero';
+    if (!formData.cuenta) newErrors.cuenta = 'Selecciona una cuenta';
+    if (!formData.categoria) newErrors.categoria = 'Selecciona una categoría';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     const parsedAmount = parseFloat(formData.monto);
-    if (!parsedAmount || parsedAmount <= 0) {
-      return;
-    }
 
     const result = await onSubmit({
       type: 'income',
@@ -159,33 +166,10 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
 
   const isValid = formData.monto && formData.cuenta && formData.categoria;
 
-  // Icon for currency
-  const currencyIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-
-  // Icon for accounts
-  const accountIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  );
-
-  // Icon for category
-  const categoryIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-    </svg>
-  );
-
-  // Icon for note
-  const noteIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  );
+  const currencyIcon = CurrencyIcon;
+  const accountIcon = AccountIcon;
+  const categoryIcon = CategoryIcon;
+  const noteIcon = NoteIcon;
 
   return (
     <>
@@ -245,6 +229,9 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
             />
           </div>
         </div>
+        {errors.monto && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.monto}</p>
+        )}
       </div>
 
       {/* Cuenta */}
@@ -266,6 +253,9 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           emptyMessage="No hay cuentas"
           defaultOptionIcon="💳"
         />
+        {errors.cuenta && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.cuenta}</p>
+        )}
       </div>
 
       {/* Categoría */}
@@ -289,6 +279,9 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           createNewLabel="Crear categoría"
           defaultOptionIcon="🏷️"
         />
+        {errors.categoria && (
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.categoria}</p>
+        )}
       </div>
 
       {/* Nota */}

@@ -169,7 +169,7 @@ const Landing = () => {
         {/* Footer */}
         <footer className="p-6 text-center relative" style={{ color: 'var(--text-muted)' }}>
           <p className="text-sm">
-            © 2026 Cashé. Hecho con 💚 para manejar tus finanzas.
+            © {new Date().getFullYear()} Cashé. Hecho con 💚 para manejar tus finanzas.
           </p>
         </footer>
       </div>

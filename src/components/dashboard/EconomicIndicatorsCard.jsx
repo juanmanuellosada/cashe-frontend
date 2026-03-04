@@ -50,7 +50,7 @@ function InflationTooltip({ children, title, description, details }) {
       {/* Tooltip */}
       {show && (
         <div
-          className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-xl shadow-lg z-[9999] animate-scale-in"
+          className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-xl shadow-lg z-[200] animate-scale-in"
           style={{
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -534,7 +534,7 @@ function EconomicIndicatorsCard({ onExchangeRateChange }) {
         {/* Dropdown */}
         {showTypeSelector && (
           <div
-            className="absolute bottom-full left-0 right-0 mb-1 p-2 rounded-xl shadow-lg z-[9998] animate-scale-in overflow-hidden"
+            className="absolute bottom-full left-0 right-0 mb-1 p-2 rounded-xl shadow-lg z-[200] animate-scale-in overflow-hidden"
             style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
           >
             {Object.entries(DOLLAR_TYPES).map(([key, { nombre, descripcion }]) => {

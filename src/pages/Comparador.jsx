@@ -69,7 +69,7 @@ function Comparador() {
     const totalGastos = filteredMovements.gastos.reduce((sum, m) =>
       sum + (currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0)), 0);
     const balance = totalIngresos - totalGastos;
-    const ratio = totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0;
+    const ratio = totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : null;
     return { totalIngresos, totalGastos, balance, ratio };
   }, [filteredMovements, currency]);
 
@@ -294,6 +294,7 @@ function Comparador() {
                       key={cat || `expense-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedExpenseCategories, setSelectedExpenseCategories, cat)}
                       className="px-3 py-2 rounded-full text-xs font-medium transition-colors"
+                      title={cat && cat.length > 20 ? cat : undefined}
                       style={{
                         backgroundColor: selected ? 'var(--accent-red)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
@@ -322,6 +323,7 @@ function Comparador() {
                       key={cat || `income-cat-${index}`}
                       onClick={() => toggleArrayFilter(selectedIncomeCategories, setSelectedIncomeCategories, cat)}
                       className="px-3 py-2 rounded-full text-xs font-medium transition-colors"
+                      title={cat && cat.length > 20 ? cat : undefined}
                       style={{
                         backgroundColor: selected ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                         color: selected ? 'white' : 'var(--text-secondary)',
@@ -430,8 +432,8 @@ function Comparador() {
               </div>
               <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Ratio</p>
             </div>
-            <p className="text-lg font-bold" style={{ color: 'var(--accent-purple)' }}>{totals.ratio.toFixed(0)}%</p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>de tus ingresos</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--accent-purple)' }}>{totals.ratio !== null ? `${totals.ratio.toFixed(0)}%` : 'N/A'}</p>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{totals.ratio !== null ? 'de tus ingresos' : 'sin ingresos'}</p>
           </div>
         </div>
       </div>
@@ -480,7 +482,7 @@ function Comparador() {
               {expensesPieData.slice(0, 4).map((entry, index) => (
                 <div key={`legend-${index}`} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span style={{ color: 'var(--text-secondary)' }}>{entry.name.length > 10 ? entry.name.substring(0, 10) + '...' : entry.name}</span>
+                  <span style={{ color: 'var(--text-secondary)' }} title={entry.name.length > 10 ? entry.name : undefined}>{entry.name.length > 10 ? entry.name.substring(0, 10) + '...' : entry.name}</span>
                 </div>
               ))}
               {expensesPieData.length > 4 && (

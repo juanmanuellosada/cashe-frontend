@@ -96,8 +96,9 @@ function Toast({ message, type = 'success', onClose, duration = 3000 }) {
         {/* Close button */}
         <button
           onClick={onClose}
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/10 active:scale-95"
+          className="flex-shrink-0 w-10 h-10 min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/10 active:scale-95"
           style={{ color: 'var(--text-secondary)' }}
+          aria-label="Cerrar notificacion"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -4,6 +4,7 @@ import { useStatistics } from '../contexts/StatisticsContext';
 import { formatCurrency } from '../utils/format';
 import StatisticsFilterBar from '../components/StatisticsFilterBar';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Toast from '../components/Toast';
 
 // Tipos de movimiento para tabs
 const MOVEMENT_TABS = [
@@ -21,6 +22,7 @@ const PIE_COLORS = [
 function CategorySummary() {
   const { filteredMovements: allFiltered, currency, loading } = useStatistics();
   const [activeTab, setActiveTab] = useState('gasto');
+  const [toast, setToast] = useState(null);
 
   // Filtrar movimientos por tipo
   const filteredMovements = useMemo(() => {
@@ -139,8 +141,9 @@ function CategorySummary() {
       .map(cat => `${cat.name}\t${cat.pesos.toFixed(2)}\t${cat.dolares.toFixed(2)}\t${cat.percentage.toFixed(1)}%`)
       .join('\n');
     const total = `TOTAL\t${categoryData.totalPesos.toFixed(2)}\t${categoryData.totalDolares.toFixed(2)}\t100%`;
-    navigator.clipboard.writeText(header + rows + '\n' + total);
-    alert('Datos copiados al portapapeles');
+    navigator.clipboard.writeText(header + rows + '\n' + total)
+      .then(() => setToast({ message: 'Datos copiados al portapapeles', type: 'success' }))
+      .catch(() => setToast({ message: 'No se pudo copiar', type: 'error' }));
   };
 
   const activeTabData = MOVEMENT_TABS.find(t => t.id === activeTab);
@@ -357,6 +360,13 @@ function CategorySummary() {
           Mostrando {categoryData.categories.length} categorias con {filteredMovements.length} movimientos
         </p>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-4 left-4 right-4 z-50">
+          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+        </div>
+      )}
     </div>
   );
 }

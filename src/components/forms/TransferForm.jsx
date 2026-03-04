@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
+import { AccountIcon, NoteIcon } from './FormIcons';
 import AttachmentInput from '../AttachmentInput';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
@@ -24,6 +25,8 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
     nota: prefillData?.nota || '',
   });
 
+  const [errors, setErrors] = useState({});
+
   // Si hay prefillData con montos diferentes, desactivar sameAmount
   const initialSameAmount = prefillData
     ? prefillData.montoSaliente === prefillData.montoEntrante
@@ -45,6 +48,11 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+    // Clear same-account error when either account changes
+    if ((name === 'cuentaSaliente' || name === 'cuentaEntrante') && errors.cuentaEntrante) {
+      setErrors(prev => ({ ...prev, cuentaEntrante: null }));
+    }
 
     // Sincronizar monto saliente con el estado compartido
     if (name === 'montoSaliente' && onAmountChange) {
@@ -55,24 +63,26 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !formData.cuentaSaliente ||
-      !formData.cuentaEntrante ||
-      !formData.montoSaliente ||
-      !formData.montoEntrante
-    ) {
-      return;
+    const newErrors = {};
+    if (!formData.cuentaSaliente) newErrors.cuentaSaliente = 'Selecciona una cuenta de origen';
+    if (!formData.cuentaEntrante) newErrors.cuentaEntrante = 'Selecciona una cuenta de destino';
+    else if (formData.cuentaSaliente && formData.cuentaSaliente === formData.cuentaEntrante) {
+      newErrors.cuentaEntrante = 'Las cuentas deben ser diferentes';
+    }
+    if (!formData.montoSaliente) newErrors.montoSaliente = 'Ingresa un monto';
+    else if (parseFloat(formData.montoSaliente) <= 0) newErrors.montoSaliente = 'El monto debe ser mayor a cero';
+    if (!sameAmount) {
+      if (!formData.montoEntrante) newErrors.montoEntrante = 'Ingresa un monto';
+      else if (parseFloat(formData.montoEntrante) <= 0) newErrors.montoEntrante = 'El monto debe ser mayor a cero';
     }
 
-    if (formData.cuentaSaliente === formData.cuentaEntrante) {
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     const parsedSaliente = parseFloat(formData.montoSaliente);
     const parsedEntrante = parseFloat(formData.montoEntrante);
-    if (!parsedSaliente || parsedSaliente <= 0 || !parsedEntrante || parsedEntrante <= 0) {
-      return;
-    }
 
     const result = await onSubmit({
       type: 'transfer',
@@ -98,19 +108,8 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
     formData.montoEntrante &&
     formData.cuentaSaliente !== formData.cuentaEntrante;
 
-  // Icon for accounts
-  const accountIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  );
-
-  // Icon for note
-  const noteIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  );
+  const accountIcon = AccountIcon;
+  const noteIcon = NoteIcon;
 
   const availableDestinationAccounts = sortedAccounts
     .filter((acc) => acc.nombre !== formData.cuentaSaliente)
@@ -162,6 +161,9 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
             emptyMessage="No hay cuentas"
             defaultOptionIcon="💳"
           />
+          {errors.cuentaSaliente && (
+            <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.cuentaSaliente}</p>
+          )}
         </div>
 
         {/* Arrow */}
@@ -197,6 +199,9 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
             emptyMessage={formData.cuentaSaliente ? "No hay otras cuentas" : "Selecciona cuenta de origen primero"}
             defaultOptionIcon="💳"
           />
+          {errors.cuentaEntrante && (
+            <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.cuentaEntrante}</p>
+          )}
         </div>
       </div>
 
@@ -204,7 +209,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
       <button
         type="button"
         onClick={() => setSameAmount(!sameAmount)}
-        className="flex items-center gap-3 w-full p-3 rounded-xl transition-colors"
+        className="flex items-center gap-3 w-full p-3 min-h-[44px] rounded-xl transition-colors"
         style={{ backgroundColor: 'var(--bg-tertiary)' }}
       >
         <div
@@ -265,6 +270,9 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
               />
             </div>
           </div>
+          {errors.montoSaliente && (
+            <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.montoSaliente}</p>
+          )}
         </div>
 
         {!sameAmount && (
@@ -305,6 +313,9 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
                 />
               </div>
             </div>
+            {errors.montoEntrante && (
+              <p className="text-xs mt-1 font-medium" style={{ color: 'var(--accent-red)' }}>{errors.montoEntrante}</p>
+            )}
           </div>
         )}
       </div>

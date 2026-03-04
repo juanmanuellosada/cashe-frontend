@@ -214,7 +214,7 @@ function Categories() {
 
   // Skeleton loading
   const renderSkeleton = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
+    <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
       {[...Array(6)].map((_, i) => (
         <div
           key={i}
@@ -398,7 +398,7 @@ function Categories() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
           {filteredCategories.map((category) => {
             const isIngreso = category.tipo === 'Ingreso';
             const iconInfo = getCategoryIcon(category);
@@ -513,7 +513,7 @@ function Categories() {
                       e.stopPropagation();
                       setEditingCategory(category);
                     }}
-                    className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 p-1.5 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     style={{ backgroundColor: 'var(--bg-tertiary)' }}
                   >
                     <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">

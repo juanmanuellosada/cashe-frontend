@@ -43,6 +43,8 @@ function DatePicker({ value, onChange, name, compact = false }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={`Seleccionar fecha${displayDate ? `: ${displayDate}` : ''}`}
+        aria-expanded={isOpen}
         className={`w-full text-left flex items-center min-h-[44px] ${compact ? 'px-2.5 py-2 rounded-lg gap-1.5 text-xs' : 'px-4 py-3 rounded-xl gap-3 text-sm'}`}
         style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
       >

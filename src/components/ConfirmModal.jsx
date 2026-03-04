@@ -20,13 +20,20 @@ function ConfirmModal({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
   const titleId = useId();
 
-  // Reset drag state when modal opens/closes
+  // Reset drag state when modal opens/closes + focus management
   useEffect(() => {
     if (isOpen) {
       setDragY(0);
       setIsDragging(false);
+      previousFocusRef.current = document.activeElement;
+      // Focus the modal container for keyboard accessibility
+      setTimeout(() => modalRef.current?.focus(), 50);
+    } else if (previousFocusRef.current) {
+      previousFocusRef.current.focus();
+      previousFocusRef.current = null;
     }
   }, [isOpen]);
 
@@ -115,7 +122,8 @@ function ConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
+        tabIndex={-1}
+        className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-6 animate-slide-down sm:max-h-[calc(100vh-48px)] outline-none"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           transform: `translateY(${dragY}px)`,

@@ -199,11 +199,11 @@ function RecentMovements({
         <div className="card-glass p-6 sm:p-8 text-center rounded-lg min-[400px]:rounded-xl">
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-lg min-[400px]:rounded-xl sm:rounded-2xl flex items-center justify-center"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            style={{ backgroundColor: 'var(--accent-primary-dim)' }}
           >
             <svg
               className="w-7 h-7 sm:w-8 sm:h-8"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: 'var(--accent-primary)' }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -214,9 +214,19 @@ function RecentMovements({
           <p className="font-semibold text-base mb-1" style={{ color: 'var(--text-primary)' }}>
             Sin movimientos
           </p>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            No hay movimientos en este periodo
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+            No hay movimientos en este periodo. Registra tu primer ingreso o gasto para verlo aqui.
           </p>
+          <a
+            href="/nuevo"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+            style={{ backgroundColor: 'var(--accent-primary)', boxShadow: '0 4px 16px var(--accent-primary-glow)' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo movimiento
+          </a>
         </div>
       ) : (
         <div className="card-glass overflow-hidden rounded-lg min-[400px]:rounded-xl">
@@ -262,7 +272,7 @@ function RecentMovements({
                         }}
                       >
                         {movement.tipo === 'transferencia'
-                          ? 'Transfer'
+                          ? 'Transferencia'
                           : movement.categoria || ''}
                       </p>
                       <p
@@ -320,6 +330,7 @@ function RecentMovements({
                   className="p-2 sm:p-2.5 rounded-md min-[400px]:rounded-lg sm:rounded-xl flex-shrink-0 transition-all duration-200 hover:bg-red-500/15 active:scale-95 self-start min-[400px]:self-center"
                   style={{ color: 'var(--text-muted)' }}
                   title="Eliminar"
+                  aria-label="Eliminar movimiento"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 transition-colors hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

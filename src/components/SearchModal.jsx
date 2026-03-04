@@ -42,7 +42,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
-      setFilteredResults([]);
+      setFilteredResults({ items: [], total: 0 });
     }
   }, [isOpen]);
 
@@ -76,9 +76,9 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
             monto.includes(searchTerm)
           );
         });
-        setFilteredResults(results.slice(0, 20));
+        setFilteredResults({ items: results.slice(0, 20), total: results.length });
       } else {
-        setFilteredResults([]);
+        setFilteredResults({ items: [], total: 0 });
       }
     }, 300);
 
@@ -248,7 +248,7 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : query && filteredResults.length === 0 ? (
+          ) : query && filteredResults.items.length === 0 ? (
             <div className="py-12 text-center" style={{ color: 'var(--text-secondary)' }}>
               <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -266,7 +266,12 @@ function SearchModal({ isOpen, onClose, onMovementClick }) {
             </div>
           ) : (
             <div className="p-2">
-              {filteredResults.map((movement, index) => (
+              {filteredResults.total > 20 && (
+                <p className="text-xs text-center py-1.5 mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Mostrando 20 de {filteredResults.total} resultados
+                </p>
+              )}
+              {filteredResults.items.map((movement, index) => (
                 <button
                   key={`${movement.tipo}-${movement.fecha}-${index}`}
                   onClick={() => {

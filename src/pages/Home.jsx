@@ -335,8 +335,16 @@ function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Balance Card - Saldo actual */}
         {loadingDashboard ? (
-          <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <LoadingSpinner />
+          <div className="card-glass rounded-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-24 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              <div className="h-8 w-20 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            </div>
+            <div className="h-10 w-48 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            <div className="flex gap-4">
+              <div className="h-4 w-20 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              <div className="h-4 w-20 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            </div>
           </div>
         ) : (
           <BalanceCard
@@ -351,8 +359,21 @@ function Home() {
 
         {/* Period Flow Card - Flujo del período */}
         {loadingDashboard ? (
-          <div className="rounded-xl p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <LoadingSpinner />
+          <div className="card-glass rounded-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-32 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              <div className="h-8 w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <div className="h-3 w-16 skeleton-shimmer rounded-md" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+                <div className="h-7 w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-16 skeleton-shimmer rounded-md" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+                <div className="h-7 w-28 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
+              </div>
+            </div>
           </div>
         ) : (
           <PeriodFlowCard
