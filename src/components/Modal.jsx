@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 
 /**
  * Modal component with drag-to-dismiss on mobile
@@ -21,6 +21,8 @@ function Modal({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const titleId = useId();
 
   // Reset drag state when modal opens/closes
   useEffect(() => {
@@ -28,6 +30,46 @@ function Modal({
       setDragY(0);
       setIsDragging(false);
     }
+  }, [isOpen]);
+
+  // Focus trap and restore focus
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return;
+
+    previousFocusRef.current = document.activeElement;
+
+    // Focus first focusable element inside modal
+    const focusableElements = modalRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements.length > 0) {
+      focusableElements[0].focus();
+    }
+
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+      }
+    };
   }, [isOpen]);
 
   // Close on Escape key
@@ -93,11 +135,15 @@ function Modal({
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={closeOnBackdrop && !loading ? onClose : undefined}
+        aria-hidden="true"
       />
 
       {/* Modal */}
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={`relative w-full ${maxWidth} sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl flex flex-col animate-slide-down max-h-[calc(100dvh-40px)] sm:max-h-[calc(100vh-48px)]`}
         style={{
           backgroundColor: 'var(--bg-secondary)',
@@ -126,7 +172,7 @@ function Modal({
             style={{ borderColor: 'var(--border-subtle)' }}
             data-modal-header
           >
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <h2 id={titleId} className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
               {title}
             </h2>
             {showCloseButton && (

@@ -9,6 +9,7 @@ import ConfirmModal from './ConfirmModal';
 import SortDropdown from './SortDropdown';
 import SwipeableItem from './SwipeableItem';
 import { useError } from '../contexts/ErrorContext';
+import { useAuth } from '../contexts/AuthContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
@@ -28,6 +29,7 @@ function MovementsList({
 }) {
   const navigate = useNavigate();
   const { showError } = useError();
+  const { user } = useAuth();
   const haptics = useHaptics();
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const [selectedAccounts, setSelectedAccounts] = useState([]);
@@ -88,9 +90,10 @@ function MovementsList({
   const [bulkDateValue, setBulkDateValue] = useState(''); // String in yyyy-MM-dd format
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  // Sort state - different storage key per type
-  const sortStorageKey = `cashe-sort-${type}`;
-  const filterStorageKey = `cashe-filters-${type}`;
+  // Sort state - different storage key per type, namespaced by user
+  const uid = user?.id || '';
+  const sortStorageKey = uid ? `cashe-sort-${type}_${uid}` : `cashe-sort-${type}`;
+  const filterStorageKey = uid ? `cashe-filters-${type}_${uid}` : `cashe-filters-${type}`;
   const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
   const [sortLoaded, setSortLoaded] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);

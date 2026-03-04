@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../config/supabase';
 import { clear as clearDataListeners } from '../services/dataEvents';
+import { clearUserStorage } from '../hooks/useUserStorage';
 
 const AuthContext = createContext({});
 
@@ -211,7 +212,8 @@ export const AuthProvider = ({ children }) => {
 
   // Sign in with Google
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const redirectUrl = `${window.location.origin}${base}/login`;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -226,6 +228,11 @@ export const AuthProvider = ({ children }) => {
     try {
       // Clear all data event listeners first to prevent refetches during signout
       clearDataListeners();
+
+      // Clear user-scoped localStorage before losing the user reference
+      if (user?.id) {
+        clearUserStorage(user.id);
+      }
 
       // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 
 /**
  * Modal de confirmación reutilizable con drag-to-dismiss
@@ -19,6 +19,8 @@ function ConfirmModal({
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
+  const modalRef = useRef(null);
+  const titleId = useId();
 
   // Reset drag state when modal opens/closes
   useEffect(() => {
@@ -106,8 +108,13 @@ function ConfirmModal({
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` }}
         onClick={loading ? undefined : onClose}
+        aria-hidden="true"
       />
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="relative w-full max-w-sm sm:mx-4 mt-0 rounded-b-2xl sm:rounded-2xl p-4 sm:p-6 animate-slide-down sm:max-h-[calc(100vh-48px)]"
         style={{
           backgroundColor: 'var(--bg-secondary)',
@@ -136,7 +143,7 @@ function ConfirmModal({
           >
             {icon || defaultIcon}
           </div>
-          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+          <h3 id={titleId} className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
             {title}
           </h3>
           <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>

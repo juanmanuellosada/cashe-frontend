@@ -56,6 +56,12 @@ const ChartContainer = React.forwardRef(
 );
 ChartContainer.displayName = "ChartContainer";
 
+const sanitizeCssIdentifier = (str) =>
+  typeof str === 'string' ? str.replace(/[^a-zA-Z0-9_-]/g, '') : '';
+
+const sanitizeCssValue = (str) =>
+  typeof str === 'string' ? str.replace(/[<>"'\\;{}]/g, '') : '';
+
 const ChartStyle = ({ id, config }) => {
   const colorConfig = Object.entries(config).filter(
     ([, config]) => config.theme || config.color
@@ -71,13 +77,15 @@ const ChartStyle = ({ id, config }) => {
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart=${sanitizeCssIdentifier(id)}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color =
       itemConfig.theme?.[theme] ||
       itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    const safeKey = sanitizeCssIdentifier(key);
+    const safeColor = sanitizeCssValue(color);
+    return safeColor ? `  --color-${safeKey}: ${safeColor};` : null;
   })
   .join("\n")}
 }

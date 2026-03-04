@@ -124,15 +124,16 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
-          // Cache Supabase API calls with stale-while-revalidate
+          // Supabase API calls - NetworkFirst with short TTL (financial data)
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-api-cache',
+              networkTimeoutSeconds: 5,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxEntries: 50,
+                maxAgeSeconds: 60 // 1 minute max
               },
               cacheableResponse: {
                 statuses: [0, 200]

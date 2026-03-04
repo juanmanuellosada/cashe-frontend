@@ -2,19 +2,21 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { getRecentMovements, getAccounts, getCategories } from '../services/supabaseApi';
 import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useAuth } from './AuthContext';
 
 const StatisticsContext = createContext(null);
 
-const STORAGE_KEY = 'cashe_stats_filters';
+const STORAGE_KEY_BASE = 'cashe_stats_filters';
 
 const DEFAULT_DATE_RANGE = {
   from: startOfMonth(subMonths(new Date(), 5)),
   to: endOfMonth(new Date()),
 };
 
-function loadFiltersFromStorage() {
+function loadFiltersFromStorage(userId) {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const key = userId ? `${STORAGE_KEY_BASE}_${userId}` : STORAGE_KEY_BASE;
+    const stored = localStorage.getItem(key);
     if (!stored) return null;
     const parsed = JSON.parse(stored);
     return {
@@ -32,8 +34,9 @@ function loadFiltersFromStorage() {
   }
 }
 
-function saveFiltersToStorage(dateRange, currency, selectedAccounts) {
+function saveFiltersToStorage(dateRange, currency, selectedAccounts, userId) {
   try {
+    const key = userId ? `${STORAGE_KEY_BASE}_${userId}` : STORAGE_KEY_BASE;
     const data = {
       dateRange: dateRange.from && dateRange.to
         ? {
@@ -44,14 +47,16 @@ function saveFiltersToStorage(dateRange, currency, selectedAccounts) {
       currency,
       selectedAccounts,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(data));
   } catch {
     // Silently fail on storage errors
   }
 }
 
 export function StatisticsProvider({ children }) {
-  const stored = useMemo(() => loadFiltersFromStorage(), []);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const stored = useMemo(() => loadFiltersFromStorage(userId), [userId]);
 
   const [dateRange, setDateRange] = useState(
     stored?.dateRange || DEFAULT_DATE_RANGE
@@ -67,8 +72,8 @@ export function StatisticsProvider({ children }) {
 
   // Persist filters to localStorage
   useEffect(() => {
-    saveFiltersToStorage(dateRange, currency, selectedAccounts);
-  }, [dateRange, currency, selectedAccounts]);
+    saveFiltersToStorage(dateRange, currency, selectedAccounts, userId);
+  }, [dateRange, currency, selectedAccounts, userId]);
 
   // Load data
   const loadData = useCallback(async (showLoading = true) => {

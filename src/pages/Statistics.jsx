@@ -18,6 +18,25 @@ import IncomeExpenseComposedChart from '../components/charts/IncomeExpenseCompos
 import { AnimatedChartGroup, AnimatedChartItem } from '../components/charts/AnimatedChart';
 import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 
+const VariationBadge = ({ value, invertColor = false, label }) => {
+  if (value === null || value === undefined || !isFinite(value)) return null;
+  const isPositive = value > 0;
+  const isGood = invertColor ? !isPositive : isPositive;
+  const color = isGood ? 'var(--accent-green)' : 'var(--accent-red)';
+  const arrow = isPositive ? '\u25B2' : '\u25BC';
+
+  return (
+    <div className="flex items-center gap-1 mt-1" title={label}>
+      <span className="text-[10px] font-semibold" style={{ color }}>
+        {arrow} {Math.abs(value).toFixed(1)}%
+      </span>
+      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+        vs anterior
+      </span>
+    </div>
+  );
+};
+
 function Statistics() {
   const { filteredMovements, dateRange, currency, loading, movements, categoryIconMap } = useStatistics();
   const navigate = useNavigate();
@@ -107,41 +126,33 @@ function Statistics() {
   }, [pieChartData, movements, currency, dateRange]);
 
   // Process data for budget progress chart (estimated budgets based on historical averages)
+  // Single O(n) pass to build monthly totals per category, then lookup per top-6
   const budgetChartData = useMemo(() => {
     if (!dateRange.from || !dateRange.to || pieChartData.length === 0) return [];
 
-    // Use top 6 categories and create "budgets" based on average + 20%
-    const top6 = pieChartData.slice(0, 6);
+    // Build category→month→total map in one pass
+    const catMonthMap = {};
+    for (const m of movements) {
+      if (m.tipo !== 'gasto') continue;
+      const cat = m.categoria || 'Sin categoria';
+      const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
+      const monthKey = m.fecha ? m.fecha.substring(0, 7) : '';
+      if (!monthKey) continue;
+      const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+      if (!catMonthMap[cleanCat]) catMonthMap[cleanCat] = {};
+      catMonthMap[cleanCat][monthKey] = (catMonthMap[cleanCat][monthKey] || 0) + value;
+    }
 
-    return top6.map(item => {
-      // Calculate historical average for this category
-      const historical = movements
-        .filter(m => {
-          if (m.tipo !== 'gasto') return false;
-          const cat = m.categoria || 'Sin categoria';
-          const cleanCat = cat.replace(/^[\p{Emoji}\u200d]+\s*/u, '').trim() || cat;
-          return cleanCat === item.name;
-        });
-
-      // Group historical movements by month to get monthly average
-      const monthTotals = {};
-      historical.forEach(m => {
-        const monthKey = m.fecha ? m.fecha.substring(0, 7) : '';
-        if (!monthKey) return;
-        const value = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
-        monthTotals[monthKey] = (monthTotals[monthKey] || 0) + value;
-      });
-      const monthCount = Object.keys(monthTotals).length;
-      const totalValue = Object.values(monthTotals).reduce((sum, v) => sum + v, 0);
+    return pieChartData.slice(0, 6).map(item => {
+      const months = catMonthMap[item.name] || {};
+      const monthCount = Object.keys(months).length;
+      const totalValue = Object.values(months).reduce((s, v) => s + v, 0);
       const avgValue = monthCount > 0 ? totalValue / monthCount : item.value;
-
-      // Budget is average spending + 20% buffer
-      const presupuesto = avgValue * 1.2;
 
       return {
         category: item.name,
         gastado: item.value,
-        presupuesto: presupuesto,
+        presupuesto: avgValue * 1.2,
       };
     });
   }, [pieChartData, movements, currency, dateRange]);
@@ -155,39 +166,35 @@ function Statistics() {
       end: dateRange.to,
     });
 
+    // Pre-bucket movements by month key in a single O(n) pass
+    const buckets = {};
+    for (const m of filteredMovements) {
+      const mk = m.fecha ? m.fecha.substring(0, 7) : '';
+      if (!mk) continue;
+      if (!buckets[mk]) buckets[mk] = { ingresosPesos: 0, gastosPesos: 0, ingresosDolares: 0, gastosDolares: 0 };
+      const pesos = m.montoPesos || m.monto || 0;
+      const dolares = m.montoDolares || 0;
+      if (m.tipo === 'ingreso') {
+        buckets[mk].ingresosPesos += pesos;
+        buckets[mk].ingresosDolares += dolares;
+      } else if (m.tipo === 'gasto') {
+        buckets[mk].gastosPesos += pesos;
+        buckets[mk].gastosDolares += dolares;
+      }
+    }
+
     return monthsInRange.map(monthDate => {
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
       const monthKey = format(monthDate, 'yyyy-MM');
       const monthLabel = format(monthDate, 'MMM', { locale: es });
-
-      let ingresosPesos = 0;
-      let gastosPesos = 0;
-      let ingresosDolares = 0;
-      let gastosDolares = 0;
-
-      filteredMovements.forEach(m => {
-        const fecha = new Date(m.fecha);
-        if (fecha >= monthStart && fecha <= monthEnd) {
-          const pesos = m.montoPesos || m.monto || 0;
-          const dolares = m.montoDolares || 0;
-          if (m.tipo === 'ingreso') {
-            ingresosPesos += pesos;
-            ingresosDolares += dolares;
-          } else if (m.tipo === 'gasto') {
-            gastosPesos += pesos;
-            gastosDolares += dolares;
-          }
-        }
-      });
+      const b = buckets[monthKey] || { ingresosPesos: 0, gastosPesos: 0, ingresosDolares: 0, gastosDolares: 0 };
 
       return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
         monthKey,
-        ingresos: currency === 'ARS' ? ingresosPesos : ingresosDolares,
-        gastos: currency === 'ARS' ? gastosPesos : gastosDolares,
+        ingresos: currency === 'ARS' ? b.ingresosPesos : b.ingresosDolares,
+        gastos: currency === 'ARS' ? b.gastosPesos : b.gastosDolares,
       };
-    }).filter(item => item.ingresos > 0 || item.gastos > 0); // Solo mostrar meses con datos
+    }).filter(item => item.ingresos > 0 || item.gastos > 0);
   }, [filteredMovements, dateRange, currency]);
 
   // Process data for line chart (balance evolution)
@@ -371,26 +378,7 @@ function Statistics() {
     setDrawerOpen(true);
   };
 
-  // Variation badge component
-  const VariationBadge = ({ value, invertColor = false, label }) => {
-    if (value === null || value === undefined || !isFinite(value)) return null;
-    const isPositive = value > 0;
-    // For expenses, positive = bad (more spending), for everything else positive = good
-    const isGood = invertColor ? !isPositive : isPositive;
-    const color = isGood ? 'var(--accent-green)' : 'var(--accent-red)';
-    const arrow = isPositive ? '\u25B2' : '\u25BC';
-
-    return (
-      <div className="flex items-center gap-1 mt-1" title={label}>
-        <span className="text-[10px] font-semibold" style={{ color }}>
-          {arrow} {Math.abs(value).toFixed(1)}%
-        </span>
-        <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
-          vs anterior
-        </span>
-      </div>
-    );
-  };
+  // VariationBadge moved to module scope to prevent re-mount on re-render
 
   return (
     <div className="space-y-6">

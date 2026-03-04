@@ -507,6 +507,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
               {monedaGasto === 'USD' ? 'US$' : '$'}
             </span>
             <input
+              id="expense-monto"
               type="number"
               name="monto"
               value={formData.monto}
@@ -722,6 +723,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       {/* Nota */}
       <div>
         <label
+          htmlFor="expense-nota"
           className="flex items-center gap-2 text-xs sm:text-sm font-medium mb-1.5 sm:mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
@@ -729,10 +731,12 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
           Nota (opcional)
         </label>
         <textarea
+          id="expense-nota"
           name="nota"
           value={formData.nota}
           onChange={handleChange}
           placeholder="Agregar una nota..."
+          maxLength={500}
           rows={1}
           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl resize-none transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)] text-sm sm:text-base"
           style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}

@@ -67,6 +67,16 @@ const protectedRoutes = [
   { path: '/reglas', component: AutoRules },
 ]
 
+const ProtectedPage = ({ children, darkMode, toggleDarkMode }) => (
+  <ProtectedRoute>
+    <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </Layout>
+  </ProtectedRoute>
+)
+
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode')
@@ -87,17 +97,6 @@ function App() {
   const basename = import.meta.env.BASE_URL === '/'
     ? '/'
     : import.meta.env.BASE_URL.replace(/\/$/, '')
-
-  // Helper component for protected pages
-  const ProtectedPage = ({ children }) => (
-    <ProtectedRoute>
-      <Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
-        <Suspense fallback={<PageLoader />}>
-          {children}
-        </Suspense>
-      </Layout>
-    </ProtectedRoute>
-  )
 
   return (
     <ErrorProvider>
@@ -120,7 +119,7 @@ function App() {
                 key={path}
                 path={path}
                 element={
-                  <ProtectedPage>
+                  <ProtectedPage darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                     <Component />
                   </ProtectedPage>
                 }
@@ -129,7 +128,7 @@ function App() {
 
             {/* Monthly report - no StatisticsProvider needed */}
             <Route path="/resumen-mensual" element={
-              <ProtectedPage>
+              <ProtectedPage darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                 <MonthlyReport />
               </ProtectedPage>
             } />
@@ -144,7 +143,7 @@ function App() {
                 key={path}
                 path={path}
                 element={
-                  <ProtectedPage>
+                  <ProtectedPage darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                     <StatisticsProvider>
                       <Component />
                     </StatisticsProvider>
@@ -155,7 +154,7 @@ function App() {
 
             {/* Settings page - special case with additional props */}
             <Route path="/configuracion" element={
-              <ProtectedPage>
+              <ProtectedPage darkMode={darkMode} toggleDarkMode={toggleDarkMode}>
                 <Settings darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
               </ProtectedPage>
             } />

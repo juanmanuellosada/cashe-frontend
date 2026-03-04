@@ -652,13 +652,15 @@ const deleteAccountAttachments = async (accountId) => {
 };
 
 export const deleteAccount = async (idOrRowIndex) => {
+  const userId = await getUserId();
   // Eliminar adjuntos primero
   await deleteAccountAttachments(idOrRowIndex);
 
   const { error } = await supabase
     .from('accounts')
     .delete()
-    .eq('id', idOrRowIndex);
+    .eq('id', idOrRowIndex)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('accounts');
@@ -666,6 +668,7 @@ export const deleteAccount = async (idOrRowIndex) => {
 };
 
 export const bulkDeleteAccounts = async (accounts) => {
+  const userId = await getUserId();
   const ids = accounts.map(a => a.id).filter(Boolean);
   if (ids.length === 0) return { success: true };
 
@@ -677,7 +680,8 @@ export const bulkDeleteAccounts = async (accounts) => {
   const { error } = await supabase
     .from('accounts')
     .delete()
-    .in('id', ids);
+    .in('id', ids)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('accounts');
@@ -861,6 +865,7 @@ export const addCategory = async ({ nombre, tipo, icon, icon_catalog_id }) => {
 };
 
 export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_catalog_id }) => {
+  const userId = await getUserId();
   const categoryId = id || rowIndex;
   const { data, error } = await supabase
     .from('categories')
@@ -871,6 +876,7 @@ export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_ca
       icon_catalog_id: icon_catalog_id || null,
     })
     .eq('id', categoryId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -880,10 +886,12 @@ export const updateCategory = async ({ id, rowIndex, nombre, tipo, icon, icon_ca
 };
 
 export const deleteCategory = async (idOrRowIndex) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('categories')
     .delete()
-    .eq('id', idOrRowIndex);
+    .eq('id', idOrRowIndex)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('categories');
@@ -891,10 +899,12 @@ export const deleteCategory = async (idOrRowIndex) => {
 };
 
 export const bulkDeleteCategories = async (categoryIds) => {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('categories')
     .delete()
-    .in('id', categoryIds);
+    .in('id', categoryIds)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('categories');
@@ -1255,6 +1265,7 @@ export const updateMovement = async (movement) => {
     .from('movements')
     .update(updatePayload)
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -1279,6 +1290,7 @@ export const updateMovement = async (movement) => {
 };
 
 export const deleteMovement = async (movement) => {
+  const userId = await getUserId();
   const id = movement.id || movement.rowIndex;
 
   // Eliminar adjuntos si existen
@@ -1292,7 +1304,8 @@ export const deleteMovement = async (movement) => {
   const { error } = await supabase
     .from('movements')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('movements');
@@ -1300,6 +1313,7 @@ export const deleteMovement = async (movement) => {
 };
 
 export const deleteMultipleMovements = async (movements) => {
+  const userId = await getUserId();
   const ids = movements.map(m => m.id || m.rowIndex);
 
   // Eliminar adjuntos de los movimientos que los tengan
@@ -1313,7 +1327,8 @@ export const deleteMultipleMovements = async (movements) => {
   const { error } = await supabase
     .from('movements')
     .delete()
-    .in('id', ids);
+    .in('id', ids)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('movements');
@@ -1351,7 +1366,8 @@ export const updateMultipleMovements = async (movements, field, value) => {
   const { error } = await supabase
     .from('movements')
     .update(updateData)
-    .in('id', ids);
+    .in('id', ids)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('movements');
@@ -1624,6 +1640,7 @@ export const updateTransfer = async (transfer) => {
       attachment_name: attachmentName,
     })
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -1633,6 +1650,7 @@ export const updateTransfer = async (transfer) => {
 };
 
 export const deleteTransfer = async (transfer) => {
+  const userId = await getUserId();
   const id = transfer.id || transfer.rowIndex;
 
   // Eliminar adjunto si existe
@@ -1643,7 +1661,8 @@ export const deleteTransfer = async (transfer) => {
   const { error } = await supabase
     .from('transfers')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (error) throw error;
   invalidateCache('transfer');
@@ -2526,12 +2545,14 @@ export const deleteCardStatementAttachment = async ({ accountId, period, field }
     await supabase
       .from('card_statement_attachments')
       .delete()
-      .eq('id', current.id);
+      .eq('id', current.id)
+      .eq('user_id', userId);
   } else {
     await supabase
       .from('card_statement_attachments')
       .update(updateData)
-      .eq('id', current.id);
+      .eq('id', current.id)
+      .eq('user_id', userId);
   }
 
   return { success: true };

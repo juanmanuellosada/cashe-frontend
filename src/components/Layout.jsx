@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import SearchButton from './SearchButton';
@@ -36,16 +36,16 @@ function Layout({ children, darkMode, toggleDarkMode }) {
   const navigate = useNavigate();
 
   // Función para abrir nuevo movimiento (modal en desktop, página en mobile)
-  const openNewMovement = () => {
+  const openNewMovement = useCallback(() => {
     if (isDesktop) {
       setNewMovementOpen(true);
     } else {
       navigate('/nuevo');
     }
-  };
+  }, [isDesktop, navigate]);
 
-  // Definición de atajos de teclado
-  const keyboardShortcuts = [
+  // Definición de atajos de teclado (memoized to prevent useEffect re-registration)
+  const keyboardShortcuts = useMemo(() => [
     { key: 'K', alt: true, label: 'Buscar', action: () => setSearchOpen(true) },
     { key: 'N', alt: true, label: 'Nuevo movimiento', action: openNewMovement },
     { key: '?', ctrl: false, shift: true, label: 'Mostrar atajos', action: () => setShortcutsOpen(true) },
@@ -68,7 +68,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
     { key: 'B', ctrl: false, alt: true, label: 'Colapsar menú', action: () => setSidebarCollapsed(prev => !prev) },
     { key: 'S', ctrl: false, alt: true, label: 'Configuración', action: () => navigate('/configuracion') },
     { key: 'Escape', ctrl: false, label: 'Cerrar modal', action: () => { setShortcutsOpen(false); setSearchOpen(false); setNewMovementOpen(false); } },
-  ];
+  ], [navigate, openNewMovement]);
 
   // Persist sidebar state
   useEffect(() => {

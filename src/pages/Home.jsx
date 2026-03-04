@@ -15,34 +15,20 @@ import AccountModal from '../components/AccountModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PullToRefresh from '../components/PullToRefresh';
 import { useError } from '../contexts/ErrorContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useDataEvent, DataEvents, emit } from '../services/dataEvents';
+import { useUserStorage } from '../hooks/useUserStorage';
 
 function Home() {
   const navigate = useNavigate();
   const { showError } = useError();
+  const { user } = useAuth();
 
   // Currency selector (shared between cards)
   const [currency, setCurrency] = useState('ARS');
 
   // Shared account filters (used by both BalanceCard and PeriodFlowCard)
-  const [accountFilters, setAccountFilters] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cashe_balance_account_filters');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Error loading balance account filters:', e);
-    }
-    return [];
-  });
-
-  // Save account filters to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('cashe_balance_account_filters', JSON.stringify(accountFilters));
-    } catch (e) {
-      console.warn('Error saving balance account filters:', e);
-    }
-  }, [accountFilters]);
+  const [accountFilters, setAccountFilters] = useUserStorage('cashe_balance_account_filters', []);
 
   // Balance date range (default: current month) - for PeriodFlowCard
   const [balanceDateRange, setBalanceDateRange] = useState({
@@ -50,64 +36,28 @@ function Home() {
     to: endOfMonth(new Date()),
   });
 
-  // Movements date range (default: current month) - load from localStorage
+  // Movements date range (default: current month) - persisted per user
+  const [savedDateRange, setSavedDateRange] = useUserStorage('cashe_home_movement_dates', null);
   const [movementDateRange, setMovementDateRange] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cashe_home_movement_dates');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          from: parsed.from ? new Date(parsed.from) : startOfMonth(new Date()),
-          to: parsed.to ? new Date(parsed.to) : endOfMonth(new Date()),
-        };
-      }
-    } catch (e) {
-      console.warn('Error loading saved date range:', e);
+    if (savedDateRange?.from) {
+      return {
+        from: new Date(savedDateRange.from),
+        to: savedDateRange.to ? new Date(savedDateRange.to) : endOfMonth(new Date()),
+      };
     }
-    return {
-      from: startOfMonth(new Date()),
-      to: endOfMonth(new Date()),
-    };
+    return { from: startOfMonth(new Date()), to: endOfMonth(new Date()) };
   });
 
-  // Save movement date range to localStorage when it changes
+  // Sync date range to storage when it changes
   useEffect(() => {
-    try {
-      localStorage.setItem('cashe_home_movement_dates', JSON.stringify({
-        from: movementDateRange.from?.toISOString() || null,
-        to: movementDateRange.to?.toISOString() || null,
-      }));
-    } catch (e) {
-      console.warn('Error saving date range:', e);
-    }
-  }, [movementDateRange]);
+    setSavedDateRange({
+      from: movementDateRange.from?.toISOString() || null,
+      to: movementDateRange.to?.toISOString() || null,
+    });
+  }, [movementDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Movements filters (arrays for multi-select) - load from localStorage
-  const [movementFilters, setMovementFilters] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cashe_home_filters');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          tipos: parsed.tipos || [],
-          cuentas: parsed.cuentas || [],
-          categorias: parsed.categorias || [],
-        };
-      }
-    } catch (e) {
-      console.warn('Error loading saved filters:', e);
-    }
-    return { tipos: [], cuentas: [], categorias: [] };
-  });
-
-  // Save filters to localStorage when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('cashe_home_filters', JSON.stringify(movementFilters));
-    } catch (e) {
-      console.warn('Error saving filters:', e);
-    }
-  }, [movementFilters]);
+  // Movements filters (arrays for multi-select) - namespaced by user
+  const [movementFilters, setMovementFilters] = useUserStorage('cashe_home_filters', { tipos: [], cuentas: [], categorias: [] });
 
   // Data states
   const [dashboard, setDashboard] = useState(null);

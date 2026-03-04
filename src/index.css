@@ -1088,3 +1088,21 @@ select {
     page-break-inside: avoid;
   }
 }
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-scale-in,
+  .animate-slide-down,
+  .animate-slide-up,
+  .animate-slide-in-right,
+  .animate-bounce-in,
+  .animate-check-bounce,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .animate-float {
+    animation: none !important;
+    transition: none !important;
+  }
+}

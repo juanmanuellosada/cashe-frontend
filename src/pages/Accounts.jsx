@@ -6,11 +6,13 @@ import ConfirmModal from '../components/ConfirmModal';
 import SortDropdown from '../components/SortDropdown';
 import AccountModal from '../components/AccountModal';
 import { useError } from '../contexts/ErrorContext';
+import { useAuth } from '../contexts/AuthContext';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import { useDataEvent, DataEvents } from '../services/dataEvents';
 
 function Accounts() {
   const { showError } = useError();
+  const { user } = useAuth();
   const location = useLocation();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +28,8 @@ function Accounts() {
   const [selectedAccounts, setSelectedAccounts] = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
-  // Sort state
-  const sortStorageKey = 'cashe-sort-accounts';
+  // Sort state - namespaced by user
+  const sortStorageKey = user?.id ? `cashe-sort-accounts_${user.id}` : 'cashe-sort-accounts';
   const [sortConfig, setSortConfig] = useState({ sortBy: 'balance', sortOrder: 'desc' });
 
   // Sort options for accounts

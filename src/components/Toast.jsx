@@ -59,7 +59,12 @@ function Toast({ message, type = 'success', onClose, duration = 3000 }) {
   const currentStyle = styles[type] || styles.info;
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-[100] animate-bounce-in pointer-events-none">
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
+      className="fixed top-4 left-4 right-4 z-[100] animate-bounce-in pointer-events-none"
+    >
       <div
         className="flex items-center gap-3 px-4 py-4 rounded-2xl backdrop-blur-xl max-w-md mx-auto pointer-events-auto relative overflow-hidden"
         style={{

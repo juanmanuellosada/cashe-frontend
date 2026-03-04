@@ -1,31 +1,15 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/format';
+import { useUserStorage } from '../../hooks/useUserStorage';
 
 function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], gastos: [] }, loading }) {
   const [currency, setCurrency] = useState('ARS');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filters state with localStorage persistence
-  const [filters, setFilters] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cashe_weekly_filters');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Error loading weekly filters:', e);
-    }
-    return { cuentas: [], categorias: [] };
-  });
-
-  // Save filters to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('cashe_weekly_filters', JSON.stringify(filters));
-    } catch (e) {
-      console.warn('Error saving weekly filters:', e);
-    }
-  }, [filters]);
+  // Filters state with user-scoped localStorage persistence
+  const [filters, setFilters] = useUserStorage('cashe_weekly_filters', { cuentas: [], categorias: [] });
 
   // Get expense categories only
   const expenseCategories = categories.gastos || [];

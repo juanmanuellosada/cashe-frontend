@@ -96,6 +96,9 @@ function Combobox({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={`${placeholder}: ${selectedLabel || 'ninguno'}`}
         className="w-full px-4 py-3 rounded-xl text-left flex items-center gap-3 transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-primary)]"
         style={{
           backgroundColor: 'var(--bg-tertiary)',
