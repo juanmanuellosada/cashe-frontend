@@ -462,22 +462,6 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
   const totalAllMonths = Object.values(expensesByMonth).reduce((sum, val) => sum + val, 0);
   const promedioMensual = months.length > 0 ? totalAllMonths / months.length : 0;
 
-  // Calculate the "due" period (the one that's due now/soon, previous to current)
-  // This is the statement that closed and is now due for payment
-  let dueYear = statementYear;
-  let dueMonth = statementMonth - 1;
-  if (dueMonth < 0) {
-    dueMonth = 11;
-    dueYear -= 1;
-  }
-  const duePeriod = `${dueYear}-${String(dueMonth + 1).padStart(2, '0')}`;
-
-  // Get due period data
-  const dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
-  const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);
-  const dueUsdPaid = paidSet.has(`${duePeriod}_USD`);
-  const resumenVencePagado = (dueExpenses.ARS === 0 || dueArsPaid) && (dueExpenses.USD === 0 || dueUsdPaid);
-
   // Sort periods chronologically
   const sortedPeriods = Object.keys(expensesByPeriod).sort((a, b) => {
     const [yearA, monthA] = a.split('-').map(Number);
@@ -485,6 +469,40 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     if (yearA !== yearB) return yearA - yearB;
     return monthA - monthB;
   });
+
+  // Calculate the "due" period: find the oldest unpaid closed period.
+  // A closed period is any period before the current accumulating one.
+  // This fixes the bug where a paid recent period was shown instead of an older unpaid one.
+  const currentPeriodKey = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`;
+  let duePeriod = null;
+  let dueExpenses = { ARS: 0, USD: 0 };
+
+  for (const period of sortedPeriods) {
+    if (period >= currentPeriodKey) break; // Only closed periods
+    const periodExpenses = expensesByPeriod[period];
+    const arsTotal = periodExpenses.ARS || 0;
+    const usdTotal = periodExpenses.USD || 0;
+    const arsPaid = paidSet.has(`${period}_ARS`);
+    const usdPaid = paidSet.has(`${period}_USD`);
+    if ((arsTotal > 0 && !arsPaid) || (usdTotal > 0 && !usdPaid)) {
+      duePeriod = period;
+      dueExpenses = periodExpenses;
+      break;
+    }
+  }
+
+  // If no unpaid closed period, fall back to the immediately previous period
+  if (!duePeriod) {
+    let dueYear = statementYear;
+    let dueMonth = statementMonth - 1;
+    if (dueMonth < 0) { dueMonth = 11; dueYear -= 1; }
+    duePeriod = `${dueYear}-${String(dueMonth + 1).padStart(2, '0')}`;
+    dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
+  }
+
+  const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);
+  const dueUsdPaid = paidSet.has(`${duePeriod}_USD`);
+  const resumenVencePagado = (dueExpenses.ARS === 0 || dueArsPaid) && (dueExpenses.USD === 0 || dueUsdPaid);
 
   // Find first period that has unpaid amounts (for "próximo resumen" display)
   let proximoResumenPesos = 0;
