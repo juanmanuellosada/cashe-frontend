@@ -54,10 +54,11 @@ function CreditCardDueAlert({ accounts }) {
   return (
     <div className="space-y-2">
       {dueCards.map(card => {
-        // Use resumenVence* for the statement that's actually due (not próximo)
-        const vencePesos = card.resumenVencePesos || 0;
-        const venceDolares = card.resumenVenceDolares || 0;
-        const isPaid = card.resumenVencePagado;
+        // Use proximoResumen* to show the next unpaid statement amount
+        const vencePesos = card.proximoResumenPesos || 0;
+        const venceDolares = card.proximoResumenDolares || 0;
+        // Only "paid" if the due statement is paid AND there's nothing upcoming to pay
+        const isPaid = card.resumenVencePagado && vencePesos === 0 && venceDolares === 0;
         const hasAmounts = vencePesos > 0 || venceDolares > 0;
 
         // Determine styling based on payment status
@@ -139,8 +140,7 @@ function CreditCardDueAlert({ accounts }) {
                         <span
                           className="text-xs min-[400px]:text-sm sm:text-base font-semibold"
                           style={{
-                            color: isPaid ? 'var(--text-secondary)' : 'var(--text-primary)',
-                            textDecoration: isPaid ? 'line-through' : 'none',
+                            color: 'var(--text-primary)',
                           }}
                         >
                           ${formatNumberAR(vencePesos)}
@@ -150,8 +150,7 @@ function CreditCardDueAlert({ accounts }) {
                         <span
                           className="text-[11px] min-[400px]:text-xs sm:text-sm font-semibold"
                           style={{
-                            color: isPaid ? 'var(--text-secondary)' : 'var(--accent-green)',
-                            textDecoration: isPaid ? 'line-through' : 'none',
+                            color: 'var(--accent-green)',
                           }}
                         >
                           USD ${formatNumberAR(venceDolares)}
