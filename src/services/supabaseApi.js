@@ -470,15 +470,14 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     return monthA - monthB;
   });
 
-  // Find the last unpaid closed period (most recent unpaid statement).
-  // Closed periods = all periods before the current accumulating one.
+  // Find the last (most recent) unpaid statement — newest to oldest, including current period.
   const currentPeriodKey = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`;
-  const closedPeriods = sortedPeriods.filter(p => p < currentPeriodKey).reverse(); // newest first
+  const allPeriodsDesc = [...sortedPeriods].reverse();
 
   let duePeriod = null;
   let dueExpenses = { ARS: 0, USD: 0 };
 
-  for (const period of closedPeriods) {
+  for (const period of allPeriodsDesc) {
     const periodExpenses = expensesByPeriod[period];
     const arsTotal = periodExpenses.ARS || 0;
     const usdTotal = periodExpenses.USD || 0;
@@ -491,15 +490,10 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     }
   }
 
-  // If all closed periods are paid, use the most recent closed one
+  // If all periods are paid, fall back to current accumulating period
   if (!duePeriod) {
-    if (closedPeriods.length > 0) {
-      duePeriod = closedPeriods[0];
-      dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
-    } else {
-      duePeriod = currentPeriodKey;
-      dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
-    }
+    duePeriod = currentPeriodKey;
+    dueExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
   }
 
   const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);
