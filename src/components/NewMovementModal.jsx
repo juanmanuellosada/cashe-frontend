@@ -279,7 +279,7 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
               loading={submitting}
               prefillData={externalPrefillData || (defaultType ? { tipo: defaultType === 'income' ? 'ingreso' : defaultType === 'expense' ? 'gasto' : 'transferencia' } : null)}
               hideTypeSelector={!!defaultType || !!externalPrefillData?.tipo}
-              onCategoryCreated={refetchCategories}
+              onCategoryCreated={undefined}
             />
           )}
         </div>

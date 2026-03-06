@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, deleteMovement, getStatementPayments, registerStatementPayment, cancelStatementPayment } from '../services/supabaseApi';
@@ -57,6 +57,13 @@ function CreditCards() {
   // Estado para refrescar viewingStatement después de editar
   const [pendingStatementRefresh, setPendingStatementRefresh] = useState(null);
 
+  // Estado para modal de selección de resumen destino
+  const [showMoveToStatementModal, setShowMoveToStatementModal] = useState(false);
+
+  // Ref para evitar stale closure en handleDataChange
+  const selectedCardRef = useRef(selectedCard);
+  selectedCardRef.current = selectedCard;
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -90,14 +97,14 @@ function CreditCards() {
       setAllCategories(categories);
 
       // Mantener la tarjeta seleccionada actual si existe, sino seleccionar la primera
+      // Usar ref para evitar stale closure cuando se llama desde handleDataChange
+      const currentCard = selectedCardRef.current;
       if (cards.length > 0) {
-        if (selectedCard) {
-          // Buscar la tarjeta actual en la nueva lista y actualizarla
-          const currentCard = cards.find(c => c.id === selectedCard.id || c.nombre === selectedCard.nombre);
-          if (currentCard) {
-            setSelectedCard(currentCard);
+        if (currentCard) {
+          const found = cards.find(c => c.id === currentCard.id || c.nombre === currentCard.nombre);
+          if (found) {
+            setSelectedCard(found);
           } else {
-            // La tarjeta ya no existe, seleccionar la primera
             setSelectedCard(cards[0]);
           }
         } else {
@@ -259,8 +266,8 @@ function CreditCards() {
       });
     });
     
-    // Ordenar por fecha de cierre (más reciente primero)
-    return result.sort((a, b) => b.closeDate - a.closeDate);
+    // Ordenar por fecha de cierre (más antiguo primero - son los primeros a pagar)
+    return result.sort((a, b) => a.closeDate - b.closeDate);
   }, [selectedCard, allExpenses]);
 
   // Actualizar viewingStatement cuando hay un refresh pendiente
@@ -717,33 +724,38 @@ function CreditCards() {
     setShowAddExpenseModal(true);
   };
 
-  // Mover gastos seleccionados al resumen anterior o siguiente
-  const handleBulkMoveToStatement = async (direction) => {
+  // Mover gastos seleccionados a un resumen elegido por el usuario
+  const handleBulkMoveToStatement = async (targetStatement) => {
     if (!viewingStatement || !selectedCard) return;
 
-    const currentIndex = getCurrentStatementIndex();
-    const targetIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
-
-    if (targetIndex < 0 || targetIndex >= statements.length) {
-      showError('No se puede mover', `No hay resumen ${direction === 'prev' ? 'anterior' : 'siguiente'}`);
-      return;
-    }
-
-    const targetStatement = statements[targetIndex];
     const diaCierre = selectedCard.diaCierre || 1;
     const newDate = getDateForStatementPeriod(targetStatement, diaCierre);
+    const movementsToUpdate = getSelectedMovementsFromStatement();
+    const movedIds = new Set(movementsToUpdate.map(m => m.id));
 
+    setShowMoveToStatementModal(false);
     setBulkProcessing(true);
+
+    // Actualización optimista: cambiar la fecha en allExpenses inmediatamente
+    setAllExpenses(prev => prev.map(e =>
+      movedIds.has(e.id) ? { ...e, fecha: newDate } : e
+    ));
+    setSelectedItems(new Set());
+    setSelectionMode(false);
+    // Navegar al resumen destino
+    setPendingStatementRefresh(targetStatement.id);
+
     try {
-      const movementsToUpdate = getSelectedMovementsFromStatement();
       await updateMultipleMovements(movementsToUpdate, 'fecha', newDate);
-      setSelectedItems(new Set());
-      setSelectionMode(false);
-      // Guardar el ID del statement destino para navegar a él después del refresh
-      setPendingStatementRefresh(targetStatement.id);
-      await fetchData(true, false);
+      // Refrescar en background para sincronizar
+      fetchData(true, false);
     } catch (err) {
       console.error('Error moving to statement:', err);
+      // Revertir el cambio optimista en caso de error
+      setAllExpenses(prev => prev.map(e => {
+        const orig = movementsToUpdate.find(m => m.id === e.id);
+        return orig ? { ...e, fecha: orig.fecha } : e;
+      }));
       showError('No se pudieron mover los movimientos', err.message);
     } finally {
       setBulkProcessing(false);
@@ -1585,30 +1597,17 @@ function CreditCards() {
               </div>
               <div className="flex items-center gap-2">
                 {selectedItems.size > 0 && (
-                  <>
-                    <button
-                      onClick={() => handleBulkMoveToStatement('prev')}
-                      disabled={bulkProcessing || !hasPreviousStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
-                      style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Resumen ant.
-                    </button>
-                    <button
-                      onClick={() => handleBulkMoveToStatement('next')}
-                      disabled={bulkProcessing || !hasNextStatement()}
-                      className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
-                      style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)' }}
-                    >
-                      Resumen sig.
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setShowMoveToStatementModal(true)}
+                    disabled={bulkProcessing || statements.length <= 1}
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium disabled:opacity-40"
+                    style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Mover a resumen
+                  </button>
                 )}
                 <button
                   onClick={toggleSelectionMode}
@@ -1856,6 +1855,59 @@ function CreditCards() {
           })()}
         </div>
       )}
+      {/* Modal - Seleccionar resumen destino */}
+      {showMoveToStatementModal && viewingStatement && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowMoveToStatementModal(false)}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-2xl p-5 animate-scale-in"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Mover {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''} a
+            </h3>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Origen: <span className="capitalize font-medium">{viewingStatement.monthName}</span>
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {statements
+                .filter(s => s.id !== viewingStatement.id)
+                .map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => handleBulkMoveToStatement(s)}
+                    disabled={bulkProcessing}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-left transition-all active:scale-[0.98] disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium capitalize" style={{ color: 'var(--text-primary)' }}>
+                        {s.monthName}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        Cierra {format(s.closeDate, 'd MMM yyyy', { locale: es })} · {s.itemCount} mov.
+                      </p>
+                    </div>
+                    <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() => setShowMoveToStatementModal(false)}
+              className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modal - Adjuntos del Resumen */}
       <StatementAttachmentsModal
         isOpen={attachmentsModalOpen}
