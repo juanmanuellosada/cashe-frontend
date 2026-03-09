@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/format';
 import { useUserStorage } from '../../hooks/useUserStorage';
 
-function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], gastos: [] }, loading }) {
+const WeeklySummary = memo(function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], gastos: [] }, loading }) {
   const [currency, setCurrency] = useState('ARS');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -438,6 +438,6 @@ function WeeklySummary({ movements, accounts = [], categories = { ingresos: [], 
       )}
     </div>
   );
-}
+});
 
 export default WeeklySummary;

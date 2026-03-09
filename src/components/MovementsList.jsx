@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
@@ -14,7 +14,7 @@ import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
-function MovementsList({
+const MovementsList = memo(function MovementsList({
   title,
   movements,
   accounts,
@@ -1493,6 +1493,6 @@ function MovementsList({
       )}
     </div>
   );
-}
+});
 
 export default MovementsList;

@@ -399,9 +399,7 @@ function Home() {
       <AccountBalances
         accounts={accounts}
         loading={loadingInitial}
-        onAccountClick={(account) => {
-          setEditingAccount(account);
-        }}
+        onAccountClick={setEditingAccount}
       />
 
       {/* Weekly Summary - Full width */}

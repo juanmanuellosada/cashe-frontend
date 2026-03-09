@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { formatCurrency } from '../../utils/format';
 
-function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0, gastosMesDolares = 0 }) {
+const QuickStats = memo(function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0, gastosMesDolares = 0 }) {
   const [currency, setCurrency] = useState('ARS');
 
   const ingresos = currency === 'ARS' ? ingresosMes : ingresosMesDolares;
@@ -117,6 +117,6 @@ function QuickStats({ ingresosMes, gastosMes, balanceMes, ingresosMesDolares = 0
       </div>
     </div>
   );
-}
+});
 
 export default QuickStats;

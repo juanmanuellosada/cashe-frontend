@@ -1,39 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getAccounts } from '../services/supabaseApi';
-import { useDataEvent, DataEvents } from '../services/dataEvents';
+import { useEffect } from 'react';
+import { useAppStore } from './useStore';
 
 export function useAccounts() {
-  const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchAccounts = useCallback(async (showLoading = true) => {
-    try {
-      if (showLoading) setLoading(true);
-      setError(null);
-      const data = await getAccounts();
-      setAccounts(data.accounts || []);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching accounts:', err);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, []);
+  const accounts = useAppStore(state => state.accounts);
+  const loading = useAppStore(state => state.loading.accounts);
+  const error = useAppStore(state => state.errors.accounts);
+  const fetchAccounts = useAppStore(state => state.fetchAccounts);
+  const initialized = useAppStore(state => state._initialized.accounts);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    if (!initialized) {
+      fetchAccounts();
+    }
+  }, [initialized, fetchAccounts]);
 
-  // Suscribirse a cambios de datos para refrescar automáticamente
-  useDataEvent(
-    [DataEvents.ACCOUNTS_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED],
-    () => fetchAccounts(false)
-  );
-
-  const refetch = useCallback(async () => {
-    await fetchAccounts(true);
-  }, [fetchAccounts]);
-
-  return { accounts, loading, error, refetch };
+  return { accounts, loading, error, refetch: fetchAccounts };
 }

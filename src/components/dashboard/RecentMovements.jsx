@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { formatCurrency, formatDate } from '../../utils/format';
 import DateRangePicker from '../DateRangePicker';
 import FilterBar from '../FilterBar';
 import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
-function RecentMovements({
+const RecentMovements = memo(function RecentMovements({
   movements,
   dateRange,
   onDateRangeChange,
@@ -412,6 +412,6 @@ function RecentMovements({
       )}
     </div>
   );
-}
+});
 
 export default RecentMovements;

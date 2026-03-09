@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/format';
 import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
-function AccountBalances({ accounts, loading, onAccountClick }) {
+const AccountBalances = memo(function AccountBalances({ accounts, loading, onAccountClick }) {
   const [expanded, setExpanded] = useState(true);
   const navigate = useNavigate();
 
@@ -303,6 +303,6 @@ function AccountBalances({ accounts, loading, onAccountClick }) {
       )}
     </div>
   );
-}
+});
 
 export default AccountBalances;

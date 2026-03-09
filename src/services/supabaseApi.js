@@ -4,40 +4,52 @@ import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 import { emit, DataEvents } from './dataEvents';
 
 // ============================================
-// CACHE MANAGEMENT (mantener compatibilidad)
+// CACHE MANAGEMENT - Stale-While-Revalidate
 // ============================================
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const FRESH_DURATION = 30 * 1000;        // < 30s: fresh, no refetch
+const STALE_DURATION = 10 * 60 * 1000;   // 30s–10min: stale, show + bg refresh
 const cache = new Map();
 const pendingRequests = new Map(); // Prevent duplicate concurrent requests
 
-const getCachedData = (key) => {
+const getCacheEntry = (key) => {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
-  }
-  return null;
+  if (!cached) return { data: null, status: 'miss' };
+  const age = Date.now() - cached.timestamp;
+  if (age < FRESH_DURATION) return { data: cached.data, status: 'fresh' };
+  if (age < STALE_DURATION) return { data: cached.data, status: 'stale' };
+  return { data: null, status: 'expired' };
 };
 
 const setCachedData = (key, data) => {
   cache.set(key, { data, timestamp: Date.now() });
 };
 
-// Wrapper to prevent duplicate concurrent requests
+// Stale-while-revalidate: returns stale data immediately + refreshes in background
 const withDeduplication = async (key, fetchFn) => {
-  // Check cache first
-  const cached = getCachedData(key);
-  if (cached) return cached;
-  
-  // Check if request is already in flight
+  const { data, status } = getCacheEntry(key);
+
+  if (status === 'fresh') return data;
+
+  // If stale: return immediately + kick off background refresh
+  if (status === 'stale') {
+    if (!pendingRequests.has(key)) {
+      const bgPromise = fetchFn()
+        .then(result => { setCachedData(key, result); return result; })
+        .finally(() => pendingRequests.delete(key));
+      pendingRequests.set(key, bgPromise);
+    }
+    return data; // return stale data right away
+  }
+
+  // Cache miss or expired: blocking fetch
   if (pendingRequests.has(key)) {
     return pendingRequests.get(key);
   }
-  
-  // Make the request and store the promise
-  const promise = fetchFn().finally(() => {
-    pendingRequests.delete(key);
-  });
-  
+
+  const promise = fetchFn()
+    .then(result => { setCachedData(key, result); return result; })
+    .finally(() => pendingRequests.delete(key));
+
   pendingRequests.set(key, promise);
   return promise;
 };
@@ -827,8 +839,8 @@ export const getCategories = () => withDeduplication('categories', async () => {
 });
 export const getCategoriesWithId = async () => {
   const cacheKey = 'categoriesWithId';
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
+  const { data: cached, status } = getCacheEntry(cacheKey);
+  if (status === 'fresh') return cached;
 
   const userId = await getUserId();
 
@@ -972,8 +984,8 @@ const mapMovementFromDB = (m, accounts, categories) => {
 export const getExpenses = async (forceRefresh = false) => {
   const cacheKey = 'expenses';
   if (!forceRefresh) {
-    const cached = getCachedData(cacheKey);
-    if (cached) return cached;
+    const { data: cached, status } = getCacheEntry(cacheKey);
+    if (status === 'fresh') return cached;
   }
 
   const userId = await getUserId();
@@ -999,8 +1011,8 @@ export const getExpenses = async (forceRefresh = false) => {
 export const getIncomes = async (forceRefresh = false) => {
   const cacheKey = 'incomes';
   if (!forceRefresh) {
-    const cached = getCachedData(cacheKey);
-    if (cached) return cached;
+    const { data: cached, status } = getCacheEntry(cacheKey);
+    if (status === 'fresh') return cached;
   }
 
   const userId = await getUserId();
@@ -1491,8 +1503,8 @@ export const updateSubsequentInstallments = async (movement) => {
 export const getTransfers = async (forceRefresh = false) => {
   const cacheKey = 'transfers';
   if (!forceRefresh) {
-    const cached = getCachedData(cacheKey);
-    if (cached) return cached;
+    const { data: cached, status } = getCacheEntry(cacheKey);
+    if (status === 'fresh') return cached;
   }
 
   const userId = await getUserId();

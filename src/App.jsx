@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, Suspense, lazy } from 'react'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ErrorProvider } from './contexts/ErrorContext'
 import { StatisticsProvider } from './contexts/StatisticsContext'
 import { ZoomProvider } from './contexts/ZoomContext'
@@ -9,6 +9,7 @@ import ErrorModal from './components/ErrorModal'
 import UpdatePrompt from './components/UpdatePrompt'
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
+import { useAppStore } from './store/index.js'
 
 // Public pages - loaded immediately for fast initial render
 import Landing from './pages/Landing'
@@ -46,6 +47,37 @@ const PageLoader = () => (
     <LoadingSpinner size="lg" />
   </div>
 )
+
+/**
+ * StoreInitializer
+ * Runs inside AuthProvider so it can read the current user.
+ * When the user logs in it pre-fetches accounts, categories and dashboard data
+ * into the Zustand store. When the user logs out it resets the store.
+ * Renders nothing – purely a side-effect component.
+ */
+function StoreInitializer() {
+  const { user } = useAuth()
+  const { fetchAccounts, fetchCategories, fetchDashboard, reset } = useAppStore(state => ({
+    fetchAccounts: state.fetchAccounts,
+    fetchCategories: state.fetchCategories,
+    fetchDashboard: state.fetchDashboard,
+    reset: state.reset,
+  }))
+
+  useEffect(() => {
+    if (user) {
+      // Pre-fetch all global data in parallel when user authenticates
+      fetchAccounts()
+      fetchCategories()
+      fetchDashboard()
+    } else {
+      // Clear store on logout
+      reset()
+    }
+  }, [user, fetchAccounts, fetchCategories, fetchDashboard, reset])
+
+  return null
+}
 
 // Protected routes configuration
 const protectedRoutes = [
@@ -102,6 +134,7 @@ function App() {
     <ErrorProvider>
       <ZoomProvider>
         <AuthProvider>
+          <StoreInitializer />
           <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ErrorModal />
           <UpdatePrompt />

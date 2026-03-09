@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 
-function FilterBar({
+const FilterBar = memo(function FilterBar({
   accounts = [],
   categories = { ingresos: [], gastos: [] },
   filters,
@@ -338,6 +338,6 @@ function FilterBar({
       )}
     </div>
   );
-}
+});
 
 export default FilterBar;
