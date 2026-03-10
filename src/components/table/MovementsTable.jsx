@@ -41,6 +41,7 @@ export default function MovementsTable({
   getTypeBgDim,
   isAccountUSD,
   storageKey,
+  tipoCambio,
 }) {
   const columns = useMemo(() => getColumns(type), [type]);
   const { columnWidths, onResizeStart } = useColumnResize(columns, storageKey);
@@ -103,6 +104,7 @@ export default function MovementsTable({
             getTypeBgDim={getTypeBgDim}
             isAccountUSD={isAccountUSD}
             gridTemplateColumns={gridTemplateColumns}
+            tipoCambio={tipoCambio}
           />
         ))}
       </div>

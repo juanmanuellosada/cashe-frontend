@@ -889,19 +889,80 @@ select {
    DATE PICKER CUSTOMIZATION
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Override DayPicker v9 to match app dark/light theme */
 .rdp-root {
   --rdp-accent-color: var(--accent-primary);
-  --rdp-accent-background-color: var(--accent-primary-dim);
+  --rdp-accent-background-color: rgba(20, 184, 166, 0.2);
+  --rdp-today-color: var(--accent-primary);
+  --rdp-selected-border: 2px solid var(--accent-primary);
+  --rdp-day_button-border-radius: 8px;
+  --rdp-range_start-date-background-color: var(--accent-primary);
+  --rdp-range_end-date-background-color: var(--accent-primary);
+  --rdp-range_start-color: white;
+  --rdp-range_end-color: white;
+  --rdp-range_middle-background-color: rgba(20, 184, 166, 0.15);
+  --rdp-range_middle-color: var(--text-primary);
+  --rdp-range_start-background: linear-gradient(to right, transparent 50%, rgba(20,184,166,0.15) 50%);
+  --rdp-range_end-background: linear-gradient(to left, transparent 50%, rgba(20,184,166,0.15) 50%);
+  font-family: inherit;
+  color: var(--text-primary);
 }
 
-.rdp-day_button.rdp-day_selected {
+/* Calendar container */
+.rdp-month_caption {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+.rdp-weekday {
+  color: var(--text-secondary) !important;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rdp-day {
+  color: var(--text-primary) !important;
+}
+
+.rdp-day_button {
+  color: inherit !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.rdp-day_button:hover:not([disabled]) {
+  background-color: var(--bg-hover, rgba(255,255,255,0.08)) !important;
+}
+
+.rdp-today .rdp-day_button {
+  color: var(--accent-primary) !important;
+  font-weight: 700;
+}
+
+.rdp-selected .rdp-day_button,
+.rdp-range_start .rdp-day_button,
+.rdp-range_end .rdp-day_button {
   background-color: var(--accent-primary) !important;
   color: white !important;
   font-weight: 600;
 }
 
-.rdp-day_button:hover:not(.rdp-day_selected) {
-  background-color: var(--bg-hover) !important;
+.rdp-range_middle .rdp-day_button {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+.rdp-day.rdp-outside {
+  opacity: 0.35;
+}
+
+.rdp-nav button {
+  color: var(--text-secondary) !important;
+}
+
+.rdp-nav button:hover {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-hover, rgba(255,255,255,0.08)) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

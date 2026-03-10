@@ -27,6 +27,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
   getTypeBgDim,
   isAccountUSD,
   gridTemplateColumns,
+  tipoCambio,
 }) {
   const itemId = movement.rowIndex || movement.id;
 
@@ -150,15 +151,15 @@ const MovementsTableRow = memo(function MovementsTableRow({
             })()}
           </div>
 
-          {/* Equivalente (otra moneda) */}
+          {/* Equivalente (otra moneda, calculada con tipoCambio) */}
           <div className="flex items-center justify-end gap-1 px-3 py-2">
             {(() => {
               const isUSD = isAccountUSD(movement.cuenta);
               const equivCode = isUSD ? 'ARS' : 'USD';
+              const tc = tipoCambio || 1000;
               const equivAmount = isUSD
-                ? (movement.montoPesos || null)
-                : (movement.montoDolares || null);
-              if (!equivAmount) return <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>—</span>;
+                ? movement.monto * tc
+                : movement.monto / tc;
               return (
                 <>
                   <img

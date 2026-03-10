@@ -2,6 +2,7 @@ import { memo, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
+import { getExchangeRate } from '../services/supabaseApi';
 import DateFilterChip from './DateFilterChip';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
@@ -60,8 +61,13 @@ const MovementsList = memo(function MovementsList({
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [currency, setCurrency] = useState('ARS');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Exchange rate for equivalente column
+  const [tipoCambio, setTipoCambio] = useState(1000);
+  useEffect(() => {
+    getExchangeRate().then(data => setTipoCambio(data.tipoCambio || 1000)).catch(() => {});
+  }, []);
 
   // Popovers / saved views UI state
   const [showAddFilter, setShowAddFilter] = useState(false);
@@ -352,25 +358,21 @@ const MovementsList = memo(function MovementsList({
   // Calculate subtotals
   const subtotals = useMemo(() => {
     if (type === 'transferencia') {
-      if (currency === 'ARS') {
-        const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
-        const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
-        return { totalSaliente, totalEntrante };
-      } else {
-        const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSalienteDolares || 0), 0);
-        const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntranteDolares || 0), 0);
-        return { totalSaliente, totalEntrante };
-      }
+      const totalSalienteARS = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
+      const totalEntranteARS = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
+      return { totalSalienteARS, totalEntranteARS };
     } else {
-      if (currency === 'ARS') {
-        const total = filteredMovements.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
-        return { total };
-      } else {
-        const total = filteredMovements.reduce((sum, m) => sum + (m.montoDolares || 0), 0);
-        return { total };
-      }
+      const totalARS = filteredMovements.reduce((sum, m) => {
+        if (m.monedaOriginal === 'USD') return sum;
+        return sum + (m.monto || 0);
+      }, 0);
+      const totalUSD = filteredMovements.reduce((sum, m) => {
+        if (m.monedaOriginal !== 'USD') return sum;
+        return sum + (m.monto || 0);
+      }, 0);
+      return { totalARS, totalUSD };
     }
-  }, [filteredMovements, type, currency]);
+  }, [filteredMovements, type]);
 
   const toggleAccount = (accountName) => {
     setSelectedAccounts(prev =>
@@ -754,82 +756,6 @@ const MovementsList = memo(function MovementsList({
             </button>
           )}
 
-          {/* Selection mode toggle */}
-          {!selectionMode && filteredMovements.length > 0 && (
-            <button
-              onClick={toggleSelectionMode}
-              className="p-2 rounded-xl transition-colors"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-              title="Selección múltiple"
-              aria-label="Selección múltiple"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h7M4 12h7m-7 7h7m5-14v14m0-14l3 3m-3-3l-3 3m3 11l3-3m-3 3l-3-3" />
-              </svg>
-            </button>
-          )}
-
-          {/* Currency Selector - desktop */}
-          <div
-            className="hidden sm:inline-flex rounded-xl p-1"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
-            <button
-              onClick={() => setCurrency('ARS')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
-              style={{
-                backgroundColor: currency === 'ARS' ? 'var(--accent-primary)' : 'transparent',
-                color: currency === 'ARS' ? 'white' : 'var(--text-secondary)',
-                boxShadow: currency === 'ARS' ? '0 4px 12px var(--accent-primary-glow)' : 'none',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
-              ARS
-            </button>
-            <button
-              onClick={() => setCurrency('USD')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 active:scale-95 flex items-center gap-1.5"
-              style={{
-                backgroundColor: currency === 'USD' ? 'var(--accent-green)' : 'transparent',
-                color: currency === 'USD' ? 'white' : 'var(--text-secondary)',
-                boxShadow: currency === 'USD' ? '0 4px 12px rgba(0, 217, 154, 0.3)' : 'none',
-              }}
-            >
-              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
-              USD
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Currency Selector - mobile ── */}
-      <div className="sm:hidden">
-        <div
-          className="flex w-full p-1 rounded-lg"
-          style={{ backgroundColor: 'var(--bg-tertiary)' }}
-        >
-          <button
-            onClick={() => setCurrency('ARS')}
-            className="flex-1 py-2 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5"
-            style={{
-              backgroundColor: currency === 'ARS' ? 'var(--bg-elevated)' : 'transparent',
-              color: currency === 'ARS' ? 'var(--text-primary)' : 'var(--text-muted)',
-            }}
-          >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm" />
-            Pesos (ARS)
-          </button>
-          <button
-            onClick={() => setCurrency('USD')}
-            className="flex-1 py-2 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5"
-            style={{
-              backgroundColor: currency === 'USD' ? 'var(--bg-elevated)' : 'transparent',
-              color: currency === 'USD' ? 'var(--text-primary)' : 'var(--text-muted)',
-            }}
-          >
-            <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm" />
-            Dólares (USD)
-          </button>
         </div>
       </div>
 
@@ -1154,28 +1080,42 @@ const MovementsList = memo(function MovementsList({
         </div>
       </div>
 
-      {/* ── Saved views tabs ── */}
+      {/* ── Saved views tabs (Notion-style) ── */}
       {savedViews.length > 0 && (
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+        <div
+          className="flex items-end gap-0 overflow-x-auto border-b"
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
           {savedViews.map(view => (
             <button
               key={view.id}
               onClick={() => applyView(view)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 relative"
               style={{
-                backgroundColor: activeViewId === view.id ? getTypeBgDim() : 'var(--bg-tertiary)',
                 color: activeViewId === view.id ? getTypeColor() : 'var(--text-secondary)',
-                border: `1px solid ${activeViewId === view.id ? getTypeColor() : 'var(--border-subtle)'}`,
+                borderBottom: `2px solid ${activeViewId === view.id ? getTypeColor() : 'transparent'}`,
+                marginBottom: '-1px',
               }}
             >
               {view.isDefault && (
-                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-2.5 h-2.5 flex-shrink-0 opacity-70" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                 </svg>
               )}
               {view.name}
             </button>
           ))}
+          {/* Add view button */}
+          <button
+            onClick={() => setShowSavedViews(true)}
+            className="flex items-center gap-1 px-3 py-2 text-xs whitespace-nowrap transition-all flex-shrink-0 opacity-40 hover:opacity-80"
+            style={{ color: 'var(--text-secondary)', marginBottom: '-1px', borderBottom: '2px solid transparent' }}
+            title="Guardar vista actual"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
         </div>
       )}
 
@@ -1185,16 +1125,23 @@ const MovementsList = memo(function MovementsList({
           {filteredMovements.length} {type === 'transferencia' ? 'transferencia' : 'movimiento'}{filteredMovements.length !== 1 ? 's' : ''}
         </span>
         {type !== 'transferencia' ? (
-          <span className="font-semibold" style={{ color: getTypeColor() }}>
-            {formatCurrency(subtotals.total, currency)}
-          </span>
+          <>
+            <span className="font-semibold" style={{ color: getTypeColor() }}>
+              {formatCurrency(subtotals.totalARS, 'ARS')}
+            </span>
+            {subtotals.totalUSD > 0 && (
+              <span className="font-semibold opacity-60" style={{ color: getTypeColor() }}>
+                + {formatCurrency(subtotals.totalUSD, 'USD')}
+              </span>
+            )}
+          </>
         ) : (
           <>
             <span className="font-semibold" style={{ color: 'var(--accent-red)' }}>
-              ↓ {formatCurrency(subtotals.totalSaliente, currency)}
+              ↓ {formatCurrency(subtotals.totalSalienteARS, 'ARS')}
             </span>
             <span className="font-semibold" style={{ color: 'var(--accent-green)' }}>
-              ↑ {formatCurrency(subtotals.totalEntrante, currency)}
+              ↑ {formatCurrency(subtotals.totalEntranteARS, 'ARS')}
             </span>
           </>
         )}
@@ -1222,6 +1169,7 @@ const MovementsList = memo(function MovementsList({
           getTypeBgDim={getTypeBgDim}
           isAccountUSD={isAccountUSD}
           storageKey={tableColsKey}
+          tipoCambio={tipoCambio}
         />
       ) : (
         /* Mobile: cards */
@@ -1461,18 +1409,8 @@ const MovementsList = memo(function MovementsList({
                 <br />
                 <span className="font-semibold text-base" style={{ color: getTypeColor() }}>
                   {type === 'transferencia'
-                    ? formatCurrency(
-                        currency === 'ARS'
-                          ? deleteConfirm.montoSaliente
-                          : (deleteConfirm.montoSalienteDolares || 0),
-                        currency
-                      )
-                    : formatCurrency(
-                        currency === 'ARS'
-                          ? (deleteConfirm.montoPesos || deleteConfirm.monto)
-                          : (deleteConfirm.montoDolares || 0),
-                        currency
-                      )}
+                    ? formatCurrency(deleteConfirm.montoSaliente, 'ARS')
+                    : formatCurrency(deleteConfirm.monto || deleteConfirm.montoPesos || 0, 'ARS')}
                 </span>
               </p>
               <div className="flex gap-3">
