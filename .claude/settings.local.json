@@ -83,7 +83,11 @@
       "Bash(powershell.exe:*)",
       "Bash(npm audit:*)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && cp src/components/table/NotionTable.jsx src/components/table/MovementsTable.jsx && cp src/components/table/NotionTableHeader.jsx src/components/table/MovementsTableHeader.jsx && cp src/components/table/NotionTableRow.jsx src/components/table/MovementsTableRow.jsx)",
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && sed -i 's/NotionTableRow/MovementsTableRow/g' src/components/table/MovementsTableRow.jsx)",
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && sed -i 's/NotionTable/MovementsTable/g' src/components/MovementsList.jsx)",
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && rm src/components/table/NotionTable.jsx src/components/table/NotionTableHeader.jsx src/components/table/NotionTableRow.jsx && echo \"Eliminados\")"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -3,16 +3,18 @@ import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AnimatedBackground from '../components/AnimatedBackground';
+import { DEMO_EMAIL, DEMO_PASSWORD, ensureDemoSeeded } from '../demo/seedDemo';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  const { signIn, signInWithGoogle, resetPassword, user, loading: authLoading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,6 +51,35 @@ const Login = () => {
     } else {
       navigate(from, { replace: true });
     }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    setError('');
+
+    let result = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+
+    if (result.error) {
+      const { error: signUpError } = await signUp(DEMO_EMAIL, DEMO_PASSWORD, 'Usuario Demo');
+      if (signUpError && !signUpError.message.includes('already registered')) {
+        setError('No se pudo crear el usuario demo. Asegurate de tener el email demo@cashe.ar o configurar VITE_DEMO_EMAIL.');
+        setDemoLoading(false);
+        return;
+      }
+      result = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+      if (result.error) {
+        setError('Error al iniciar sesión demo. Si es la primera vez, confirmá el email en Supabase o desactivá la confirmación de email.');
+        setDemoLoading(false);
+        return;
+      }
+    }
+
+    const userId = result.data?.user?.id;
+    if (userId) {
+      await ensureDemoSeeded(userId);
+    }
+
+    navigate(from, { replace: true });
   };
 
   const handleGoogleLogin = async () => {
@@ -134,6 +165,46 @@ const Login = () => {
             </div>
           ) : (
             <>
+              {/* Demo Login (DEV only) */}
+              {import.meta.env.DEV && !showForgotPassword && (
+                <>
+                  <div className="relative mb-4">
+                    <div className="absolute -top-2 -right-2 z-10">
+                      <span
+                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'var(--accent-yellow)', color: '#000' }}
+                      >
+                        DEV
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDemoLogin}
+                      disabled={demoLoading}
+                      className="w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-98 disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-blue))',
+                        color: '#fff',
+                      }}
+                    >
+                      {demoLoading ? (
+                        <LoadingSpinner size="sm" />
+                      ) : (
+                        <>
+                          <span>🧪</span>
+                          Ingresar como usuario demo
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-medium)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>o ingresá con tu cuenta</span>
+                    <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-medium)' }} />
+                  </div>
+                </>
+              )}
+
               {/* Google Login */}
               {!showForgotPassword && (
                 <>
