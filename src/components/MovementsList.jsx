@@ -13,6 +13,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
+import { useViewMode } from '../hooks/useViewMode';
+import NotionTable from './table/NotionTable';
 
 const MovementsList = memo(function MovementsList({
   title,
@@ -94,6 +96,10 @@ const MovementsList = memo(function MovementsList({
   const uid = user?.id || '';
   const sortStorageKey = uid ? `cashe-sort-${type}_${uid}` : `cashe-sort-${type}`;
   const filterStorageKey = uid ? `cashe-filters-${type}_${uid}` : `cashe-filters-${type}`;
+  const tableColsKey = uid ? `cashe-table-cols-${type}_${uid}` : `cashe-table-cols-${type}`;
+
+  // View mode: 'cards' | 'table' — mobile always shows cards
+  const [viewMode, setViewMode] = useViewMode(type, uid);
   const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
   const [sortLoaded, setSortLoaded] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
@@ -678,6 +684,45 @@ const MovementsList = memo(function MovementsList({
             </button>
           )}
 
+          {/* View mode toggle: cards ↔ table (desktop only) */}
+          {!selectionMode && filteredMovements.length > 0 && !isMobile && (
+            <div
+              className="hidden lg:inline-flex rounded-xl p-1"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <button
+                onClick={() => setViewMode('cards')}
+                className="p-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  backgroundColor: viewMode === 'cards' ? 'var(--bg-card)' : 'transparent',
+                  color: viewMode === 'cards' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: viewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+                }}
+                title="Vista cards"
+                aria-label="Vista cards"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className="p-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  backgroundColor: viewMode === 'table' ? 'var(--bg-card)' : 'transparent',
+                  color: viewMode === 'table' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+                }}
+                title="Vista tabla"
+                aria-label="Vista tabla"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Currency Selector - Hidden on mobile, shown inline on desktop */}
           <div
             className="hidden sm:inline-flex rounded-xl p-1"
@@ -992,9 +1037,29 @@ const MovementsList = memo(function MovementsList({
       {/* Movements list */}
       {filteredMovements.length === 0 ? (
         renderEmptyState()
+      ) : viewMode === 'table' && !isMobile ? (
+        /* ── Notion-style table (desktop only) ── */
+        <NotionTable
+          movements={filteredMovements}
+          type={type}
+          accounts={accounts}
+          sortConfig={sortConfig}
+          onSortChange={setSortConfig}
+          selectionMode={selectionMode}
+          selectedItems={selectedItems}
+          onToggleSelect={toggleItemSelection}
+          onSelectAll={selectAll}
+          onDeselectAll={deselectAll}
+          onMovementClick={onMovementClick}
+          onDeleteClick={handleDeleteClick}
+          getTypeColor={getTypeColor}
+          getTypeBgDim={getTypeBgDim}
+          isAccountUSD={isAccountUSD}
+          storageKey={tableColsKey}
+        />
       ) : (
         <div className="space-y-2">
-          {/* Desktop table header */}
+          {/* Desktop table header (cards mode) */}
           <div className="hidden lg:flex items-center gap-3 px-4 py-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
             {selectionMode && <div className="w-6" />}
             <div className="w-12" /> {/* Icon space */}
