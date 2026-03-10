@@ -1,6 +1,7 @@
-import { memo, useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
 import DateRangePicker from './DateRangePicker';
 import DatePicker from './DatePicker';
@@ -12,8 +13,31 @@ import { useAuth } from '../contexts/AuthContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
-import { useViewMode } from '../hooks/useViewMode';
 import NotionTable from './table/NotionTable';
+import { useSavedViews } from '../hooks/useSavedViews';
+
+// ─── FilterChip ───────────────────────────────────────────────────────────────
+function FilterChip({ label, onRemove }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium"
+      style={{
+        backgroundColor: 'var(--bg-tertiary)',
+        color: 'var(--text-primary)',
+        border: '1px solid var(--border-subtle)',
+      }}
+    >
+      {label}
+      {onRemove && (
+        <button onClick={onRemove} className="ml-0.5 hover:opacity-70 transition-opacity" aria-label="Quitar filtro">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </span>
+  );
+}
 
 const MovementsList = memo(function MovementsList({
   title,
@@ -36,10 +60,19 @@ const MovementsList = memo(function MovementsList({
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [currency, setCurrency] = useState('ARS');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Popovers / saved views UI state
+  const [showAddFilter, setShowAddFilter] = useState(false);
+  const [showSavedViews, setShowSavedViews] = useState(false);
+  const [savingViewName, setSavingViewName] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+
+  // Refs for click-outside handling
+  const filterPopoverRef = useRef(null);
+  const savedViewsRef = useRef(null);
 
   // Helper to get account by name
   const getAccount = (accountName) => {
@@ -82,13 +115,37 @@ const MovementsList = memo(function MovementsList({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
+  // Close add-filter popover on click-outside
+  useEffect(() => {
+    if (!showAddFilter) return;
+    const handler = (e) => {
+      if (filterPopoverRef.current && !filterPopoverRef.current.contains(e.target)) {
+        setShowAddFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAddFilter]);
+
+  // Close saved-views dropdown on click-outside
+  useEffect(() => {
+    if (!showSavedViews) return;
+    const handler = (e) => {
+      if (savedViewsRef.current && !savedViewsRef.current.contains(e.target)) {
+        setShowSavedViews(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSavedViews]);
+
   // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [bulkAction, setBulkAction] = useState(null); // 'delete', 'editAccount', 'editCategory', 'editDate'
   const [bulkEditValue, setBulkEditValue] = useState('');
-  const [bulkDateValue, setBulkDateValue] = useState(''); // String in yyyy-MM-dd format
+  const [bulkDateValue, setBulkDateValue] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Sort state - different storage key per type, namespaced by user
@@ -97,11 +154,29 @@ const MovementsList = memo(function MovementsList({
   const filterStorageKey = uid ? `cashe-filters-${type}_${uid}` : `cashe-filters-${type}`;
   const tableColsKey = uid ? `cashe-table-cols-${type}_${uid}` : `cashe-table-cols-${type}`;
 
-  // View mode: 'cards' | 'table' — mobile always shows cards
-  const [viewMode, setViewMode] = useViewMode(type, uid);
   const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
   const [sortLoaded, setSortLoaded] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  // Saved views (Supabase — persisten entre dispositivos)
+  const { views: savedViews, loading: viewsLoading, saveView, deleteView, setDefault, unsetDefault, defaultView } = useSavedViews(type, uid);
+
+  // Auto-aplicar vista default la primera vez que carga (una sola vez)
+  const defaultAppliedRef = useRef(false);
+  useEffect(() => {
+    if (defaultAppliedRef.current || viewsLoading || !filtersLoaded || !defaultView) return;
+    defaultAppliedRef.current = true;
+    if (defaultView.filters?.dateRange) {
+      setDateRange({
+        from: defaultView.filters.dateRange.from ? new Date(defaultView.filters.dateRange.from) : null,
+        to: defaultView.filters.dateRange.to ? new Date(defaultView.filters.dateRange.to) : null,
+      });
+    }
+    setSelectedAccounts(defaultView.filters?.selectedAccounts || []);
+    setSelectedCategories(defaultView.filters?.selectedCategories || []);
+    setSearchText(defaultView.filters?.searchText || '');
+    if (defaultView.sortConfig) setSortConfig(defaultView.sortConfig);
+  }, [defaultView, viewsLoading, filtersLoaded]);
 
   // Load sort preference from localStorage on mount
   useEffect(() => {
@@ -121,7 +196,7 @@ const MovementsList = memo(function MovementsList({
 
   // Save sort preference to localStorage
   useEffect(() => {
-    if (!sortLoaded) return; // Don't save until initial load is complete
+    if (!sortLoaded) return;
     localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
   }, [sortConfig, sortStorageKey, sortLoaded]);
 
@@ -136,7 +211,6 @@ const MovementsList = memo(function MovementsList({
         if (parsed.selectedAccounts) setSelectedAccounts(parsed.selectedAccounts);
         if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
         if (parsed.dateRange && (parsed.dateRange.from || parsed.dateRange.to)) {
-          // Convert string dates back to Date objects
           setDateRange({
             from: parsed.dateRange.from ? new Date(parsed.dateRange.from) : null,
             to: parsed.dateRange.to ? new Date(parsed.dateRange.to) : null,
@@ -177,7 +251,7 @@ const MovementsList = memo(function MovementsList({
 
   // Save filter preferences to localStorage
   useEffect(() => {
-    if (!filtersLoaded) return; // Don't save until initial load is complete
+    if (!filtersLoaded) return;
     localStorage.setItem(filterStorageKey, JSON.stringify({
       selectedAccounts,
       selectedCategories,
@@ -185,29 +259,10 @@ const MovementsList = memo(function MovementsList({
     }));
   }, [selectedAccounts, selectedCategories, dateRange, filterStorageKey, filtersLoaded]);
 
-  // Sort options based on movement type
-  const sortOptions = useMemo(() => {
-    if (type === 'transferencia') {
-      return [
-        { id: 'date', label: 'Fecha', defaultOrder: 'desc' },
-        { id: 'amount', label: 'Monto', defaultOrder: 'desc' },
-        { id: 'accountFrom', label: 'Cuenta origen', defaultOrder: 'asc' },
-        { id: 'accountTo', label: 'Cuenta destino', defaultOrder: 'asc' },
-      ];
-    }
-    return [
-      { id: 'date', label: 'Fecha', defaultOrder: 'desc' },
-      { id: 'amount', label: 'Monto', defaultOrder: 'desc' },
-      { id: 'category', label: 'Categoría', defaultOrder: 'asc' },
-      { id: 'account', label: 'Cuenta', defaultOrder: 'asc' },
-    ];
-  }, [type]);
-
   // Filter movements
   const filteredMovements = useMemo(() => {
     let filtered = [...movements];
 
-    // Filter by date (usar parseLocalDate para evitar problemas de timezone)
     if (dateRange.from) {
       const from = new Date(dateRange.from);
       from.setHours(0, 0, 0, 0);
@@ -219,7 +274,6 @@ const MovementsList = memo(function MovementsList({
       filtered = filtered.filter(m => parseLocalDate(m.fecha) <= to);
     }
 
-    // Filter by accounts
     if (selectedAccounts.length > 0) {
       if (type === 'transferencia') {
         filtered = filtered.filter(m =>
@@ -231,12 +285,10 @@ const MovementsList = memo(function MovementsList({
       }
     }
 
-    // Filter by categories (only for income/expense)
     if (selectedCategories.length > 0 && type !== 'transferencia') {
       filtered = filtered.filter(m => selectedCategories.includes(m.categoria));
     }
 
-    // Filter by search text (nota, categoria, cuenta)
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
       filtered = filtered.filter(m => {
@@ -253,7 +305,6 @@ const MovementsList = memo(function MovementsList({
       });
     }
 
-    // Apply sorting
     const { sortBy, sortOrder } = sortConfig;
     const multiplier = sortOrder === 'asc' ? 1 : -1;
 
@@ -263,11 +314,10 @@ const MovementsList = memo(function MovementsList({
       switch (sortBy) {
         case 'date':
           comparison = parseLocalDate(a.fecha) - parseLocalDate(b.fecha);
-          // Desempate por fecha de creación (más reciente primero)
           if (comparison === 0) {
             const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return (cb - ca); // siempre más reciente primero, independiente de sortOrder
+            return (cb - ca);
           }
           break;
         case 'amount':
@@ -302,7 +352,6 @@ const MovementsList = memo(function MovementsList({
   // Calculate subtotals
   const subtotals = useMemo(() => {
     if (type === 'transferencia') {
-      // Para transferencias, usar la moneda seleccionada
       if (currency === 'ARS') {
         const totalSaliente = filteredMovements.reduce((sum, m) => sum + (m.montoSaliente || 0), 0);
         const totalEntrante = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
@@ -313,7 +362,6 @@ const MovementsList = memo(function MovementsList({
         return { totalSaliente, totalEntrante };
       }
     } else {
-      // Para gastos e ingresos, usar la moneda seleccionada
       if (currency === 'ARS') {
         const total = filteredMovements.reduce((sum, m) => sum + (m.montoPesos || m.monto || 0), 0);
         return { total };
@@ -347,6 +395,14 @@ const MovementsList = memo(function MovementsList({
     setSearchText('');
   };
 
+  const handleReset = () => {
+    clearFilters();
+    if (type === 'gasto' || type === 'ingreso') {
+      const now = new Date();
+      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+    }
+  };
+
   // Check if date range is the default (current month) for gastos/ingresos
   const isDefaultDateRange = useMemo(() => {
     if (type !== 'gasto' && type !== 'ingreso') return false;
@@ -366,6 +422,16 @@ const MovementsList = memo(function MovementsList({
     selectedCategories.length > 0,
     searchText.trim().length > 0,
   ].filter(Boolean).length;
+
+  // Build date chip label
+  const dateChipLabel = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return null;
+    if (isDefaultDateRange) return 'Este mes';
+    const from = dateRange.from ? format(new Date(dateRange.from), 'd MMM', { locale: es }) : '…';
+    const to = dateRange.to ? format(new Date(dateRange.to), 'd MMM', { locale: es }) : '…';
+    if (from === to) return from;
+    return `${from} – ${to}`;
+  }, [dateRange, isDefaultDateRange]);
 
   // Selection functions
   const toggleSelectionMode = () => {
@@ -398,7 +464,6 @@ const MovementsList = memo(function MovementsList({
 
   const handleBulkDelete = async () => {
     if (!onBulkDelete) return;
-    
     setBulkProcessing(true);
     try {
       const movementsToDelete = getSelectedMovements();
@@ -415,7 +480,6 @@ const MovementsList = memo(function MovementsList({
   };
 
   const handleBulkUpdate = async () => {
-    // Determine the field and value based on bulkAction
     let field, value;
     if (bulkAction === 'editAccount') {
       field = 'cuenta';
@@ -425,7 +489,7 @@ const MovementsList = memo(function MovementsList({
       value = bulkEditValue;
     } else if (bulkAction === 'editDate') {
       field = 'fecha';
-      value = bulkDateValue; // Already in yyyy-MM-dd format
+      value = bulkDateValue;
     } else {
       return;
     }
@@ -477,6 +541,38 @@ const MovementsList = memo(function MovementsList({
       onMovementDelete?.(deleteConfirm);
       setDeleteConfirm(null);
     }
+  };
+
+  // Apply a saved view
+  const applyView = (view) => {
+    const { filters, sortConfig: sc } = view;
+    if (filters.dateRange) {
+      setDateRange({
+        from: filters.dateRange.from ? new Date(filters.dateRange.from) : null,
+        to: filters.dateRange.to ? new Date(filters.dateRange.to) : null,
+      });
+    }
+    setSelectedAccounts(filters.selectedAccounts || []);
+    setSelectedCategories(filters.selectedCategories || []);
+    setSearchText(filters.searchText || '');
+    if (sc) setSortConfig(sc);
+    setShowSavedViews(false);
+  };
+
+  // Save current view
+  const handleSaveView = () => {
+    if (!savingViewName.trim()) return;
+    saveView(savingViewName.trim(), {
+      dateRange: {
+        from: dateRange.from ? (dateRange.from instanceof Date ? dateRange.from.toISOString() : dateRange.from) : null,
+        to: dateRange.to ? (dateRange.to instanceof Date ? dateRange.to.toISOString() : dateRange.to) : null,
+      },
+      selectedAccounts,
+      selectedCategories,
+      searchText,
+    }, sortConfig);
+    setSavingViewName('');
+    setShowSaveInput(false);
   };
 
   // Skeleton loading
@@ -559,8 +655,8 @@ const MovementsList = memo(function MovementsList({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Selection Mode Bar */}
+    <div className="space-y-3">
+      {/* ── Selection Mode Bar ── */}
       {selectionMode && (
         <div
           className="sticky top-14 z-40 rounded-2xl p-3 animate-fade-in"
@@ -579,11 +675,10 @@ const MovementsList = memo(function MovementsList({
                 {selectedItems.size === filteredMovements.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
               </button>
             </div>
-            
+
             <div className="flex items-center gap-2">
               {selectedItems.size > 0 && (
                 <>
-                  {/* Bulk Delete */}
                   <button
                     onClick={() => setBulkAction('delete')}
                     className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
@@ -594,8 +689,7 @@ const MovementsList = memo(function MovementsList({
                     </svg>
                     Eliminar
                   </button>
-                  
-                  {/* Bulk Edit Account */}
+
                   <button
                     onClick={() => setBulkAction('editAccount')}
                     className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
@@ -606,8 +700,7 @@ const MovementsList = memo(function MovementsList({
                     </svg>
                     Cuenta
                   </button>
-                  
-                  {/* Bulk Edit Category (not for transfers) */}
+
                   {type !== 'transferencia' && (
                     <button
                       onClick={() => setBulkAction('editCategory')}
@@ -621,7 +714,6 @@ const MovementsList = memo(function MovementsList({
                     </button>
                   )}
 
-                  {/* Bulk Edit Date */}
                   <button
                     onClick={() => setBulkAction('editDate')}
                     className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
@@ -634,7 +726,7 @@ const MovementsList = memo(function MovementsList({
                   </button>
                 </>
               )}
-              
+
               <button
                 onClick={toggleSelectionMode}
                 className="px-3 py-1.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors"
@@ -647,7 +739,7 @@ const MovementsList = memo(function MovementsList({
         </div>
       )}
 
-      {/* Header */}
+      {/* ── Header row ── */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           {title}
@@ -683,46 +775,7 @@ const MovementsList = memo(function MovementsList({
             </button>
           )}
 
-          {/* View mode toggle: cards ↔ table (desktop only) */}
-          {!selectionMode && filteredMovements.length > 0 && !isMobile && (
-            <div
-              className="hidden lg:inline-flex rounded-xl p-1"
-              style={{ backgroundColor: 'var(--bg-tertiary)' }}
-            >
-              <button
-                onClick={() => setViewMode('cards')}
-                className="p-1.5 rounded-lg transition-all duration-200"
-                style={{
-                  backgroundColor: viewMode === 'cards' ? 'var(--bg-card)' : 'transparent',
-                  color: viewMode === 'cards' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  boxShadow: viewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
-                }}
-                title="Vista cards"
-                aria-label="Vista cards"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className="p-1.5 rounded-lg transition-all duration-200"
-                style={{
-                  backgroundColor: viewMode === 'table' ? 'var(--bg-card)' : 'transparent',
-                  color: viewMode === 'table' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
-                }}
-                title="Vista tabla"
-                aria-label="Vista tabla"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" />
-                </svg>
-              </button>
-            </div>
-          )}
-
-          {/* Currency Selector - Hidden on mobile, shown inline on desktop */}
+          {/* Currency Selector - desktop */}
           <div
             className="hidden sm:inline-flex rounded-xl p-1"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
@@ -752,29 +805,10 @@ const MovementsList = memo(function MovementsList({
               USD
             </button>
           </div>
-          <div className="flex items-center gap-1">
-            <DateRangePicker
-              value={dateRange}
-              onChange={setDateRange}
-            />
-            {(dateRange.from || dateRange.to) && (
-              <button
-                onClick={() => setDateRange({ from: null, to: null })}
-                className="p-2 min-w-[44px] min-h-[44px] rounded-lg transition-colors hover:opacity-80 flex items-center justify-center"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-                title="Limpiar fechas"
-                aria-label="Limpiar fechas"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Currency Selector - Full width on mobile */}
+      {/* ── Currency Selector - mobile ── */}
       <div className="sm:hidden">
         <div
           className="flex w-full p-1 rounded-lg"
@@ -805,233 +839,364 @@ const MovementsList = memo(function MovementsList({
         </div>
       </div>
 
-      {/* Filters and Sort Row */}
-      <div className="flex items-center gap-2">
-        {/* Filters Toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-          style={{
-            backgroundColor: showFilters ? getTypeBgDim() : 'var(--bg-tertiary)',
-            color: showFilters ? getTypeColor() : 'var(--text-secondary)'
-          }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          <span>Filtros</span>
-          {activeFiltersCount > 0 && (
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-              style={{ backgroundColor: getTypeColor() }}
-            >
-              {activeFiltersCount}
-            </span>
-          )}
-        </button>
-
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div
-          className="p-4 rounded-2xl space-y-4 animate-scale-in"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
-        >
-          {/* Search filter */}
-          <div>
-            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Buscar
-            </label>
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                style={{ color: 'var(--text-secondary)' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder={type === 'transferencia'
-                  ? "Buscar por cuenta..."
-                  : "Buscar por nota, categoria, cuenta..."}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-              />
-            </div>
-          </div>
-
-          {/* Accounts filter */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                Cuentas
-              </label>
+      {/* ── Filter chips bar ── */}
+      <div className="flex items-start gap-2 flex-wrap">
+        {/* Left: chips + date picker + add filter */}
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+          {/* Date range picker (always shown) */}
+          <div className="flex items-center gap-1">
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            {(dateRange.from || dateRange.to) && (
               <button
-                onClick={() => {
-                  const allAccountNames = accounts.map(a => a.nombre);
-                  if (selectedAccounts.length === accounts.length) {
-                    setSelectedAccounts([]);
-                  } else {
-                    setSelectedAccounts(allAccountNames);
-                  }
-                }}
-                className="text-xs font-medium transition-colors hover:opacity-80"
-                style={{ color: getTypeColor() }}
+                onClick={() => setDateRange({ from: null, to: null })}
+                className="p-2 min-w-[36px] min-h-[36px] rounded-lg transition-colors hover:opacity-80 flex items-center justify-center"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+                title="Limpiar fechas"
+                aria-label="Limpiar fechas"
               >
-                {selectedAccounts.length === accounts.length ? 'Ninguna' : 'Todas'}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {accounts.map(account => (
-                <button
-                  key={account.nombre}
-                  onClick={() => toggleAccount(account.nombre)}
-                  className="px-3 py-2.5 min-h-[44px] rounded-full text-xs font-medium transition-all duration-200"
-                  style={{
-                    backgroundColor: selectedAccounts.includes(account.nombre)
-                      ? getTypeColor()
-                      : 'var(--bg-tertiary)',
-                    color: selectedAccounts.includes(account.nombre)
-                      ? 'white'
-                      : 'var(--text-secondary)',
-                  }}
-                >
-                  {account.nombre}
-                </button>
-              ))}
-            </div>
+            )}
           </div>
 
-          {/* Categories filter (not for transfers) */}
-          {type !== 'transferencia' && categories.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Categorias
-                </label>
-                <button
-                  onClick={() => {
-                    const allCatValues = categories.map(cat =>
-                      typeof cat === 'object' ? (cat.value || cat.label) : cat
-                    );
-                    if (selectedCategories.length === categories.length) {
-                      setSelectedCategories([]);
-                    } else {
-                      setSelectedCategories(allCatValues);
-                    }
-                  }}
-                  className="text-xs font-medium transition-colors hover:opacity-80"
-                  style={{ color: getTypeColor() }}
-                >
-                  {selectedCategories.length === categories.length ? 'Ninguna' : 'Todas'}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {categories.map((cat, index) => {
-                  // Handle both string and object formats
-                  const catValue = typeof cat === 'object' ? (cat.value || cat.label) : cat;
-                  const catLabel = typeof cat === 'object' ? (cat.label || cat.value) : cat;
-                  return (
-                    <button
-                      key={catValue || `cat-${index}`}
-                      onClick={() => toggleCategory(catValue)}
-                      className="px-3 py-2.5 min-h-[44px] rounded-full text-xs font-medium transition-all duration-200"
-                      style={{
-                        backgroundColor: selectedCategories.includes(catValue)
-                          ? getTypeColor()
-                          : 'var(--bg-tertiary)',
-                        color: selectedCategories.includes(catValue)
-                          ? 'white'
-                          : 'var(--text-secondary)',
-                      }}
-                    >
-                      {catLabel}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Account filter chips */}
+          {selectedAccounts.map(acc => (
+            <FilterChip key={acc} label={acc} onRemove={() => toggleAccount(acc)} />
+          ))}
+
+          {/* Category filter chips */}
+          {selectedCategories.map(cat => (
+            <FilterChip key={cat} label={cat} onRemove={() => toggleCategory(cat)} />
+          ))}
+
+          {/* Search chip */}
+          {searchText && (
+            <FilterChip label={`"${searchText}"`} onRemove={() => setSearchText('')} />
           )}
 
-          {/* Clear filters */}
-          {activeFiltersCount > 0 && (
+          {/* Add filter popover */}
+          <div className="relative" ref={filterPopoverRef}>
             <button
-              onClick={clearFilters}
-              className="text-xs font-medium transition-colors hover:opacity-80"
-              style={{ color: getTypeColor() }}
+              onClick={() => setShowAddFilter(!showAddFilter)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+              style={{
+                backgroundColor: showAddFilter ? getTypeBgDim() : 'var(--bg-tertiary)',
+                color: showAddFilter ? getTypeColor() : 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)',
+              }}
             >
-              Limpiar filtros
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Filtrar
+              {activeFiltersCount > 0 && (
+                <span
+                  className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
+                  style={{ backgroundColor: getTypeColor() }}
+                >
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            {showAddFilter && (
+              <div
+                className="absolute left-0 top-full mt-2 z-50 w-80 rounded-2xl p-4 space-y-4 shadow-xl"
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                {/* Search */}
+                <div>
+                  <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Buscar
+                  </label>
+                  <div className="relative">
+                    <svg
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                      style={{ color: 'var(--text-secondary)' }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder={type === 'transferencia' ? 'Buscar por cuenta...' : 'Buscar por nota, categoría, cuenta...'}
+                      className="w-full pl-10 pr-4 py-2 rounded-xl text-sm"
+                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Accounts */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Cuentas</label>
+                    <button
+                      onClick={() => {
+                        const allAccountNames = accounts.map(a => a.nombre);
+                        setSelectedAccounts(selectedAccounts.length === accounts.length ? [] : allAccountNames);
+                      }}
+                      className="text-xs font-medium transition-colors hover:opacity-80"
+                      style={{ color: getTypeColor() }}
+                    >
+                      {selectedAccounts.length === accounts.length ? 'Ninguna' : 'Todas'}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                    {accounts.map(account => (
+                      <button
+                        key={account.nombre}
+                        onClick={() => toggleAccount(account.nombre)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200"
+                        style={{
+                          backgroundColor: selectedAccounts.includes(account.nombre) ? getTypeColor() : 'var(--bg-tertiary)',
+                          color: selectedAccounts.includes(account.nombre) ? 'white' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {account.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Categories */}
+                {type !== 'transferencia' && categories.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Categorías</label>
+                      <button
+                        onClick={() => {
+                          const allCatValues = categories.map(cat => typeof cat === 'object' ? (cat.value || cat.label) : cat);
+                          setSelectedCategories(selectedCategories.length === categories.length ? [] : allCatValues);
+                        }}
+                        className="text-xs font-medium transition-colors hover:opacity-80"
+                        style={{ color: getTypeColor() }}
+                      >
+                        {selectedCategories.length === categories.length ? 'Ninguna' : 'Todas'}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {categories.map((cat, index) => {
+                        const catValue = typeof cat === 'object' ? (cat.value || cat.label) : cat;
+                        const catLabel = typeof cat === 'object' ? (cat.label || cat.value) : cat;
+                        return (
+                          <button
+                            key={catValue || `cat-${index}`}
+                            onClick={() => toggleCategory(catValue)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200"
+                            style={{
+                              backgroundColor: selectedCategories.includes(catValue) ? getTypeColor() : 'var(--bg-tertiary)',
+                              color: selectedCategories.includes(catValue) ? 'white' : 'var(--text-secondary)',
+                            }}
+                          >
+                            {catLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={() => { handleReset(); setShowAddFilter(false); }}
+                    className="text-xs font-medium transition-colors hover:opacity-80"
+                    style={{ color: getTypeColor() }}
+                  >
+                    Restablecer filtros
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: saved views + reset */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Saved views dropdown */}
+          <div className="relative" ref={savedViewsRef}>
+            <button
+              onClick={() => setShowSavedViews(!showSavedViews)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+              style={{
+                backgroundColor: showSavedViews ? getTypeBgDim() : 'var(--bg-tertiary)',
+                color: showSavedViews ? getTypeColor() : 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)',
+              }}
+              title="Vistas guardadas"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span className="hidden sm:inline">Vistas</span>
+              {savedViews.length > 0 && (
+                <span
+                  className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
+                  style={{ backgroundColor: getTypeColor() }}
+                >
+                  {savedViews.length}
+                </span>
+              )}
+            </button>
+
+            {showSavedViews && (
+              <div
+                className="absolute right-0 top-full mt-2 z-50 w-72 rounded-2xl p-3 shadow-xl"
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <p className="text-xs font-semibold mb-2 px-1" style={{ color: 'var(--text-secondary)' }}>
+                  Vistas guardadas
+                </p>
+
+                {viewsLoading ? (
+                  <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>Cargando...</p>
+                ) : savedViews.length === 0 ? (
+                  <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>
+                    No hay vistas guardadas todavía.
+                  </p>
+                ) : (
+                  <div className="space-y-1 mb-3">
+                    {savedViews.map(view => (
+                      <div key={view.id} className="flex items-center gap-1">
+                        {/* Estrella: marcar como default */}
+                        <button
+                          onClick={() => view.isDefault ? unsetDefault(view.id) : setDefault(view.id)}
+                          className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+                          style={{ color: view.isDefault ? '#f59e0b' : 'var(--text-secondary)' }}
+                          title={view.isDefault ? 'Quitar vista predeterminada' : 'Marcar como predeterminada'}
+                        >
+                          <svg className="w-3.5 h-3.5" fill={view.isDefault ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        </button>
+                        {/* Nombre: click para aplicar */}
+                        <button
+                          onClick={() => applyView(view)}
+                          className="flex-1 text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                          style={{
+                            backgroundColor: view.isDefault ? getTypeBgDim() : 'var(--bg-tertiary)',
+                            color: view.isDefault ? getTypeColor() : 'var(--text-primary)',
+                          }}
+                        >
+                          {view.name}
+                          {view.isDefault && <span className="ml-1 opacity-60 text-[10px]">predeterminada</span>}
+                        </button>
+                        {/* Eliminar */}
+                        <button
+                          onClick={() => deleteView(view.id)}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-red-500/20 flex-shrink-0"
+                          style={{ color: 'var(--text-secondary)' }}
+                          title="Eliminar vista"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Save current view */}
+                {showSaveInput ? (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={savingViewName}
+                      onChange={(e) => setSavingViewName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveView(); if (e.key === 'Escape') setShowSaveInput(false); }}
+                      placeholder="Nombre de la vista..."
+                      autoFocus
+                      className="flex-1 px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                    />
+                    <button
+                      onClick={handleSaveView}
+                      disabled={!savingViewName.trim()}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-40"
+                      style={{ backgroundColor: getTypeColor() }}
+                    >
+                      OK
+                    </button>
+                    <button
+                      onClick={() => setShowSaveInput(false)}
+                      className="px-2 py-1.5 rounded-lg text-xs transition-colors"
+                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSaveInput(true)}
+                    className="w-full mt-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left"
+                    style={{ backgroundColor: getTypeBgDim(), color: getTypeColor() }}
+                  >
+                    + Guardar vista actual
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Reset button */}
+          {(activeFiltersCount > 0) && (
+            <button
+              onClick={handleReset}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)',
+              }}
+              title="Restablecer filtros"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span className="hidden sm:inline">Restablecer</span>
             </button>
           )}
         </div>
-      )}
-
-      {/* Subtotals */}
-      <div
-        className="rounded-2xl p-4 relative overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{ background: `linear-gradient(135deg, ${getTypeBgDim()} 0%, transparent 70%)` }}
-        />
-        <div className="relative z-10">
-          {/* Count */}
-          <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
-            {filteredMovements.length} {type === 'transferencia' ? 'transferencia' : 'movimiento'}{filteredMovements.length !== 1 ? 's' : ''}
-          </p>
-
-          {type === 'transferencia' ? (
-            /* Transfer totals - show both saliente and entrante */
-            <div className="grid grid-cols-2 gap-2 sm:gap-4">
-              <div className="overflow-hidden">
-                <p className="text-xs mb-1 flex items-center gap-1" style={{ color: 'var(--accent-red)' }}>
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
-                  </svg>
-                  Saliente
-                </p>
-                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-red)' }}>
-                  {formatCurrency(subtotals.totalSaliente, currency)}
-                </p>
-              </div>
-              <div className="text-right overflow-hidden">
-                <p className="text-xs mb-1 flex items-center gap-1 justify-end" style={{ color: 'var(--accent-green)' }}>
-                  Entrante
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h14" />
-                  </svg>
-                </p>
-                <p className="text-base xs:text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--accent-green)' }}>
-                  {formatCurrency(subtotals.totalEntrante, currency)}
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Income/Expense total */
-            <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
-                Total
-              </p>
-              <p className="text-xl sm:text-2xl font-bold" style={{ color: getTypeColor() }}>
-                {formatCurrency(subtotals.total, currency)}
-              </p>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Movements list */}
+      {/* ── Stats summary ── */}
+      <div className="flex items-center gap-3 py-1 text-sm flex-wrap">
+        <span style={{ color: 'var(--text-secondary)' }}>
+          {filteredMovements.length} {type === 'transferencia' ? 'transferencia' : 'movimiento'}{filteredMovements.length !== 1 ? 's' : ''}
+        </span>
+        {type !== 'transferencia' ? (
+          <span className="font-semibold" style={{ color: getTypeColor() }}>
+            {formatCurrency(subtotals.total, currency)}
+          </span>
+        ) : (
+          <>
+            <span className="font-semibold" style={{ color: 'var(--accent-red)' }}>
+              ↓ {formatCurrency(subtotals.totalSaliente, currency)}
+            </span>
+            <span className="font-semibold" style={{ color: 'var(--accent-green)' }}>
+              ↑ {formatCurrency(subtotals.totalEntrante, currency)}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* ── Content ── */}
       {filteredMovements.length === 0 ? (
         renderEmptyState()
-      ) : viewMode === 'table' && !isMobile ? (
-        /* ── Notion-style table (desktop only) ── */
+      ) : !isMobile ? (
+        /* Desktop: always show NotionTable */
         <NotionTable
           movements={filteredMovements}
           type={type}
@@ -1051,33 +1216,21 @@ const MovementsList = memo(function MovementsList({
           storageKey={tableColsKey}
         />
       ) : (
+        /* Mobile: cards */
         <div className="space-y-2">
-          {/* Desktop table header (cards mode) */}
-          <div className="hidden lg:flex items-center gap-3 px-4 py-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
-            {selectionMode && <div className="w-6" />}
-            <div className="w-12" /> {/* Icon space */}
-            <div className="flex-1">Descripción</div>
-            <div className="w-24 text-center">Fecha</div>
-            {type !== 'transferencia' && <div className="w-32 text-center">Cuenta</div>}
-            <div className="w-28 text-right">Monto</div>
-            <div className="w-10" /> {/* Delete button space */}
-          </div>
-          
-          {filteredMovements.map((movement, index) => {
+          {filteredMovements.map((movement) => {
             const itemId = movement.rowIndex || movement.id;
             const isSelected = selectedItems.has(itemId);
 
-            // Movement item content
             const movementContent = (
               <div
-                className={`group rounded-2xl p-4 transition-all duration-200 ${!selectionMode && !isMobile ? 'hover:scale-[1.01]' : ''}`}
+                className="group rounded-2xl p-4 transition-all duration-200"
                 style={{
                   backgroundColor: isSelected ? getTypeBgDim() : 'var(--bg-secondary)',
                   border: isSelected ? `1px solid ${getTypeColor()}` : '1px solid transparent',
                 }}
               >
                 <div className="flex items-center gap-3">
-                  {/* Checkbox for selection mode */}
                   {selectionMode && (
                     <button
                       onClick={() => toggleItemSelection(itemId)}
@@ -1094,7 +1247,7 @@ const MovementsList = memo(function MovementsList({
                       )}
                     </button>
                   )}
-                  
+
                   <button
                     onClick={() => selectionMode ? toggleItemSelection(itemId) : onMovementClick?.(movement)}
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
@@ -1102,216 +1255,157 @@ const MovementsList = memo(function MovementsList({
                   >
                     {/* Icon */}
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 ${!selectionMode ? 'group-hover:scale-110' : ''}`}
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: getTypeBgDim() }}
                     >
-                    {type === 'transferencia' ? (
-                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                      </svg>
-                    ) : type === 'ingreso' ? (
-                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                      </svg>
-                    ) : (
-                      <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                      </svg>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                        {type === 'transferencia'
-                          ? 'Transferencia'
-                          : movement.categoria || '-'}
-                      </p>
-                      {/* Future transaction badge */}
-                      {movement.isFuture && (
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                          style={{
-                            backgroundColor: 'var(--accent-yellow-dim)',
-                            color: 'var(--accent-yellow)',
-                          }}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Futuro
-                        </span>
-                      )}
-                      {/* Recurring badge */}
-                      {movement.isRecurring && (
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                          style={{
-                            backgroundColor: 'var(--accent-purple-dim)',
-                            color: 'var(--accent-purple)',
-                          }}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          Recurrente
-                        </span>
-                      )}
-                      {/* Installment badge */}
-                      {movement.cuota && (
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                          style={{
-                            backgroundColor: 'rgba(20, 184, 166, 0.15)',
-                            color: 'var(--accent-primary)',
-                          }}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                          {movement.cuota}
-                        </span>
-                      )}
-                      {/* Category badge */}
-                      {type !== 'transferencia' && movement.categoria && !movement.cuota && !movement.isFuture && !movement.isRecurring && (
-                        <span
-                          className="px-2 py-0.5 rounded-md text-xs font-medium hidden sm:inline-block"
-                          style={{
-                            backgroundColor: getTypeBgDim(),
-                            color: getTypeColor(),
-                          }}
-                        >
-                          {movement.categoria.split(' ')[0]}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs truncate flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                       {type === 'transferencia' ? (
-                        <>
-                          {renderAccountIcon(movement.cuentaSaliente)}
-                          <span>{movement.cuentaSaliente}</span>
-                          <span>→</span>
-                          {renderAccountIcon(movement.cuentaEntrante)}
-                          <span>{movement.cuentaEntrante}</span>
-                        </>
+                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                      ) : type === 'ingreso' ? (
+                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
                       ) : (
-                        <>
-                          {renderAccountIcon(movement.cuenta)}
-                          <span>{movement.cuenta}</span>
-                        </>
+                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
                       )}
-                    </p>
-                    {movement.nota && (
-                      <p className="text-xs truncate mt-0.5 italic" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
-                        "{movement.nota}"
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                          {type === 'transferencia' ? 'Transferencia' : movement.categoria || '-'}
+                        </p>
+                        {movement.isFuture && (
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
+                            style={{ backgroundColor: 'var(--accent-yellow-dim)', color: 'var(--accent-yellow)' }}
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Futuro
+                          </span>
+                        )}
+                        {movement.isRecurring && (
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
+                            style={{ backgroundColor: 'var(--accent-purple-dim)', color: 'var(--accent-purple)' }}
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Recurrente
+                          </span>
+                        )}
+                        {movement.cuota && (
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
+                            style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            {movement.cuota}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs truncate flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                        {type === 'transferencia' ? (
+                          <>
+                            {renderAccountIcon(movement.cuentaSaliente)}
+                            <span>{movement.cuentaSaliente}</span>
+                            <span>→</span>
+                            {renderAccountIcon(movement.cuentaEntrante)}
+                            <span>{movement.cuentaEntrante}</span>
+                          </>
+                        ) : (
+                          <>
+                            {renderAccountIcon(movement.cuenta)}
+                            <span>{movement.cuenta}</span>
+                          </>
+                        )}
                       </p>
-                    )}
-                  </div>
+                      {movement.nota && (
+                        <p className="text-xs truncate mt-0.5 italic" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
+                          &quot;{movement.nota}&quot;
+                        </p>
+                      )}
+                    </div>
 
-                  {/* Desktop: Show date in separate column */}
-                  <div className="hidden lg:block text-center flex-shrink-0 w-24">
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {formatDate(movement.fecha, 'short')}
-                    </p>
-                  </div>
-
-                  {/* Desktop: Show account/category info */}
-                  {type !== 'transferencia' && (
-                    <div className="hidden lg:flex items-center justify-center gap-1.5 flex-shrink-0 w-32">
-                      {renderAccountIcon(movement.cuenta)}
-                      <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>
-                        {movement.cuenta}
+                    {/* Amount and date */}
+                    <div className="text-right flex-shrink-0 max-w-[45%] sm:max-w-none">
+                      {(() => {
+                        const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
+                        const isUSD = isAccountUSD(accountName);
+                        const currencyCode = isUSD ? 'USD' : 'ARS';
+                        const amount = movement.monto || movement.montoSaliente;
+                        return (
+                          <div className="flex items-center justify-end gap-1">
+                            <img
+                              src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
+                              alt={currencyCode}
+                              className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                            />
+                            <p className="text-[15px] font-bold truncate" style={{ color: getTypeColor() }}>
+                              {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        {formatDate(movement.fecha, 'short')}
                       </p>
                     </div>
+                  </button>
+
+                  {/* Attachment indicator */}
+                  {(movement.attachmentUrl || movement.attachmentUrl2) && !selectionMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadAttachment(movement.attachmentUrl || movement.attachmentUrl2, movement.attachmentName || movement.attachmentName2);
+                      }}
+                      className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 relative"
+                      style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                      title={movement.attachmentUrl && movement.attachmentUrl2 ? '2 adjuntos' : (movement.attachmentName || movement.attachmentName2 || 'Descargar adjunto')}
+                    >
+                      {isImageFile(movement.attachmentName || movement.attachmentName2) ? (
+                        <img
+                          src={movement.attachmentUrl || movement.attachmentUrl2}
+                          alt="Adjunto"
+                          className="w-6 h-6 rounded object-cover"
+                        />
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          style={{ color: 'var(--accent-primary)' }}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      )}
+                      {movement.attachmentUrl && movement.attachmentUrl2 && (
+                        <span
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                          style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+                        >
+                          2
+                        </span>
+                      )}
+                    </button>
                   )}
-
-                  {/* Amount and date */}
-                  <div className="text-right flex-shrink-0 max-w-[45%] sm:max-w-none">
-                    {(() => {
-                      // Determine currency based on the account's currency
-                      const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
-                      const isUSD = isAccountUSD(accountName);
-                      const currencyCode = isUSD ? 'USD' : 'ARS';
-                      const amount = movement.monto || movement.montoSaliente;
-
-                      return (
-                        <div className="flex items-center justify-end gap-1">
-                          <img
-                            src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
-                            alt={currencyCode}
-                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm flex-shrink-0"
-                          />
-                          <p className="text-[15px] xs:text-base sm:text-lg font-bold truncate" style={{ color: getTypeColor() }}>
-                            {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                    <p className="text-xs lg:hidden" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDate(movement.fecha, 'short')}
-                    </p>
-                  </div>
-                </button>
-
-                {/* Attachment indicator */}
-                {(movement.attachmentUrl || movement.attachmentUrl2) && !selectionMode && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadAttachment(movement.attachmentUrl || movement.attachmentUrl2, movement.attachmentName || movement.attachmentName2);
-                    }}
-                    className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 relative"
-                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                    title={movement.attachmentUrl && movement.attachmentUrl2 ? '2 adjuntos' : (movement.attachmentName || movement.attachmentName2 || 'Descargar adjunto')}
-                  >
-                    {isImageFile(movement.attachmentName || movement.attachmentName2) ? (
-                      <img
-                        src={movement.attachmentUrl || movement.attachmentUrl2}
-                        alt="Adjunto"
-                        className="w-6 h-6 rounded object-cover"
-                      />
-                    ) : (
-                      <svg
-                        className="w-4 h-4"
-                        style={{ color: 'var(--accent-primary)' }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                    )}
-                    {movement.attachmentUrl && movement.attachmentUrl2 && (
-                      <span
-                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
-                        style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
-                      >
-                        2
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {/* Delete button - hidden by default and in selection mode, desktop only */}
-                {!selectionMode && !isMobile && (
-                  <button
-                    onClick={(e) => handleDeleteClick(e, movement)}
-                    className="p-2 rounded-xl flex-shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-red-500/20"
-                    style={{ color: 'var(--text-secondary)' }}
-                    title="Eliminar"
-                  >
-                    <svg className="w-5 h-5 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
+                </div>
               </div>
-            </div>
             );
 
             // Wrap with SwipeableItem on mobile for swipe-to-delete
-            return isMobile && !selectionMode ? (
+            return !selectionMode ? (
               <SwipeableItem
                 key={itemId}
                 onDelete={() => {
@@ -1331,7 +1425,7 @@ const MovementsList = memo(function MovementsList({
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Confirmation Modal ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -1360,14 +1454,14 @@ const MovementsList = memo(function MovementsList({
                 <span className="font-semibold text-base" style={{ color: getTypeColor() }}>
                   {type === 'transferencia'
                     ? formatCurrency(
-                        currency === 'ARS' 
-                          ? deleteConfirm.montoSaliente 
+                        currency === 'ARS'
+                          ? deleteConfirm.montoSaliente
                           : (deleteConfirm.montoSalienteDolares || 0),
                         currency
                       )
                     : formatCurrency(
-                        currency === 'ARS' 
-                          ? (deleteConfirm.montoPesos || deleteConfirm.monto) 
+                        currency === 'ARS'
+                          ? (deleteConfirm.montoPesos || deleteConfirm.monto)
                           : (deleteConfirm.montoDolares || 0),
                         currency
                       )}
@@ -1394,7 +1488,7 @@ const MovementsList = memo(function MovementsList({
         </div>
       )}
 
-      {/* Bulk Delete Confirmation Modal */}
+      {/* ── Bulk Delete Modal ── */}
       {bulkAction === 'delete' && (
         <ConfirmModal
           isOpen={true}
@@ -1408,7 +1502,7 @@ const MovementsList = memo(function MovementsList({
         />
       )}
 
-      {/* Bulk Edit Account Modal */}
+      {/* ── Bulk Edit Account Modal ── */}
       {bulkAction === 'editAccount' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -1425,7 +1519,6 @@ const MovementsList = memo(function MovementsList({
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
               Cambiar la cuenta de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
             </p>
-            
             <div className="mb-4">
               <Combobox
                 value={bulkEditValue}
@@ -1434,7 +1527,6 @@ const MovementsList = memo(function MovementsList({
                 placeholder="Seleccionar cuenta..."
               />
             </div>
-            
             <div className="flex gap-3">
               <button
                 onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
@@ -1456,7 +1548,7 @@ const MovementsList = memo(function MovementsList({
         </div>
       )}
 
-      {/* Bulk Edit Category Modal */}
+      {/* ── Bulk Edit Category Modal ── */}
       {bulkAction === 'editCategory' && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center p-4 pt-20">
           <div
@@ -1473,7 +1565,6 @@ const MovementsList = memo(function MovementsList({
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
               Cambiar la categoría de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
             </p>
-
             <div className="mb-4">
               <Combobox
                 value={bulkEditValue}
@@ -1487,7 +1578,6 @@ const MovementsList = memo(function MovementsList({
                 placeholder="Seleccionar categoría..."
               />
             </div>
-
             <div className="flex gap-3">
               <button
                 onClick={() => { setBulkAction(null); setBulkEditValue(''); }}
@@ -1509,7 +1599,7 @@ const MovementsList = memo(function MovementsList({
         </div>
       )}
 
-      {/* Bulk Edit Date Modal */}
+      {/* ── Bulk Edit Date Modal ── */}
       {bulkAction === 'editDate' && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20">
           <div
@@ -1526,7 +1616,6 @@ const MovementsList = memo(function MovementsList({
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
               Cambiar la fecha de {selectedItems.size} movimiento{selectedItems.size !== 1 ? 's' : ''}
             </p>
-
             <div className="mb-4">
               <DatePicker
                 value={bulkDateValue}
@@ -1534,7 +1623,6 @@ const MovementsList = memo(function MovementsList({
                 name="bulkDate"
               />
             </div>
-
             <div className="flex gap-3">
               <button
                 onClick={() => { setBulkAction(null); setBulkDateValue(''); }}

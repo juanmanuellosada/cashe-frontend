@@ -4972,3 +4972,66 @@ export const updateUserSettings = async (settings) => {
   invalidateCache('userSettings');
   return data;
 };
+
+// ─── Saved Views ──────────────────────────────────────────────────────────────
+
+const mapView = (row) => ({
+  id: row.id,
+  name: row.name,
+  type: row.type,
+  filters: row.filters,
+  sortConfig: row.sort_config,
+  isDefault: row.is_default,
+  createdAt: row.created_at,
+});
+
+export const getSavedViews = async (type) => {
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from('saved_views')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapView);
+};
+
+export const createSavedView = async ({ type, name, filters, sortConfig }) => {
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from('saved_views')
+    .insert({ user_id: userId, type, name, filters, sort_config: sortConfig })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapView(data);
+};
+
+export const deleteSavedView = async (id) => {
+  const { error } = await supabase.from('saved_views').delete().eq('id', id);
+  if (error) throw error;
+};
+
+export const setDefaultSavedView = async (id, type) => {
+  const userId = await getUserId();
+  // Quitar default anterior del mismo tipo
+  await supabase
+    .from('saved_views')
+    .update({ is_default: false })
+    .eq('user_id', userId)
+    .eq('type', type);
+  const { error } = await supabase
+    .from('saved_views')
+    .update({ is_default: true })
+    .eq('id', id);
+  if (error) throw error;
+};
+
+export const unsetDefaultSavedView = async (id) => {
+  const { error } = await supabase
+    .from('saved_views')
+    .update({ is_default: false })
+    .eq('id', id);
+  if (error) throw error;
+};
