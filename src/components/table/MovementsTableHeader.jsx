@@ -51,11 +51,12 @@ const MovementsTableHeader = memo(function MovementsTableHeader({
         gridTemplateColumns,
         backgroundColor: 'var(--bg-secondary)',
         borderColor: 'var(--border-subtle)',
-        top: '56px',
+        top: 0,
       }}
     >
-      {selectionMode && (
-        <div className="flex items-center justify-center px-2 py-2.5">
+      {/* Checkbox column - always first */}
+      <div className="flex items-center justify-center px-2 py-2.5">
+        {selectionMode ? (
           <button
             onClick={onSelectAll}
             className="w-4 h-4 rounded flex items-center justify-center transition-all flex-shrink-0"
@@ -74,8 +75,10 @@ const MovementsTableHeader = memo(function MovementsTableHeader({
               <div className="w-2 h-px" style={{ backgroundColor: 'var(--accent-primary)' }} />
             )}
           </button>
-        </div>
-      )}
+        ) : (
+          <div className="w-4 h-4" />
+        )}
+      </div>
 
       {columns.map((col) => {
         const isActive = sortConfig.sortBy === col.sortId;

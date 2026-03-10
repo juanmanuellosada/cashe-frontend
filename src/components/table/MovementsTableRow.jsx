@@ -53,26 +53,25 @@ const MovementsTableRow = memo(function MovementsTableRow({
       }}
       onClick={handleRowClick}
     >
-      {selectionMode && (
+      {/* Checkbox column - always first */}
+      <div
+        className="flex items-center justify-center px-2 py-2.5"
+        onClick={(e) => { e.stopPropagation(); onToggleSelect(itemId); }}
+      >
         <div
-          className="flex items-center justify-center px-2 py-2.5"
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(itemId); }}
+          className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all ${!selectionMode ? 'opacity-0 group-hover:opacity-60' : ''}`}
+          style={{
+            backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+            border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border)'}`,
+          }}
         >
-          <div
-            className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
-            style={{
-              backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
-              border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border)'}`,
-            }}
-          >
-            {isSelected && (
-              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
+          {isSelected && (
+            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
         </div>
-      )}
+      </div>
 
       {type !== 'transferencia' ? (
         <>
@@ -145,6 +144,30 @@ const MovementsTableRow = memo(function MovementsTableRow({
                   />
                   <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: getTypeColor() }}>
                     {type === 'ingreso' ? '+' : '-'}{formatCurrency(movement.monto, currencyCode)}
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Equivalente (otra moneda) */}
+          <div className="flex items-center justify-end gap-1 px-3 py-2">
+            {(() => {
+              const isUSD = isAccountUSD(movement.cuenta);
+              const equivCode = isUSD ? 'ARS' : 'USD';
+              const equivAmount = isUSD
+                ? (movement.montoPesos || null)
+                : (movement.montoDolares || null);
+              if (!equivAmount) return <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>—</span>;
+              return (
+                <>
+                  <img
+                    src={`${import.meta.env.BASE_URL}icons/catalog/${equivCode}.svg`}
+                    alt={equivCode}
+                    className="w-3.5 h-3.5 rounded-sm flex-shrink-0 opacity-50"
+                  />
+                  <span className="text-xs tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                    {formatCurrency(equivAmount, equivCode)}
                   </span>
                 </>
               );

@@ -113,20 +113,22 @@ function Expenses() {
   };
 
   return (
-    <PullToRefresh onRefresh={fetchData} disabled={loading}>
-      <MovementsList
-        title="Gastos"
-        movements={expenses}
-        accounts={accounts}
-        categories={categories.gastos || []}
-        loading={loading}
-        onMovementClick={setEditingMovement}
-        onMovementDelete={handleDelete}
-        onBulkDelete={handleBulkDelete}
-        onBulkUpdate={handleBulkUpdate}
-        onAddClick={() => setShowAddModal(true)}
-        type="gasto"
-      />
+    <>
+      <PullToRefresh onRefresh={fetchData} disabled={loading}>
+        <MovementsList
+          title="Gastos"
+          movements={expenses}
+          accounts={accounts}
+          categories={categories.gastos || []}
+          loading={loading}
+          onMovementClick={setEditingMovement}
+          onMovementDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onBulkUpdate={handleBulkUpdate}
+          onAddClick={() => setShowAddModal(true)}
+          type="gasto"
+        />
+      </PullToRefresh>
       {editingMovement && (
         <EditMovementModal
           movement={editingMovement}
@@ -147,7 +149,7 @@ function Expenses() {
         }}
         defaultType="expense"
       />
-    </PullToRefresh>
+    </>
   );
 }
 

@@ -16,10 +16,11 @@ function getColumns(type) {
   }
   return [
     { id: 'fecha', label: 'Fecha', resizable: false, defaultWidth: 90, sortable: true, sortId: 'date' },
-    { id: 'nota', label: 'Descripción', resizable: true, defaultWidth: 220, minWidth: 120, maxWidth: 500, sortable: false },
-    { id: 'categoria', label: 'Categoría', resizable: true, defaultWidth: 160, minWidth: 100, maxWidth: 300, sortable: true, sortId: 'category' },
-    { id: 'cuenta', label: 'Cuenta', resizable: true, defaultWidth: 150, minWidth: 80, maxWidth: 300, sortable: true, sortId: 'account' },
-    { id: 'monto', label: 'Monto', resizable: false, defaultWidth: 130, sortable: true, sortId: 'amount', align: 'right' },
+    { id: 'nota', label: 'Descripción', resizable: true, defaultWidth: 200, minWidth: 120, maxWidth: 500, sortable: false },
+    { id: 'categoria', label: 'Categoría', resizable: true, defaultWidth: 150, minWidth: 100, maxWidth: 300, sortable: true, sortId: 'category' },
+    { id: 'cuenta', label: 'Cuenta', resizable: true, defaultWidth: 140, minWidth: 80, maxWidth: 300, sortable: true, sortId: 'account' },
+    { id: 'monto', label: 'Monto', resizable: false, defaultWidth: 120, sortable: true, sortId: 'amount', align: 'right' },
+    { id: 'equivalente', label: 'Equiv.', resizable: false, defaultWidth: 110, sortable: false, align: 'right' },
   ];
 }
 
@@ -45,15 +46,14 @@ export default function MovementsTable({
   const { columnWidths, onResizeStart } = useColumnResize(columns, storageKey);
 
   const gridTemplateColumns = useMemo(() => {
-    const parts = [];
-    if (selectionMode) parts.push('32px');
+    const parts = ['40px']; // checkbox always first
     columns.forEach((col) => {
       const w = col.resizable ? (columnWidths[col.id] ?? col.defaultWidth) : col.defaultWidth;
       parts.push(`${w}px`);
     });
     parts.push('36px'); // actions
     return parts.join(' ');
-  }, [columns, columnWidths, selectionMode]);
+  }, [columns, columnWidths]);
 
   const allSelected = movements.length > 0 && movements.every((m) => selectedItems.has(m.rowIndex || m.id));
   const someSelected = !allSelected && movements.some((m) => selectedItems.has(m.rowIndex || m.id));
@@ -68,8 +68,13 @@ export default function MovementsTable({
 
   return (
     <div
-      className="overflow-x-auto rounded-xl"
-      style={{ border: '1px solid var(--border-subtle)' }}
+      className="rounded-xl"
+      style={{
+        border: '1px solid var(--border-subtle)',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        maxHeight: 'calc(100vh - 260px)',
+      }}
     >
       <div style={{ minWidth: 'max-content', width: '100%' }}>
         <MovementsTableHeader

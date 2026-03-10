@@ -107,20 +107,22 @@ function Income() {
   };
 
   return (
-    <PullToRefresh onRefresh={fetchData} disabled={loading}>
-      <MovementsList
-        title="Ingresos"
-        movements={incomes}
-        accounts={accounts}
-        categories={categories.ingresos || []}
-        loading={loading}
-        onMovementClick={setEditingMovement}
-        onMovementDelete={handleDelete}
-        onBulkDelete={handleBulkDelete}
-        onBulkUpdate={handleBulkUpdate}
-        onAddClick={() => setShowAddModal(true)}
-        type="ingreso"
-      />
+    <>
+      <PullToRefresh onRefresh={fetchData} disabled={loading}>
+        <MovementsList
+          title="Ingresos"
+          movements={incomes}
+          accounts={accounts}
+          categories={categories.ingresos || []}
+          loading={loading}
+          onMovementClick={setEditingMovement}
+          onMovementDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onBulkUpdate={handleBulkUpdate}
+          onAddClick={() => setShowAddModal(true)}
+          type="ingreso"
+        />
+      </PullToRefresh>
       {editingMovement && (
         <EditMovementModal
           movement={editingMovement}
@@ -141,7 +143,7 @@ function Income() {
         }}
         defaultType="income"
       />
-    </PullToRefresh>
+    </>
   );
 }
 
