@@ -14,7 +14,7 @@ function AccountIcon({ icon }) {
   );
 }
 
-const NotionTableRow = memo(function NotionTableRow({
+const MovementsTableRow = memo(function MovementsTableRow({
   movement,
   type,
   accounts,
@@ -76,32 +76,28 @@ const NotionTableRow = memo(function NotionTableRow({
 
       {type !== 'transferencia' ? (
         <>
-          {/* Descripción: categoría + nota */}
-          <div className="flex items-center gap-2 px-3 py-2 min-w-0">
-            <div
-              className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: getTypeBgDim() }}
+          {/* Fecha */}
+          <div className="flex items-center px-3 py-2">
+            <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+              {formatDate(movement.fecha, 'short')}
+            </span>
+          </div>
+
+          {/* Nota / Descripción */}
+          <div className="flex items-center px-3 py-2 min-w-0">
+            <span
+              className="text-sm truncate"
+              style={{ color: movement.nota ? 'var(--text-primary)' : 'var(--text-secondary)' }}
             >
-              {type === 'ingreso' ? (
-                <svg className="w-3 h-3" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                </svg>
-              ) : (
-                <svg className="w-3 h-3" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate leading-tight" style={{ color: 'var(--text-primary)' }}>
-                {movement.categoria || '—'}
-              </p>
-              {movement.nota && (
-                <p className="text-xs truncate leading-tight" style={{ color: 'var(--text-secondary)' }}>
-                  {movement.nota}
-                </p>
-              )}
-            </div>
+              {movement.nota || '—'}
+            </span>
+          </div>
+
+          {/* Categoría + badges */}
+          <div className="flex items-center gap-1.5 px-3 py-2 min-w-0">
+            <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+              {movement.categoria || '—'}
+            </span>
             {movement.cuota && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
@@ -128,13 +124,6 @@ const NotionTableRow = memo(function NotionTableRow({
             )}
           </div>
 
-          {/* Fecha */}
-          <div className="flex items-center px-3 py-2">
-            <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-              {formatDate(movement.fecha, 'short')}
-            </span>
-          </div>
-
           {/* Cuenta */}
           <div className="flex items-center gap-1.5 px-3 py-2 min-w-0">
             <AccountIcon icon={getAccountIcon(movement.cuenta)} />
@@ -154,7 +143,7 @@ const NotionTableRow = memo(function NotionTableRow({
                     alt={currencyCode}
                     className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
                   />
-                  <span className="text-sm font-semibold tabular-nums" style={{ color: getTypeColor() }}>
+                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: getTypeColor() }}>
                     {type === 'ingreso' ? '+' : '-'}{formatCurrency(movement.monto, currencyCode)}
                   </span>
                 </>
@@ -243,4 +232,4 @@ const NotionTableRow = memo(function NotionTableRow({
   );
 });
 
-export default NotionTableRow;
+export default MovementsTableRow;

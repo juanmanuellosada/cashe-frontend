@@ -13,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
-import NotionTable from './table/NotionTable';
+import MovementsTable from './table/MovementsTable';
 import { useSavedViews } from '../hooks/useSavedViews';
 
 // ─── FilterChip ───────────────────────────────────────────────────────────────
@@ -1196,8 +1196,8 @@ const MovementsList = memo(function MovementsList({
       {filteredMovements.length === 0 ? (
         renderEmptyState()
       ) : !isMobile ? (
-        /* Desktop: always show NotionTable */
-        <NotionTable
+        /* Desktop: always show MovementsTable */
+        <MovementsTable
           movements={filteredMovements}
           type={type}
           accounts={accounts}

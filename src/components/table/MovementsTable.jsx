@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useColumnResize } from './useColumnResize';
-import NotionTableHeader from './NotionTableHeader';
-import NotionTableRow from './NotionTableRow';
+import MovementsTableHeader from './MovementsTableHeader';
+import MovementsTableRow from './MovementsTableRow';
 
 function getColumns(type) {
   if (type === 'transferencia') {
@@ -15,14 +15,15 @@ function getColumns(type) {
     ];
   }
   return [
-    { id: 'descripcion', label: 'Descripción', resizable: true, defaultWidth: 260, minWidth: 160, maxWidth: 600, sortable: false },
     { id: 'fecha', label: 'Fecha', resizable: false, defaultWidth: 90, sortable: true, sortId: 'date' },
+    { id: 'nota', label: 'Descripción', resizable: true, defaultWidth: 220, minWidth: 120, maxWidth: 500, sortable: false },
+    { id: 'categoria', label: 'Categoría', resizable: true, defaultWidth: 160, minWidth: 100, maxWidth: 300, sortable: true, sortId: 'category' },
     { id: 'cuenta', label: 'Cuenta', resizable: true, defaultWidth: 150, minWidth: 80, maxWidth: 300, sortable: true, sortId: 'account' },
     { id: 'monto', label: 'Monto', resizable: false, defaultWidth: 130, sortable: true, sortId: 'amount', align: 'right' },
   ];
 }
 
-export default function NotionTable({
+export default function MovementsTable({
   movements,
   type,
   accounts,
@@ -71,7 +72,7 @@ export default function NotionTable({
       style={{ border: '1px solid var(--border-subtle)' }}
     >
       <div style={{ minWidth: 'max-content', width: '100%' }}>
-        <NotionTableHeader
+        <MovementsTableHeader
           columns={columns}
           sortConfig={sortConfig}
           onSortChange={onSortChange}
@@ -83,7 +84,7 @@ export default function NotionTable({
           gridTemplateColumns={gridTemplateColumns}
         />
         {movements.map((movement) => (
-          <NotionTableRow
+          <MovementsTableRow
             key={movement.rowIndex || movement.id}
             movement={movement}
             type={type}

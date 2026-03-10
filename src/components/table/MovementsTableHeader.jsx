@@ -3,26 +3,26 @@ import { memo } from 'react';
 function SortIcon({ direction }) {
   if (!direction) {
     return (
-      <svg className="w-3 h-3 opacity-0 group-hover/col:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3 h-3 flex-shrink-0 opacity-0 group-hover/col:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
     );
   }
   if (direction === 'asc') {
     return (
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
       </svg>
     );
   }
   return (
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }
 
-const NotionTableHeader = memo(function NotionTableHeader({
+const MovementsTableHeader = memo(function MovementsTableHeader({
   columns,
   sortConfig,
   onSortChange,
@@ -92,7 +92,7 @@ const NotionTableHeader = memo(function NotionTableHeader({
               style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
             >
               <span className="truncate">{col.label}</span>
-              {col.sortable && <SortIcon direction={isActive ? sortConfig.sortOrder : null} />}
+              {col.sortable && <span className="flex-shrink-0"><SortIcon direction={isActive ? sortConfig.sortOrder : null} /></span>}
             </button>
 
             {col.resizable && (
@@ -115,4 +115,4 @@ const NotionTableHeader = memo(function NotionTableHeader({
   );
 });
 
-export default NotionTableHeader;
+export default MovementsTableHeader;
