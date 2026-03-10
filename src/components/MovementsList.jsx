@@ -6,7 +6,6 @@ import DateRangePicker from './DateRangePicker';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
-import SortDropdown from './SortDropdown';
 import SwipeableItem from './SwipeableItem';
 import { useError } from '../contexts/ErrorContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -831,12 +830,6 @@ const MovementsList = memo(function MovementsList({
           )}
         </button>
 
-        {/* Sort Dropdown */}
-        <SortDropdown
-          options={sortOptions}
-          value={sortConfig}
-          onChange={setSortConfig}
-        />
       </div>
 
       {/* Filters Panel */}
