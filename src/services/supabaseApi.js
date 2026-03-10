@@ -952,6 +952,7 @@ const mapMovementFromDB = (m, accounts, categories) => {
     id: m.id,
     rowIndex: m.id, // compatibility
     fecha: m.date,
+    createdAt: m.created_at,
     monto: amount,
     // Montos separados por moneda para tarjetas de crédito
     montoPesos: isUSD ? 0 : amount,
@@ -996,7 +997,8 @@ export const getExpenses = async (forceRefresh = false) => {
       .select('*')
       .eq('user_id', userId)
       .eq('type', 'expense')
-      .order('date', { ascending: false }),
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false }),
     supabase.from('accounts').select('id, name').eq('user_id', userId),
     supabase.from('categories').select('id, name').eq('user_id', userId)
   ]);
@@ -1023,7 +1025,8 @@ export const getIncomes = async (forceRefresh = false) => {
       .select('*')
       .eq('user_id', userId)
       .eq('type', 'income')
-      .order('date', { ascending: false }),
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false }),
     supabase.from('accounts').select('id, name').eq('user_id', userId),
     supabase.from('categories').select('id, name').eq('user_id', userId)
   ]);

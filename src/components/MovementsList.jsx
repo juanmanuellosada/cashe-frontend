@@ -258,6 +258,12 @@ const MovementsList = memo(function MovementsList({
       switch (sortBy) {
         case 'date':
           comparison = parseLocalDate(a.fecha) - parseLocalDate(b.fecha);
+          // Desempate por fecha de creación (más reciente primero)
+          if (comparison === 0) {
+            const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return (cb - ca); // siempre más reciente primero, independiente de sortOrder
+          }
           break;
         case 'amount':
           if (type === 'transferencia') {

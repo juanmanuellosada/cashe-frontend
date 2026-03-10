@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getAccounts, invalidateMovementCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
 import { formatCurrency } from '../utils/format';
@@ -89,16 +89,23 @@ function Accounts() {
     };
   }, []);
 
+  // Guard para evitar loop infinito: invalidateMovementCache emite ACCOUNTS_CHANGED de vuelta
+  const isRefetching = useRef(false);
+
   // Suscribirse a cambios de datos para refrescar automáticamente
   const handleDataChange = useCallback(() => {
-    fetchAccounts(true);
+    if (isRefetching.current) return;
+    isRefetching.current = true;
+    fetchAccounts(true, true).finally(() => {
+      isRefetching.current = false;
+    });
   }, []);
 
   useDataEvent([DataEvents.ACCOUNTS_CHANGED, DataEvents.EXPENSES_CHANGED, DataEvents.INCOMES_CHANGED, DataEvents.TRANSFERS_CHANGED], handleDataChange);
 
-  const fetchAccounts = async (forceRefresh = false) => {
+  const fetchAccounts = async (forceRefresh = false, silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       // Invalidar solo cache de cuentas antes de obtener datos frescos
       if (forceRefresh) {
         invalidateMovementCache('accounts');
@@ -108,7 +115,7 @@ function Accounts() {
     } catch (err) {
       console.error('Error fetching accounts:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -219,13 +226,35 @@ function Accounts() {
   };
 
   const handleSave = async (formData) => {
+    // Optimistic update: actualizar UI inmediatamente sin esperar al servidor
+    const prevAccounts = accounts;
+    setAccounts(prev => prev.map(acc => {
+      if (acc.id !== formData.id) return acc;
+      const balanceDiff = (formData.balanceInicial || 0) - (acc.balanceInicial || 0);
+      return {
+        ...acc,
+        nombre: formData.nombre,
+        balanceInicial: formData.balanceInicial || 0,
+        balanceActual: (acc.balanceActual || 0) + balanceDiff,
+        moneda: formData.moneda,
+        numeroCuenta: formData.numeroCuenta || '',
+        tipo: formData.tipo,
+        esTarjetaCredito: formData.esTarjetaCredito || false,
+        diaCierre: formData.diaCierre,
+        diaVencimiento: formData.diaVencimiento,
+        icon: formData.icon || null,
+        ocultaDelBalance: formData.ocultaDelBalance || false,
+      };
+    }));
+    setEditingAccount(null); // Cerrar modal inmediatamente
+
     try {
       setSaving(true);
       await updateAccount(formData);
-      setEditingAccount(null);
-      await fetchAccounts();
+      // El evento ACCOUNTS_CHANGED hará un refresh silencioso en background
     } catch (err) {
       console.error('Error updating account:', err);
+      setAccounts(prevAccounts); // Revertir en caso de error
       showError('No se pudo guardar la cuenta', err.message);
     } finally {
       setSaving(false);

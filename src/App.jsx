@@ -57,12 +57,10 @@ const PageLoader = () => (
  */
 function StoreInitializer() {
   const { user } = useAuth()
-  const { fetchAccounts, fetchCategories, fetchDashboard, reset } = useAppStore(state => ({
-    fetchAccounts: state.fetchAccounts,
-    fetchCategories: state.fetchCategories,
-    fetchDashboard: state.fetchDashboard,
-    reset: state.reset,
-  }))
+  const fetchAccounts = useAppStore(state => state.fetchAccounts)
+  const fetchCategories = useAppStore(state => state.fetchCategories)
+  const fetchDashboard = useAppStore(state => state.fetchDashboard)
+  const reset = useAppStore(state => state.reset)
 
   useEffect(() => {
     if (user) {
