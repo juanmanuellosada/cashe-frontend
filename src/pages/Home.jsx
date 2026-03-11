@@ -8,6 +8,7 @@ import QuickStats from '../components/dashboard/QuickStats';
 import AccountBalances from '../components/dashboard/AccountBalances';
 import WeeklySummary from '../components/dashboard/WeeklySummary';
 import RecentMovements from '../components/dashboard/RecentMovements';
+import CategoryFlowChart from '../components/charts/CategoryFlowChart';
 import CreditCardDueAlert from '../components/dashboard/CreditCardDueAlert';
 import EconomicIndicatorsCard from '../components/dashboard/EconomicIndicatorsCard';
 import EditMovementModal from '../components/EditMovementModal';
@@ -409,6 +410,11 @@ function Home() {
         categories={categories}
         loading={loadingWeekly}
       />
+
+      {/* Category Flow Chart */}
+      {movements.length > 0 && (
+        <CategoryFlowChart movements={movements} currency={currency} accounts={accounts} categories={categories.gastos || []} />
+      )}
 
       {/* Recent Movements - Full width */}
       <RecentMovements
