@@ -735,7 +735,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
       {/* Adjuntos - Solo para gastos sin cuotas */}
       {!(esTarjetaCredito && cantidadCuotas > 1) && (
-        <>
+        <div className="grid grid-cols-2 gap-2">
           <AttachmentInput
             value={attachment}
             onChange={setAttachment}
@@ -748,7 +748,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
             disabled={loading}
             label="Adjunto 2"
           />
-        </>
+        </div>
       )}
 
       {/* Impacto en presupuestos y metas */}

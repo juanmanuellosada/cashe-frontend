@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { formatCurrency } from '../../utils/format';
-import DateRangePicker from '../DateRangePicker';
+import DateFilterChip from '../DateFilterChip';
 
 function PeriodFlowCard({
   accounts = [],
@@ -51,10 +51,9 @@ function PeriodFlowCard({
           Flujo del período
         </span>
         <div className="self-start min-[400px]:self-auto">
-          <DateRangePicker
-            value={dateRange}
+          <DateFilterChip
+            value={dateRange || { from: null, to: null }}
             onChange={onDateRangeChange}
-            defaultPreset="Este mes"
           />
         </div>
       </div>

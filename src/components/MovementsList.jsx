@@ -1,4 +1,5 @@
 import { memo, useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { formatCurrency, formatDate, parseLocalDate } from '../utils/format';
@@ -7,20 +8,122 @@ import DateFilterChip from './DateFilterChip';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
 import ConfirmModal from './ConfirmModal';
-import SwipeableItem from './SwipeableItem';
 import { useError } from '../contexts/ErrorContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
-import { useHaptics } from '../hooks/useHaptics';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import MovementsTable from './table/MovementsTable';
 import { useSavedViews } from '../hooks/useSavedViews';
+
+// ─── ViewTab ──────────────────────────────────────────────────────────────────
+const ICON_EDIT = (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+const ICON_STAR = (filled) => (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+  </svg>
+);
+const ICON_TRASH = (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+const TABLE_ICON = (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+  </svg>
+);
+
+// Renders context menu via portal, auto-clamped to viewport
+function ContextMenuPortal({ x, y, children }) {
+  const menuRef = useRef(null);
+  const [pos, setPos] = useState({ top: y + 4, left: x + 4 });
+
+  useEffect(() => {
+    if (!menuRef.current) return;
+    const { offsetWidth: w, offsetHeight: h } = menuRef.current;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    setPos({
+      top: Math.min(y + 4, vh - h - 8),
+      left: Math.min(x + 4, vw - w - 8),
+    });
+  }, [x, y]);
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="fixed z-[9999] rounded-xl shadow-2xl py-1 min-w-[180px]"
+      style={{
+        top: pos.top,
+        left: pos.left,
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border-subtle)',
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+function ViewTab({
+  label, isActive, isRenaming, renameValue,
+  accentColor, onClick, onDoubleClick, onContextMenu,
+  onRenameChange, onRenameCommit, onRenameCancel,
+}) {
+  if (isRenaming) {
+    return (
+      <div className="flex items-center px-2 py-1.5 flex-shrink-0" style={{ marginBottom: '-1px' }}>
+        <input
+          type="text"
+          value={renameValue}
+          onChange={(e) => onRenameChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onRenameCommit(renameValue);
+            if (e.key === 'Escape') onRenameCancel();
+          }}
+          onBlur={() => onRenameCommit(renameValue)}
+          autoFocus
+          className="w-28 px-2 py-0.5 rounded text-xs"
+          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: `1px solid ${accentColor}` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex-shrink-0">
+      <button
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors rounded-t-lg"
+        style={{
+          color: isActive ? accentColor : 'var(--text-secondary)',
+          borderBottom: `2px solid ${isActive ? accentColor : 'transparent'}`,
+          marginBottom: '-1px',
+          backgroundColor: 'transparent',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      >
+        {TABLE_ICON}
+        {label}
+      </button>
+    </div>
+  );
+}
 
 // ─── FilterChip ───────────────────────────────────────────────────────────────
 function FilterChip({ label, onRemove }) {
   return (
     <span
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium"
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
       style={{
         backgroundColor: 'var(--bg-tertiary)',
         color: 'var(--text-primary)',
@@ -55,13 +158,11 @@ const MovementsList = memo(function MovementsList({
   const navigate = useNavigate();
   const { showError } = useError();
   const { user } = useAuth();
-  const haptics = useHaptics();
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   // Exchange rate for equivalente column
   const [tipoCambio, setTipoCambio] = useState(1000);
@@ -71,14 +172,21 @@ const MovementsList = memo(function MovementsList({
 
   // Popovers / saved views UI state
   const [showAddFilter, setShowAddFilter] = useState(false);
-  const [showSavedViews, setShowSavedViews] = useState(false);
+  const [showDateFormatMenu, setShowDateFormatMenu] = useState(false);
+  const [dateFormat, setDateFormat] = useState('short'); // 'short' | 'full' | 'medium' | 'slash' | 'relative'
   const [savingViewName, setSavingViewName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [activeViewId, setActiveViewId] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, tabId, viewId, isDefaultTab }
+  const [renamingViewId, setRenamingViewId] = useState(null); // id of view being renamed inline
+  const [renameInputValue, setRenameInputValue] = useState('');
+
+  // Per-tab filter/sort state memory (in-memory, survives tab switches)
+  const viewStatesRef = useRef({});
 
   // Refs for click-outside handling
   const filterPopoverRef = useRef(null);
-  const savedViewsRef = useRef(null);
+  const dateFormatMenuRef = useRef(null);
 
   // Helper to get account by name
   const getAccount = (accountName) => {
@@ -134,17 +242,25 @@ const MovementsList = memo(function MovementsList({
     return () => document.removeEventListener('mousedown', handler);
   }, [showAddFilter]);
 
-  // Close saved-views dropdown on click-outside
+  // Close date format menu on click-outside
   useEffect(() => {
-    if (!showSavedViews) return;
+    if (!showDateFormatMenu) return;
     const handler = (e) => {
-      if (savedViewsRef.current && !savedViewsRef.current.contains(e.target)) {
-        setShowSavedViews(false);
+      if (dateFormatMenuRef.current && !dateFormatMenuRef.current.contains(e.target)) {
+        setShowDateFormatMenu(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showSavedViews]);
+  }, [showDateFormatMenu]);
+
+  // Close context menu on any click
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => setContextMenu(null);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [contextMenu]);
 
   // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -165,7 +281,7 @@ const MovementsList = memo(function MovementsList({
   const [filtersLoaded, setFiltersLoaded] = useState(false);
 
   // Saved views (Supabase — persisten entre dispositivos)
-  const { views: savedViews, loading: viewsLoading, saveView, deleteView, setDefault, unsetDefault, defaultView } = useSavedViews(type, uid);
+  const { views: savedViews, loading: viewsLoading, saveView, deleteView, setDefault, unsetDefault, renameView, defaultView } = useSavedViews(type, uid);
 
   // Auto-aplicar vista default la primera vez que carga (una sola vez)
   const defaultAppliedRef = useRef(false);
@@ -362,17 +478,17 @@ const MovementsList = memo(function MovementsList({
       const totalEntranteARS = filteredMovements.reduce((sum, m) => sum + (m.montoEntrante || 0), 0);
       return { totalSalienteARS, totalEntranteARS };
     } else {
-      const totalARS = filteredMovements.reduce((sum, m) => {
-        if (m.monedaOriginal === 'USD') return sum;
-        return sum + (m.monto || 0);
-      }, 0);
-      const totalUSD = filteredMovements.reduce((sum, m) => {
-        if (m.monedaOriginal !== 'USD') return sum;
-        return sum + (m.monto || 0);
-      }, 0);
-      return { totalARS, totalUSD };
+      const nativeARS = filteredMovements.reduce((sum, m) =>
+        m.monedaOriginal !== 'USD' ? sum + (m.monto || 0) : sum, 0);
+      const nativeUSD = filteredMovements.reduce((sum, m) =>
+        m.monedaOriginal === 'USD' ? sum + (m.monto || 0) : sum, 0);
+      const tc = tipoCambio || 1000;
+      // Grand totals: native + converted equivalent
+      const totalEnARS = nativeARS + nativeUSD * tc;
+      const totalEnUSD = nativeUSD + nativeARS / tc;
+      return { nativeARS, nativeUSD, totalEnARS, totalEnUSD };
     }
-  }, [filteredMovements, type]);
+  }, [filteredMovements, type, tipoCambio]);
 
   const toggleAccount = (accountName) => {
     setSelectedAccounts(prev =>
@@ -390,21 +506,72 @@ const MovementsList = memo(function MovementsList({
     );
   };
 
-  const clearFilters = () => {
-    setDateRange({ from: null, to: null });
-    setSelectedAccounts([]);
-    setSelectedCategories([]);
-    setSearchText('');
-  };
+  const getDefaultFilters = useCallback(() => {
+    const now = new Date();
+    return {
+      dateRange: (type === 'gasto' || type === 'ingreso')
+        ? { from: startOfMonth(now), to: endOfMonth(now) }
+        : { from: null, to: null },
+      selectedAccounts: [],
+      selectedCategories: [],
+      searchText: '',
+      sortConfig: { sortBy: 'date', sortOrder: 'desc' },
+      dateFormat: 'short',
+    };
+  }, [type]);
 
-  const handleReset = () => {
-    setActiveViewId(null);
-    clearFilters();
-    if (type === 'gasto' || type === 'ingreso') {
-      const now = new Date();
-      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+  const applyFilters = useCallback((s) => {
+    setDateRange(s.dateRange);
+    setSelectedAccounts(s.selectedAccounts);
+    setSelectedCategories(s.selectedCategories);
+    setSearchText(s.searchText);
+    setSortConfig(s.sortConfig);
+    if (s.dateFormat) setDateFormat(s.dateFormat);
+  }, []);
+
+  // Switch tab: saves current state, restores target tab state
+  const switchTab = useCallback((newViewId, view = null) => {
+    // Save current tab state
+    const currentKey = activeViewId === null ? '__default' : activeViewId;
+    viewStatesRef.current[currentKey] = {
+      dateRange, selectedAccounts, selectedCategories, searchText, sortConfig, dateFormat,
+    };
+
+    const newKey = newViewId === null ? '__default' : newViewId;
+
+    if (viewStatesRef.current[newKey]) {
+      // Restore previously remembered state
+      applyFilters(viewStatesRef.current[newKey]);
+    } else if (view) {
+      // First visit to this saved view — apply its DB filters
+      const { filters, sortConfig: sc } = view;
+      applyFilters({
+        dateRange: {
+          from: filters.dateRange?.from ? new Date(filters.dateRange.from) : null,
+          to: filters.dateRange?.to ? new Date(filters.dateRange.to) : null,
+        },
+        selectedAccounts: filters.selectedAccounts || [],
+        selectedCategories: filters.selectedCategories || [],
+        searchText: filters.searchText || '',
+        sortConfig: sc || { sortBy: 'date', sortOrder: 'desc' },
+        dateFormat: filters.dateFormat || 'short',
+      });
+    } else {
+      // First visit to Tabla — use defaults
+      applyFilters(getDefaultFilters());
     }
-  };
+
+    setActiveViewId(newViewId);
+  }, [activeViewId, dateRange, selectedAccounts, selectedCategories, searchText, sortConfig, dateFormat, applyFilters, getDefaultFilters]);
+
+  // Reset current tab filters (button in filter bar)
+  const handleReset = useCallback(() => {
+    const defaults = getDefaultFilters();
+    applyFilters(defaults);
+    // Also clear cached state for current tab so it's fresh next time
+    const currentKey = activeViewId === null ? '__default' : activeViewId;
+    viewStatesRef.current[currentKey] = defaults;
+  }, [activeViewId, applyFilters, getDefaultFilters]);
 
   // Check if date range is the default (current month) for gastos/ingresos
   const isDefaultDateRange = useMemo(() => {
@@ -519,10 +686,10 @@ const MovementsList = memo(function MovementsList({
 
   const getTypeBgDim = () => {
     switch (type) {
-      case 'ingreso': return 'rgba(34, 197, 94, 0.15)';
-      case 'gasto': return 'rgba(239, 68, 68, 0.15)';
-      case 'transferencia': return 'rgba(59, 130, 246, 0.15)';
-      default: return 'rgba(96, 165, 250, 0.15)';
+      case 'ingreso': return 'var(--accent-green-dim)';
+      case 'gasto': return 'var(--accent-red-dim)';
+      case 'transferencia': return 'var(--accent-blue-dim)';
+      default: return 'var(--accent-primary-dim)';
     }
   };
 
@@ -538,22 +705,6 @@ const MovementsList = memo(function MovementsList({
     }
   };
 
-  // Apply a saved view
-  const applyView = (view) => {
-    const { filters, sortConfig: sc } = view;
-    if (filters.dateRange) {
-      setDateRange({
-        from: filters.dateRange.from ? new Date(filters.dateRange.from) : null,
-        to: filters.dateRange.to ? new Date(filters.dateRange.to) : null,
-      });
-    }
-    setSelectedAccounts(filters.selectedAccounts || []);
-    setSelectedCategories(filters.selectedCategories || []);
-    setSearchText(filters.searchText || '');
-    if (sc) setSortConfig(sc);
-    setActiveViewId(view.id);
-    setShowSavedViews(false);
-  };
 
   // Save current view
   const handleSaveView = () => {
@@ -566,6 +717,7 @@ const MovementsList = memo(function MovementsList({
       selectedAccounts,
       selectedCategories,
       searchText,
+      dateFormat,
     }, sortConfig);
     setSavingViewName('');
     setShowSaveInput(false);
@@ -736,27 +888,160 @@ const MovementsList = memo(function MovementsList({
       )}
 
       {/* ── Header row ── */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center">
         <h2 className="text-lg font-semibold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
           {title}
         </h2>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink min-w-0">
-          {/* Add button */}
-          {!selectionMode && (
+      </div>
+
+      {/* ── Views tab bar (Notion-style) ── */}
+      <div
+        className="flex items-end overflow-x-auto scrollbar-hide"
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+      >
+        {/* Helper: inline rename input */}
+        {/* Renders inside each tab when renamingViewId matches */}
+
+        {/* Tab "Tabla" — siempre presente */}
+        <ViewTab
+          label={defaultView ? defaultView.name : 'Tabla'}
+          isActive={activeViewId === null}
+          isRenaming={renamingViewId === '__default'}
+          renameValue={renameInputValue}
+          accentColor={getTypeColor()}
+          onClick={() => switchTab(null)}
+          onDoubleClick={() => {
+            setRenameInputValue(defaultView ? defaultView.name : 'Tabla');
+            setRenamingViewId('__default');
+            setContextMenu(null);
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setContextMenu({ x: e.clientX, y: e.clientY, tabId: '__default', viewId: defaultView?.id || null, isDefaultTab: true });
+            setRenamingViewId(null);
+          }}
+          onRenameChange={setRenameInputValue}
+          onRenameCommit={(val) => {
+            if (!val.trim()) { setRenamingViewId(null); return; }
+            if (defaultView) {
+              renameView(defaultView.id, val.trim());
+            } else {
+              saveView(val.trim(), {
+                dateRange: { from: dateRange.from ? (dateRange.from instanceof Date ? dateRange.from.toISOString() : dateRange.from) : null, to: dateRange.to ? (dateRange.to instanceof Date ? dateRange.to.toISOString() : dateRange.to) : null },
+                selectedAccounts, selectedCategories, searchText,
+              }, sortConfig).then(v => { if (v) setDefault(v.id); });
+            }
+            setRenamingViewId(null);
+          }}
+          onRenameCancel={() => setRenamingViewId(null)}
+        />
+
+        {/* Saved views tabs */}
+        {savedViews.filter(v => !v.isDefault).map(view => (
+          <ViewTab
+            key={view.id}
+            label={view.name}
+            isActive={activeViewId === view.id}
+            isRenaming={renamingViewId === view.id}
+            renameValue={renameInputValue}
+            accentColor={getTypeColor()}
+            onClick={() => switchTab(view.id, view)}
+            onDoubleClick={() => { setRenameInputValue(view.name); setRenamingViewId(view.id); setContextMenu(null); }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu({ x: e.clientX, y: e.clientY, tabId: view.id, viewId: view.id, isDefaultTab: false, isViewDefault: view.isDefault });
+              setRenamingViewId(null);
+            }}
+            onRenameChange={setRenameInputValue}
+            onRenameCommit={(val) => { if (val.trim()) renameView(view.id, val.trim()); setRenamingViewId(null); }}
+            onRenameCancel={() => setRenamingViewId(null)}
+          />
+        ))}
+
+        {/* Add new view — Notion-style inline */}
+        <div className="flex-shrink-0 flex items-center self-stretch" style={{ marginBottom: '-1px' }}>
+          {showSaveInput ? (
+            <div className="flex items-center gap-1 px-1 pb-1 self-end">
+              <input
+                type="text"
+                value={savingViewName}
+                onChange={(e) => setSavingViewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveView();
+                  if (e.key === 'Escape') { setShowSaveInput(false); setSavingViewName(''); }
+                }}
+                placeholder="Nombre de la vista..."
+                autoFocus
+                className="w-32 px-2 py-1 text-xs rounded-md"
+                style={{
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: `1px solid ${getTypeColor()}`,
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleSaveView}
+                disabled={!savingViewName.trim()}
+                className="px-2 py-1 rounded-md text-xs font-semibold text-white disabled:opacity-30 transition-opacity"
+                style={{ backgroundColor: getTypeColor() }}
+              >
+                Guardar
+              </button>
+              <button
+                onClick={() => { setShowSaveInput(false); setSavingViewName(''); }}
+                className="w-6 h-6 flex items-center justify-center rounded-md text-xs transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={() => onAddClick ? onAddClick() : navigate('/nuevo')}
-              className="p-2 rounded-xl transition-colors"
-              style={{ backgroundColor: getTypeColor(), color: 'white' }}
-              title={`Agregar ${type === 'transferencia' ? 'transferencia' : type}`}
-              aria-label={`Agregar ${type === 'transferencia' ? 'transferencia' : type}`}
+              onClick={() => setShowSaveInput(true)}
+              title="Nueva vista"
+              className="flex items-center justify-center w-7 h-7 rounded-md mx-1 self-center transition-all"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
               </svg>
             </button>
           )}
-
         </div>
+
+        {/* Spacer */}
+        <div className="flex-1 min-w-4" />
+
+        {/* New movement button — right side of tab bar */}
+        {!selectionMode && (
+          <div className="flex-shrink-0 flex items-center self-center pb-1 pr-0.5">
+            <button
+              onClick={() => onAddClick ? onAddClick() : navigate('/nuevo')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{ backgroundColor: getTypeColor(), color: 'white' }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              {type === 'ingreso' ? 'Nuevo Ingreso' : type === 'transferencia' ? 'Nueva Transferencia' : 'Nuevo Gasto'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Filter chips bar ── */}
@@ -812,10 +1097,11 @@ const MovementsList = memo(function MovementsList({
 
             {showAddFilter && (
               <div
-                className="absolute left-0 top-full mt-2 z-50 w-80 rounded-2xl p-4 space-y-4 shadow-xl"
+                className="absolute left-0 top-full mt-2 z-50 w-80 rounded-2xl p-4 space-y-4"
                 style={{
                   backgroundColor: 'var(--bg-secondary)',
                   border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-xl)',
                 }}
               >
                 {/* Search */}
@@ -928,212 +1214,94 @@ const MovementsList = memo(function MovementsList({
           </div>
         </div>
 
-        {/* Right: saved views + reset */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Saved views dropdown */}
-          <div className="relative" ref={savedViewsRef}>
-            <button
-              onClick={() => setShowSavedViews(!showSavedViews)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-              style={{
-                backgroundColor: showSavedViews ? getTypeBgDim() : 'var(--bg-tertiary)',
-                color: showSavedViews ? getTypeColor() : 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-              }}
-              title="Vistas guardadas"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <span className="hidden sm:inline">Vistas</span>
-              {savedViews.length > 0 && (
-                <span
-                  className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
-                  style={{ backgroundColor: getTypeColor() }}
-                >
-                  {savedViews.length}
-                </span>
-              )}
-            </button>
-
-            {showSavedViews && (
-              <div
-                className="absolute right-0 top-full mt-2 z-50 w-72 rounded-2xl p-3 shadow-xl"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <p className="text-xs font-semibold mb-2 px-1" style={{ color: 'var(--text-secondary)' }}>
-                  Vistas guardadas
-                </p>
-
-                {viewsLoading ? (
-                  <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>Cargando...</p>
-                ) : savedViews.length === 0 ? (
-                  <p className="text-xs px-1 py-2" style={{ color: 'var(--text-muted)' }}>
-                    No hay vistas guardadas todavía.
-                  </p>
-                ) : (
-                  <div className="space-y-1 mb-3">
-                    {savedViews.map(view => (
-                      <div key={view.id} className="flex items-center gap-1">
-                        {/* Estrella: marcar como default */}
-                        <button
-                          onClick={() => view.isDefault ? unsetDefault(view.id) : setDefault(view.id)}
-                          className="p-1.5 rounded-lg transition-colors flex-shrink-0"
-                          style={{ color: view.isDefault ? '#f59e0b' : 'var(--text-secondary)' }}
-                          title={view.isDefault ? 'Quitar vista predeterminada' : 'Marcar como predeterminada'}
-                        >
-                          <svg className="w-3.5 h-3.5" fill={view.isDefault ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                          </svg>
-                        </button>
-                        {/* Nombre: click para aplicar */}
-                        <button
-                          onClick={() => applyView(view)}
-                          className="flex-1 text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-                          style={{
-                            backgroundColor: view.isDefault ? getTypeBgDim() : 'var(--bg-tertiary)',
-                            color: view.isDefault ? getTypeColor() : 'var(--text-primary)',
-                          }}
-                        >
-                          {view.name}
-                          {view.isDefault && <span className="ml-1 opacity-60 text-[10px]">predeterminada</span>}
-                        </button>
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => deleteView(view.id)}
-                          className="p-1.5 rounded-lg transition-colors hover:bg-red-500/20 flex-shrink-0"
-                          style={{ color: 'var(--text-secondary)' }}
-                          title="Eliminar vista"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Save current view */}
-                {showSaveInput ? (
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="text"
-                      value={savingViewName}
-                      onChange={(e) => setSavingViewName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveView(); if (e.key === 'Escape') setShowSaveInput(false); }}
-                      placeholder="Nombre de la vista..."
-                      autoFocus
-                      className="flex-1 px-2.5 py-1.5 rounded-lg text-xs"
-                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                    />
-                    <button
-                      onClick={handleSaveView}
-                      disabled={!savingViewName.trim()}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-40"
-                      style={{ backgroundColor: getTypeColor() }}
-                    >
-                      OK
-                    </button>
-                    <button
-                      onClick={() => setShowSaveInput(false)}
-                      className="px-2 py-1.5 rounded-lg text-xs transition-colors"
-                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowSaveInput(true)}
-                    className="w-full mt-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left"
-                    style={{ backgroundColor: getTypeBgDim(), color: getTypeColor() }}
-                  >
-                    + Guardar vista actual
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Reset button */}
-          {(activeFiltersCount > 0) && (
-            <button
-              onClick={handleReset}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-              style={{
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-              }}
-              title="Restablecer filtros"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              <span className="hidden sm:inline">Restablecer</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Saved views tabs (Notion-style) ── */}
-      {savedViews.length > 0 && (
-        <div
-          className="flex items-end gap-0 overflow-x-auto border-b"
-          style={{ borderColor: 'var(--border-subtle)' }}
-        >
-          {savedViews.map(view => (
-            <button
-              key={view.id}
-              onClick={() => applyView(view)}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 relative"
-              style={{
-                color: activeViewId === view.id ? getTypeColor() : 'var(--text-secondary)',
-                borderBottom: `2px solid ${activeViewId === view.id ? getTypeColor() : 'transparent'}`,
-                marginBottom: '-1px',
-              }}
-            >
-              {view.isDefault && (
-                <svg className="w-2.5 h-2.5 flex-shrink-0 opacity-70" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              )}
-              {view.name}
-            </button>
-          ))}
-          {/* Add view button */}
+        {/* Date format picker */}
+        <div className="relative flex-shrink-0" ref={dateFormatMenuRef}>
           <button
-            onClick={() => setShowSavedViews(true)}
-            className="flex items-center gap-1 px-3 py-2 text-xs whitespace-nowrap transition-all flex-shrink-0 opacity-40 hover:opacity-80"
-            style={{ color: 'var(--text-secondary)', marginBottom: '-1px', borderBottom: '2px solid transparent' }}
-            title="Guardar vista actual"
+            onClick={() => setShowDateFormatMenu(v => !v)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+            style={{
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-subtle)',
+            }}
+            title="Formato de fecha"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>
+              {{ short: '19-ene', full: '19-01-2026', medium: '19 ene 2026', slash: '19/01/26', relative: 'Relativa' }[dateFormat]}
+            </span>
+            <svg className="w-2.5 h-2.5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
+
+          {showDateFormatMenu && (
+            <div
+              className="absolute right-0 top-full mt-1 z-50 rounded-xl py-1 min-w-[150px]"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-xl)' }}
+            >
+              {[
+                { id: 'short',    label: '19-ene',       desc: 'Día y mes corto' },
+                { id: 'full',     label: '19-01-2026',   desc: 'Numérica completa' },
+                { id: 'medium',   label: '19 ene 2026',  desc: 'Con año' },
+                { id: 'slash',    label: '19/01/26',     desc: 'Barra corta' },
+                { id: 'relative', label: 'Relativa',     desc: 'Hoy / Ayer / ...' },
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => { setDateFormat(opt.id); setShowDateFormatMenu(false); }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition-opacity hover:opacity-80"
+                  style={{ color: dateFormat === opt.id ? getTypeColor() : 'var(--text-primary)' }}
+                >
+                  <span className="font-medium tabular-nums">{opt.label}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Reset button */}
+        {activeFiltersCount > 0 && (
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex-shrink-0"
+            style={{
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-subtle)',
+            }}
+            title="Restablecer filtros"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span className="hidden sm:inline">Restablecer</span>
+          </button>
+        )}
+      </div>
 
       {/* ── Stats summary ── */}
-      <div className="flex items-center gap-3 py-1 text-sm flex-wrap">
+      <div
+        className="flex items-center gap-3 px-3 py-1.5 text-sm flex-wrap rounded-xl"
+        style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}
+      >
         <span style={{ color: 'var(--text-secondary)' }}>
           {filteredMovements.length} {type === 'transferencia' ? 'transferencia' : 'movimiento'}{filteredMovements.length !== 1 ? 's' : ''}
         </span>
         {type !== 'transferencia' ? (
           <>
-            <span className="font-semibold" style={{ color: getTypeColor() }}>
-              {formatCurrency(subtotals.totalARS, 'ARS')}
+            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: getTypeColor() }}>
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/ARS.svg`} alt="ARS" className="w-4 h-4 rounded-sm flex-shrink-0" />
+              {formatCurrency(subtotals.totalEnARS, 'ARS')}
             </span>
-            {subtotals.totalUSD > 0 && (
-              <span className="font-semibold opacity-60" style={{ color: getTypeColor() }}>
-                + {formatCurrency(subtotals.totalUSD, 'USD')}
-              </span>
-            )}
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>·</span>
+            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: getTypeColor(), opacity: 0.75 }}>
+              <img src={`${import.meta.env.BASE_URL}icons/catalog/USD.svg`} alt="USD" className="w-4 h-4 rounded-sm flex-shrink-0" />
+              {formatCurrency(subtotals.totalEnUSD, 'USD')}
+            </span>
           </>
         ) : (
           <>
@@ -1150,8 +1318,7 @@ const MovementsList = memo(function MovementsList({
       {/* ── Content ── */}
       {filteredMovements.length === 0 ? (
         renderEmptyState()
-      ) : !isMobile ? (
-        /* Desktop: always show MovementsTable */
+      ) : (
         <MovementsTable
           movements={filteredMovements}
           type={type}
@@ -1170,216 +1337,10 @@ const MovementsList = memo(function MovementsList({
           isAccountUSD={isAccountUSD}
           storageKey={tableColsKey}
           tipoCambio={tipoCambio}
+          dateFormat={dateFormat}
         />
-      ) : (
-        /* Mobile: cards */
-        <div className="space-y-2">
-          {filteredMovements.map((movement) => {
-            const itemId = movement.rowIndex || movement.id;
-            const isSelected = selectedItems.has(itemId);
-
-            const movementContent = (
-              <div
-                className="group rounded-2xl p-4 transition-all duration-200"
-                style={{
-                  backgroundColor: isSelected ? getTypeBgDim() : 'var(--bg-secondary)',
-                  border: isSelected ? `1px solid ${getTypeColor()}` : '1px solid transparent',
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  {selectionMode && (
-                    <button
-                      onClick={() => toggleItemSelection(itemId)}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                      style={{
-                        backgroundColor: isSelected ? getTypeColor() : 'var(--bg-tertiary)',
-                        border: isSelected ? 'none' : '2px solid var(--border-subtle)',
-                      }}
-                    >
-                      {isSelected && (
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => selectionMode ? toggleItemSelection(itemId) : onMovementClick?.(movement)}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    style={{ backgroundColor: 'transparent' }}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: getTypeBgDim() }}
-                    >
-                      {type === 'transferencia' ? (
-                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                      ) : type === 'ingreso' ? (
-                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                        </svg>
-                      ) : (
-                        <svg className="w-6 h-6" style={{ color: getTypeColor() }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                          {type === 'transferencia' ? 'Transferencia' : movement.categoria || '-'}
-                        </p>
-                        {movement.isFuture && (
-                          <span
-                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                            style={{ backgroundColor: 'var(--accent-yellow-dim)', color: 'var(--accent-yellow)' }}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Futuro
-                          </span>
-                        )}
-                        {movement.isRecurring && (
-                          <span
-                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                            style={{ backgroundColor: 'var(--accent-purple-dim)', color: 'var(--accent-purple)' }}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Recurrente
-                          </span>
-                        )}
-                        {movement.cuota && (
-                          <span
-                            className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1"
-                            style={{ backgroundColor: 'rgba(20, 184, 166, 0.15)', color: 'var(--accent-primary)' }}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            {movement.cuota}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs truncate flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
-                        {type === 'transferencia' ? (
-                          <>
-                            {renderAccountIcon(movement.cuentaSaliente)}
-                            <span>{movement.cuentaSaliente}</span>
-                            <span>→</span>
-                            {renderAccountIcon(movement.cuentaEntrante)}
-                            <span>{movement.cuentaEntrante}</span>
-                          </>
-                        ) : (
-                          <>
-                            {renderAccountIcon(movement.cuenta)}
-                            <span>{movement.cuenta}</span>
-                          </>
-                        )}
-                      </p>
-                      {movement.nota && (
-                        <p className="text-xs truncate mt-0.5 italic" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
-                          &quot;{movement.nota}&quot;
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Amount and date */}
-                    <div className="text-right flex-shrink-0 max-w-[45%] sm:max-w-none">
-                      {(() => {
-                        const accountName = type === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
-                        const isUSD = isAccountUSD(accountName);
-                        const currencyCode = isUSD ? 'USD' : 'ARS';
-                        const amount = movement.monto || movement.montoSaliente;
-                        return (
-                          <div className="flex items-center justify-end gap-1">
-                            <img
-                              src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
-                              alt={currencyCode}
-                              className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
-                            />
-                            <p className="text-[15px] font-bold truncate" style={{ color: getTypeColor() }}>
-                              {type === 'ingreso' ? '+' : type === 'gasto' ? '-' : ''}{formatCurrency(amount, currencyCode)}
-                            </p>
-                          </div>
-                        );
-                      })()}
-                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        {formatDate(movement.fecha, 'short')}
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Attachment indicator */}
-                  {(movement.attachmentUrl || movement.attachmentUrl2) && !selectionMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        downloadAttachment(movement.attachmentUrl || movement.attachmentUrl2, movement.attachmentName || movement.attachmentName2);
-                      }}
-                      className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 relative"
-                      style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                      title={movement.attachmentUrl && movement.attachmentUrl2 ? '2 adjuntos' : (movement.attachmentName || movement.attachmentName2 || 'Descargar adjunto')}
-                    >
-                      {isImageFile(movement.attachmentName || movement.attachmentName2) ? (
-                        <img
-                          src={movement.attachmentUrl || movement.attachmentUrl2}
-                          alt="Adjunto"
-                          className="w-6 h-6 rounded object-cover"
-                        />
-                      ) : (
-                        <svg
-                          className="w-4 h-4"
-                          style={{ color: 'var(--accent-primary)' }}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                      )}
-                      {movement.attachmentUrl && movement.attachmentUrl2 && (
-                        <span
-                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
-                          style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
-                        >
-                          2
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-
-            // Wrap with SwipeableItem on mobile for swipe-to-delete
-            return !selectionMode ? (
-              <SwipeableItem
-                key={itemId}
-                onDelete={() => {
-                  haptics.warning();
-                  setDeleteConfirm(movement);
-                }}
-                onEdit={() => onMovementClick?.(movement)}
-              >
-                {movementContent}
-              </SwipeableItem>
-            ) : (
-              <div key={itemId}>
-                {movementContent}
-              </div>
-            );
-          })}
-        </div>
       )}
+
 
       {/* ── Delete Confirmation Modal ── */}
       {deleteConfirm && (
@@ -1588,6 +1549,67 @@ const MovementsList = memo(function MovementsList({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Context Menu (right-click on tabs) ── */}
+      {contextMenu && (
+        <ContextMenuPortal x={contextMenu.x} y={contextMenu.y}>
+
+          {/* Renombrar — siempre */}
+          <button
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
+            style={{ color: 'var(--text-primary)' }}
+            onClick={() => {
+              if (contextMenu.isDefaultTab) {
+                setRenameInputValue(defaultView ? defaultView.name : 'Tabla');
+                setRenamingViewId('__default');
+              } else {
+                const view = savedViews.find(v => v.id === contextMenu.viewId);
+                setRenameInputValue(view?.name || '');
+                setRenamingViewId(contextMenu.viewId);
+              }
+              setContextMenu(null);
+            }}
+          >
+            {ICON_EDIT}
+            Renombrar
+          </button>
+
+          {/* Establecer como predeterminada — solo tabs no-default */}
+          {!contextMenu.isDefaultTab && (
+            <button
+              className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
+              style={{ color: contextMenu.isViewDefault ? '#f59e0b' : 'var(--text-primary)' }}
+              onClick={() => {
+                if (contextMenu.isViewDefault) {
+                  unsetDefault(contextMenu.viewId);
+                } else {
+                  setDefault(contextMenu.viewId);
+                }
+                setContextMenu(null);
+              }}
+            >
+              {ICON_STAR(contextMenu.isViewDefault)}
+              {contextMenu.isViewDefault ? 'Quitar predeterminada' : 'Establecer como predeterminada'}
+            </button>
+          )}
+
+          {/* Eliminar — solo tabs no-default */}
+          {!contextMenu.isDefaultTab && (
+            <button
+              className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
+              style={{ color: 'var(--accent-red)' }}
+              onClick={() => {
+                deleteView(contextMenu.viewId);
+                if (activeViewId === contextMenu.viewId) setActiveViewId(null);
+                setContextMenu(null);
+              }}
+            >
+              {ICON_TRASH}
+              Eliminar vista
+            </button>
+          )}
+        </ContextMenuPortal>
       )}
     </div>
   );

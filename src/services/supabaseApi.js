@@ -5035,3 +5035,11 @@ export const unsetDefaultSavedView = async (id) => {
     .eq('id', id);
   if (error) throw error;
 };
+
+export const renameSavedView = async (id, name) => {
+  const { error } = await supabase
+    .from('saved_views')
+    .update({ name })
+    .eq('id', id);
+  if (error) throw error;
+};

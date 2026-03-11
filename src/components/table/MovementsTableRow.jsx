@@ -28,6 +28,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
   isAccountUSD,
   gridTemplateColumns,
   tipoCambio,
+  dateFormat = 'short',
 }) {
   const itemId = movement.rowIndex || movement.id;
 
@@ -35,6 +36,14 @@ const MovementsTableRow = memo(function MovementsTableRow({
     const acc = accounts?.find(a => a.nombre === name);
     return acc?.icon ?? null;
   };
+
+  // Per-row colors when type === 'mixed'
+  const rowTypeColor = type === 'mixed'
+    ? (movement.tipo === 'ingreso' ? 'var(--accent-green)' : movement.tipo === 'gasto' ? 'var(--accent-red)' : 'var(--accent-blue)')
+    : getTypeColor();
+  const rowTypeBgDim = type === 'mixed'
+    ? (movement.tipo === 'ingreso' ? 'var(--accent-green-dim)' : movement.tipo === 'gasto' ? 'var(--accent-red-dim)' : 'var(--accent-blue-dim)')
+    : getTypeBgDim();
 
   const handleRowClick = () => {
     if (selectionMode) {
@@ -46,12 +55,15 @@ const MovementsTableRow = memo(function MovementsTableRow({
 
   return (
     <div
-      className="group grid border-b hover:bg-[var(--bg-secondary)] transition-colors duration-100 cursor-pointer"
+      className="group grid border-b transition-colors duration-100 cursor-pointer"
       style={{
         gridTemplateColumns,
-        backgroundColor: isSelected ? getTypeBgDim() : 'transparent',
+        backgroundColor: isSelected ? rowTypeBgDim : 'transparent',
         borderColor: 'var(--border-subtle)',
       }}
+      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
+
       onClick={handleRowClick}
     >
       {/* Checkbox column - always first */}
@@ -63,7 +75,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
           className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all ${!selectionMode ? 'opacity-0 group-hover:opacity-60' : ''}`}
           style={{
             backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
-            border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border)'}`,
+            border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-medium)'}`,
           }}
         >
           {isSelected && (
@@ -74,12 +86,109 @@ const MovementsTableRow = memo(function MovementsTableRow({
         </div>
       </div>
 
-      {type !== 'transferencia' ? (
+      {type === 'mixed' ? (
         <>
           {/* Fecha */}
           <div className="flex items-center px-3 py-2">
             <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-              {formatDate(movement.fecha, 'short')}
+              {formatDate(movement.fecha, dateFormat)}
+            </span>
+          </div>
+
+          {/* Tipo */}
+          <div className="flex items-center px-3 py-2">
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+              style={{ backgroundColor: rowTypeBgDim, color: rowTypeColor }}
+            >
+              {movement.tipo === 'ingreso' ? 'Ingreso' : movement.tipo === 'gasto' ? 'Gasto' : 'Transferencia'}
+            </span>
+          </div>
+
+          {/* Nota / Descripción */}
+          <div className="flex items-center gap-2 px-3 py-2 min-w-0">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: rowTypeColor }} />
+            <span
+              className="text-sm truncate"
+              style={{ color: movement.nota ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+            >
+              {movement.nota || (movement.tipo === 'transferencia' ? 'Transferencia' : '—')}
+            </span>
+          </div>
+
+          {/* Categoría */}
+          <div className="flex items-center gap-1.5 px-3 py-2 min-w-0">
+            <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+              {movement.tipo === 'transferencia' ? '—' : (movement.categoria || '—')}
+            </span>
+          </div>
+
+          {/* Cuenta */}
+          <div className="flex items-center gap-1.5 px-3 py-2 min-w-0">
+            {movement.tipo === 'transferencia' ? (
+              <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+                {movement.cuentaSaliente} → {movement.cuentaEntrante}
+              </span>
+            ) : (
+              <>
+                <AccountIcon icon={getAccountIcon(movement.cuenta)} />
+                <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+                  {movement.cuenta || '—'}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Monto */}
+          <div className="flex items-center justify-end gap-1 px-3 py-2">
+            {(() => {
+              const accountName = movement.tipo === 'transferencia' ? movement.cuentaSaliente : movement.cuenta;
+              const currencyCode = isAccountUSD(accountName) ? 'USD' : 'ARS';
+              const amount = movement.monto || movement.montoSaliente;
+              const prefix = movement.tipo === 'ingreso' ? '+' : movement.tipo === 'gasto' ? '-' : '';
+              return (
+                <>
+                  <img
+                    src={`${import.meta.env.BASE_URL}icons/catalog/${currencyCode}.svg`}
+                    alt={currencyCode}
+                    className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                  />
+                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: rowTypeColor }}>
+                    {prefix}{formatCurrency(amount, currencyCode)}
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Equivalente */}
+          <div className="flex items-center justify-end gap-1 px-3 py-2">
+            {movement.tipo !== 'transferencia' && (() => {
+              const isUSD = isAccountUSD(movement.cuenta);
+              const equivCode = isUSD ? 'ARS' : 'USD';
+              const tc = tipoCambio || 1000;
+              const equivAmount = isUSD ? movement.monto * tc : movement.monto / tc;
+              return (
+                <>
+                  <img
+                    src={`${import.meta.env.BASE_URL}icons/catalog/${equivCode}.svg`}
+                    alt={equivCode}
+                    className="w-3.5 h-3.5 rounded-sm flex-shrink-0 opacity-50"
+                  />
+                  <span className="text-xs tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                    {formatCurrency(equivAmount, equivCode)}
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+        </>
+      ) : type !== 'transferencia' ? (
+        <>
+          {/* Fecha */}
+          <div className="flex items-center px-3 py-2">
+            <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+              {formatDate(movement.fecha, dateFormat)}
             </span>
           </div>
 
@@ -143,7 +252,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
                     alt={currencyCode}
                     className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
                   />
-                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: getTypeColor() }}>
+                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: rowTypeColor }}>
                     {type === 'ingreso' ? '+' : '-'}{formatCurrency(movement.monto, currencyCode)}
                   </span>
                 </>
@@ -198,7 +307,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
           {/* Fecha */}
           <div className="flex items-center px-3 py-2">
             <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-              {formatDate(movement.fecha, 'short')}
+              {formatDate(movement.fecha, dateFormat)}
             </span>
           </div>
 

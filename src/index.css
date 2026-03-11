@@ -889,37 +889,55 @@ select {
    DATE PICKER CUSTOMIZATION
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Override DayPicker v9 to match app dark/light theme */
+/* Override ALL DayPicker v9 CSS variables to match app theme */
 .rdp-root {
-  --rdp-accent-color: var(--accent-primary);
-  --rdp-accent-background-color: rgba(20, 184, 166, 0.2);
-  --rdp-today-color: var(--accent-primary);
-  --rdp-selected-border: 2px solid var(--accent-primary);
-  --rdp-day_button-border-radius: 8px;
-  --rdp-range_start-date-background-color: var(--accent-primary);
-  --rdp-range_end-date-background-color: var(--accent-primary);
-  --rdp-range_start-color: white;
-  --rdp-range_end-color: white;
-  --rdp-range_middle-background-color: rgba(20, 184, 166, 0.15);
-  --rdp-range_middle-color: var(--text-primary);
-  --rdp-range_start-background: linear-gradient(to right, transparent 50%, rgba(20,184,166,0.15) 50%);
-  --rdp-range_end-background: linear-gradient(to left, transparent 50%, rgba(20,184,166,0.15) 50%);
+  /* Neutralize DayPicker's built-in colors */
+  --rdp-background-color: var(--bg-secondary) !important;
+  --rdp-color: var(--text-primary) !important;
+
+  /* Accent */
+  --rdp-accent-color: var(--accent-primary) !important;
+  --rdp-accent-background-color: rgba(20, 184, 166, 0.18) !important;
+  --rdp-today-color: var(--accent-primary) !important;
+
+  /* Day buttons */
+  --rdp-day_button-border-radius: 8px !important;
+  --rdp-day_button-border: none !important;
+  --rdp-day-font: inherit !important;
+
+  /* Range */
+  --rdp-selected-border: none !important;
+  --rdp-range_start-date-background-color: var(--accent-primary) !important;
+  --rdp-range_end-date-background-color: var(--accent-primary) !important;
+  --rdp-range_start-color: #fff !important;
+  --rdp-range_end-color: #fff !important;
+  --rdp-range_middle-background-color: rgba(20, 184, 166, 0.12) !important;
+  --rdp-range_middle-color: var(--text-primary) !important;
+  --rdp-range_start-background: linear-gradient(to right, transparent 50%, rgba(20,184,166,0.12) 50%) !important;
+  --rdp-range_end-background: linear-gradient(to left, transparent 50%, rgba(20,184,166,0.12) 50%) !important;
+
   font-family: inherit;
   color: var(--text-primary);
+  background: transparent;
 }
 
-/* Calendar container */
-.rdp-month_caption {
+/* Mes y año */
+.rdp-month_caption,
+.rdp-caption_label {
   color: var(--text-primary) !important;
-  font-weight: 600;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
 }
 
+/* Nombres de días de semana */
 .rdp-weekday {
   color: var(--text-secondary) !important;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  opacity: 0.8;
 }
 
+/* Días */
 .rdp-day {
   color: var(--text-primary) !important;
 }
@@ -928,41 +946,63 @@ select {
   color: inherit !important;
   background: transparent !important;
   border: none !important;
+  font-size: 0.8rem !important;
+  transition: background-color 0.15s;
 }
 
 .rdp-day_button:hover:not([disabled]) {
-  background-color: var(--bg-hover, rgba(255,255,255,0.08)) !important;
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
 }
 
-.rdp-today .rdp-day_button {
+/* Hoy */
+.rdp-today:not(.rdp-range_start):not(.rdp-range_end) .rdp-day_button {
   color: var(--accent-primary) !important;
-  font-weight: 700;
+  font-weight: 700 !important;
 }
 
+/* Seleccionado / inicio / fin del rango */
 .rdp-selected .rdp-day_button,
 .rdp-range_start .rdp-day_button,
 .rdp-range_end .rdp-day_button {
   background-color: var(--accent-primary) !important;
-  color: white !important;
-  font-weight: 600;
+  color: #fff !important;
+  font-weight: 600 !important;
 }
 
+/* Rango intermedio */
 .rdp-range_middle .rdp-day_button {
   background-color: transparent !important;
   color: var(--text-primary) !important;
 }
 
-.rdp-day.rdp-outside {
-  opacity: 0.35;
+/* Días fuera del mes */
+.rdp-outside .rdp-day_button {
+  opacity: 0.3 !important;
 }
 
-.rdp-nav button {
+/* Días deshabilitados */
+.rdp-disabled .rdp-day_button {
+  opacity: 0.2 !important;
+  cursor: not-allowed !important;
+}
+
+/* Botones de navegación */
+.rdp-nav button,
+.rdp-button_previous,
+.rdp-button_next {
   color: var(--text-secondary) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 8px !important;
+  transition: background-color 0.15s, color 0.15s;
 }
 
-.rdp-nav button:hover {
+.rdp-nav button:hover,
+.rdp-button_previous:hover,
+.rdp-button_next:hover {
   color: var(--text-primary) !important;
-  background-color: var(--bg-hover, rgba(255,255,255,0.08)) !important;
+  background-color: var(--bg-tertiary) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

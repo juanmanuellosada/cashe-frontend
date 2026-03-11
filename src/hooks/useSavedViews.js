@@ -5,6 +5,7 @@ import {
   deleteSavedView,
   setDefaultSavedView,
   unsetDefaultSavedView,
+  renameSavedView,
 } from '../services/supabaseApi';
 
 export function useSavedViews(type, uid) {
@@ -65,7 +66,16 @@ export function useSavedViews(type, uid) {
     }
   }, []);
 
+  const renameView = useCallback(async (id, name) => {
+    try {
+      await renameSavedView(id, name);
+      setViews((prev) => prev.map((v) => v.id === id ? { ...v, name } : v));
+    } catch (err) {
+      console.error('Error renaming view:', err);
+    }
+  }, []);
+
   const defaultView = views.find((v) => v.isDefault) ?? null;
 
-  return { views, loading, saveView, deleteView, setDefault, unsetDefault, defaultView };
+  return { views, loading, saveView, deleteView, setDefault, unsetDefault, renameView, defaultView };
 }

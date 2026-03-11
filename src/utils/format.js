@@ -97,38 +97,51 @@ export function parseLocalDate(dateStr) {
   return new Date(dateStr);
 }
 
+const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
 /**
- * Formatea una fecha en formato dd-MM-yyyy
- * @param {string|Date} dateStr - La fecha a formatear
- * @param {string} style - 'short' para dd-MM, 'full' para dd-MM-yyyy
- * @returns {string} - Fecha formateada (ej: "19-01-2026" o "19-ene")
+ * Formatea una fecha según el estilo indicado.
+ * @param {string|Date} dateStr
+ * @param {string} style
+ *   'short'    → 19-ene
+ *   'full'     → 19-01-2026
+ *   'medium'   → 19 ene 2026
+ *   'slash'    → 19/01/26
+ *   'relative' → Hoy / Ayer / Hace N días / (fallback: 19-ene)
  */
-export function formatDate(dateStr, style = 'full') {
+export function formatDate(dateStr, style = 'short') {
   if (!dateStr) return '-';
 
-  // Para fechas en formato yyyy-MM-dd, parsear manualmente para evitar timezone issues
+  let year, month, day;
+
   if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    if (style === 'short') {
-      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      return `${day.toString().padStart(2, '0')}-${months[month - 1]}`;
-    }
-    return `${day.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${year}`;
+    [year, month, day] = dateStr.split('-').map(Number);
+  } else {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    year = d.getFullYear();
+    month = d.getMonth() + 1;
+    day = d.getDate();
   }
 
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '-';
+  const dd = day.toString().padStart(2, '0');
+  const mm = month.toString().padStart(2, '0');
+  const mon = MONTHS_SHORT[month - 1];
 
-  if (style === 'short') {
-    const day = date.getDate().toString().padStart(2, '0');
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    const month = months[date.getMonth()];
-    return `${day}-${month}`;
+  if (style === 'relative') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(year, month - 1, day);
+    const diff = Math.round((today - target) / 86400000);
+    if (diff === 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    if (diff > 1 && diff <= 6) return `Hace ${diff} días`;
+    return `${dd}-${mon}`;
   }
 
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-
-  return `${day}-${month}-${year}`;
+  if (style === 'medium') return `${dd} ${mon} ${year}`;
+  if (style === 'slash')  return `${dd}/${mm}/${String(year).slice(-2)}`;
+  if (style === 'full')   return `${dd}-${mm}-${year}`;
+  // 'short' (default)
+  return `${dd}-${mon}`;
 }

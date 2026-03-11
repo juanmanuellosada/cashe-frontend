@@ -87,7 +87,15 @@
       "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && cp src/components/table/NotionTable.jsx src/components/table/MovementsTable.jsx && cp src/components/table/NotionTableHeader.jsx src/components/table/MovementsTableHeader.jsx && cp src/components/table/NotionTableRow.jsx src/components/table/MovementsTableRow.jsx)",
       "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && sed -i 's/NotionTableRow/MovementsTableRow/g' src/components/table/MovementsTableRow.jsx)",
       "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && sed -i 's/NotionTable/MovementsTable/g' src/components/MovementsList.jsx)",
-      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && rm src/components/table/NotionTable.jsx src/components/table/NotionTableHeader.jsx src/components/table/NotionTableRow.jsx && echo \"Eliminados\")"
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && rm src/components/table/NotionTable.jsx src/components/table/NotionTableHeader.jsx src/components/table/NotionTableRow.jsx && echo \"Eliminados\")",
+      "Bash(cd \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\" && node -e \"console.log\\(require\\('./node_modules/react-day-picker/package.json'\\).version\\)\")",
+      "Bash(find \"C:\\\\Users\\\\juanm\\\\OneDrive\\\\Escritorio\\\\cashe-frontend\\\\node_modules\\\\react-day-picker\" -name \"*.css\" 2>/dev/null | head -5)",
+      "Bash(find . -type f -name \"*ankey*\" -o -name \"*Sankey*\" 2>/dev/null | head -20)",
+      "WebFetch(domain:recharts.org)",
+      "WebFetch(domain:recharts.github.io)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(find /c/Users/juanm/OneDrive/Escritorio/cashe-frontend -type f \\\\\\( -name \"*example*\" -o -name \"*demo*\" -o -name \"*story*\" \\\\\\) -i 2>/dev/null | head -20)",
+      "Bash(find .playwright-mcp/ -name \"*.png\" -delete && rm -f nul && echo \"done\")"
     ]
   },
   "enableAllProjectMcpServers": true,
