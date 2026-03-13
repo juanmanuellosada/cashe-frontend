@@ -109,14 +109,14 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto pt-4 sm:pt-6 pb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${Math.max(0.6 - dragY / 300, 0)})` }}
         onClick={onClose}
       />
       <div
-        className="relative w-full sm:max-w-lg mx-2 sm:mx-4 rounded-2xl flex flex-col animate-slide-down max-h-[calc(100dvh-32px)] sm:max-h-[calc(100vh-48px)]"
+        className="relative w-full sm:max-w-lg rounded-2xl flex flex-col animate-slide-down max-h-[90dvh] overflow-hidden"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           transform: `translateY(${dragY}px)`,
