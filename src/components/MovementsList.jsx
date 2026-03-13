@@ -319,10 +319,12 @@ const MovementsList = memo(function MovementsList({
     setSortLoaded(true);
   }, [prefsLoaded, savedPrefs, type]);
 
-  // Auto-aplicar vista default manual (tiene precedencia sobre las prefs auto-guardadas)
+  // Auto-aplicar vista default manual solo si no hay auto-prefs guardadas
   const defaultAppliedRef = useRef(false);
   useEffect(() => {
     if (defaultAppliedRef.current || viewsLoading || !filtersLoaded || !defaultView) return;
+    // Las auto-prefs tienen prioridad: si ya existen, no pisar con la vista default
+    if (savedPrefs !== null) return;
     defaultAppliedRef.current = true;
     if (defaultView.filters?.dateRange) {
       setDateRange({
@@ -334,7 +336,7 @@ const MovementsList = memo(function MovementsList({
     setSelectedCategories(defaultView.filters?.selectedCategories || []);
     setSearchText(defaultView.filters?.searchText || '');
     if (defaultView.sortConfig) setSortConfig(defaultView.sortConfig);
-  }, [defaultView, viewsLoading, filtersLoaded]);
+  }, [defaultView, viewsLoading, filtersLoaded, savedPrefs]);
 
   // Guardar preferencias automáticamente en Supabase cuando cambia algo
   useEffect(() => {
