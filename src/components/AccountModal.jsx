@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import IconPicker from './IconPicker';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
@@ -108,8 +109,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
 
   const shouldClose = dragY > 100;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
         style={{ backgroundColor: `rgba(0, 0, 0, ${Math.max(0.6 - dragY / 300, 0)})` }}
@@ -450,7 +451,8 @@ function AccountModal({ account, onSave, onDelete, onClose, loading }) {
           title="Ícono de cuenta"
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
