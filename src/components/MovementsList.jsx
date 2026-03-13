@@ -14,6 +14,7 @@ import { isImageFile, downloadAttachment } from '../services/attachmentStorage';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import MovementsTable from './table/MovementsTable';
 import { useSavedViews } from '../hooks/useSavedViews';
+import { useViewPreferences } from '../hooks/useViewPreferences';
 
 // ─── ViewTab ──────────────────────────────────────────────────────────────────
 const ICON_EDIT = (
@@ -270,20 +271,54 @@ const MovementsList = memo(function MovementsList({
   const [bulkDateValue, setBulkDateValue] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  // Sort state - different storage key per type, namespaced by user
+  // Namespace por usuario para columnas de tabla (localStorage, solo visual)
   const uid = user?.id || '';
-  const sortStorageKey = uid ? `cashe-sort-${type}_${uid}` : `cashe-sort-${type}`;
-  const filterStorageKey = uid ? `cashe-filters-${type}_${uid}` : `cashe-filters-${type}`;
   const tableColsKey = uid ? `cashe-table-cols-${type}_${uid}` : `cashe-table-cols-${type}`;
 
   const [sortConfig, setSortConfig] = useState({ sortBy: 'date', sortOrder: 'desc' });
   const [sortLoaded, setSortLoaded] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
 
-  // Saved views (Supabase — persisten entre dispositivos)
+  // Preferencias de vista persistidas en Supabase (cross-device)
+  const { prefs: savedPrefs, loaded: prefsLoaded, savePrefs } = useViewPreferences(type, uid);
+
+  // Saved views (Supabase — vistas manuales guardadas por el usuario)
   const { views: savedViews, loading: viewsLoading, saveView, deleteView, setDefault, unsetDefault, renameView, defaultView } = useSavedViews(type, uid);
 
-  // Auto-aplicar vista default la primera vez que carga (una sola vez)
+  // Aplicar preferencias guardadas automáticamente (una sola vez al cargar)
+  const prefsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prefsAppliedRef.current || !prefsLoaded) return;
+    prefsAppliedRef.current = true;
+
+    if (savedPrefs) {
+      if (savedPrefs.dateFormat) setDateFormat(savedPrefs.dateFormat);
+      if (savedPrefs.sortConfig?.sortBy) setSortConfig(savedPrefs.sortConfig);
+      if (savedPrefs.filters?.selectedAccounts?.length) setSelectedAccounts(savedPrefs.filters.selectedAccounts);
+      if (savedPrefs.filters?.selectedCategories?.length) setSelectedCategories(savedPrefs.filters.selectedCategories);
+      const dr = savedPrefs.filters?.dateRange;
+      if (dr?.from || dr?.to) {
+        setDateRange({
+          from: dr.from ? new Date(dr.from) : null,
+          to: dr.to ? new Date(dr.to) : null,
+        });
+      } else if (type === 'gasto' || type === 'ingreso') {
+        const now = new Date();
+        setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+      }
+    } else {
+      // Sin prefs guardadas: usar mes actual para gastos/ingresos
+      if (type === 'gasto' || type === 'ingreso') {
+        const now = new Date();
+        setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+      }
+    }
+
+    setFiltersLoaded(true);
+    setSortLoaded(true);
+  }, [prefsLoaded, savedPrefs, type]);
+
+  // Auto-aplicar vista default manual (tiene precedencia sobre las prefs auto-guardadas)
   const defaultAppliedRef = useRef(false);
   useEffect(() => {
     if (defaultAppliedRef.current || viewsLoading || !filtersLoaded || !defaultView) return;
@@ -300,63 +335,18 @@ const MovementsList = memo(function MovementsList({
     if (defaultView.sortConfig) setSortConfig(defaultView.sortConfig);
   }, [defaultView, viewsLoading, filtersLoaded]);
 
-  // Load sort preference from localStorage on mount
+  // Guardar preferencias automáticamente en Supabase cuando cambia algo
   useEffect(() => {
-    const saved = localStorage.getItem(sortStorageKey);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.sortBy && parsed.sortOrder) {
-          setSortConfig(parsed);
-        }
-      } catch (e) {
-        console.error('Error parsing sort preference:', e);
-      }
-    }
-    setSortLoaded(true);
-  }, [sortStorageKey]);
+    if (!filtersLoaded || !sortLoaded) return;
+    savePrefs({
+      filters: { selectedAccounts, selectedCategories, dateRange },
+      sortConfig,
+      dateFormat,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccounts, selectedCategories, dateRange, sortConfig, dateFormat, filtersLoaded, sortLoaded]);
 
-  // Save sort preference to localStorage
-  useEffect(() => {
-    if (!sortLoaded) return;
-    localStorage.setItem(sortStorageKey, JSON.stringify(sortConfig));
-  }, [sortConfig, sortStorageKey, sortLoaded]);
-
-  // Load filter preferences from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(filterStorageKey);
-    let hasDateRange = false;
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.selectedAccounts) setSelectedAccounts(parsed.selectedAccounts);
-        if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
-        if (parsed.dateRange && (parsed.dateRange.from || parsed.dateRange.to)) {
-          setDateRange({
-            from: parsed.dateRange.from ? new Date(parsed.dateRange.from) : null,
-            to: parsed.dateRange.to ? new Date(parsed.dateRange.to) : null,
-          });
-          hasDateRange = true;
-        }
-      } catch (e) {
-        console.error('Error parsing filter preference:', e);
-      }
-    }
-
-    // Default to current month for gastos and ingresos if no saved date range
-    if (!hasDateRange && (type === 'gasto' || type === 'ingreso')) {
-      const now = new Date();
-      setDateRange({
-        from: startOfMonth(now),
-        to: endOfMonth(now),
-      });
-    }
-
-    setFiltersLoaded(true);
-  }, [filterStorageKey, type]);
-
-  // Validate stored filters against current accounts/categories (remove deleted ones)
+  // Validar filtros guardados contra cuentas/categorías actuales (quitar eliminadas)
   useEffect(() => {
     if (!filtersLoaded || accounts.length === 0) return;
     const validAccountNames = accounts.map(a => a.nombre);
@@ -370,16 +360,6 @@ const MovementsList = memo(function MovementsList({
     );
     setSelectedCategories(prev => prev.filter(cat => validCatValues.includes(cat)));
   }, [categories, filtersLoaded]);
-
-  // Save filter preferences to localStorage
-  useEffect(() => {
-    if (!filtersLoaded) return;
-    localStorage.setItem(filterStorageKey, JSON.stringify({
-      selectedAccounts,
-      selectedCategories,
-      dateRange,
-    }));
-  }, [selectedAccounts, selectedCategories, dateRange, filterStorageKey, filtersLoaded]);
 
   // Filter movements
   const filteredMovements = useMemo(() => {

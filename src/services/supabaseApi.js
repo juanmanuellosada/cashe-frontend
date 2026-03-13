@@ -4961,6 +4961,39 @@ export const getUserSettings = async () => {
 };
 
 /**
+ * Obtener preferencias de vista de una sección ('gasto', 'ingreso', 'transferencia')
+ */
+export const getViewPreferences = async (type) => {
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('view_preferences')
+    .eq('user_id', userId)
+    .single();
+  if (error) return null;
+  return data?.view_preferences?.[type] ?? null;
+};
+
+/**
+ * Guardar preferencias de vista para una sección
+ */
+export const saveViewPreferences = async (type, prefs) => {
+  const userId = await getUserId();
+  const { data: current } = await supabase
+    .from('user_settings')
+    .select('view_preferences')
+    .eq('user_id', userId)
+    .single();
+  const existing = current?.view_preferences || {};
+  const updated = { ...existing, [type]: prefs };
+  const { error } = await supabase
+    .from('user_settings')
+    .update({ view_preferences: updated, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+};
+
+/**
  * Actualizar configuración del usuario
  */
 export const updateUserSettings = async (settings) => {
