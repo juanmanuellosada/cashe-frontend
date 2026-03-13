@@ -22,7 +22,7 @@ function Income() {
       if (showLoading) setLoading(true);
       const [incomesData, accountsData, categoriesData] = await Promise.all([
         getAllIncomes(forceRefresh),
-        getAccounts(),
+        getAccounts(forceRefresh),
         getCategories(),
       ]);
       setIncomes(incomesData.incomes || []);
@@ -46,11 +46,17 @@ function Income() {
     try {
       setSaving(true);
       await updateMovement(movement);
+      // Optimistic update — reflect changes immediately in the list
+      setIncomes(prev => prev.map(i =>
+        (i.rowIndex || i.id) === (movement.rowIndex || movement.id)
+          ? { ...i, ...movement }
+          : i
+      ));
       setEditingMovement(null);
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.INCOMES_CHANGED);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      await fetchData(true, false); // Force refresh, no loading spinner
+      fetchData(true, false); // Background refresh to sync
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar el ingreso', err.message);

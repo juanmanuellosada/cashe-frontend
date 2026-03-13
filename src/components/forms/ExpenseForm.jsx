@@ -175,16 +175,20 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const infoCierreTarjeta = useMemo(() => {
     if (!esTarjetaCredito || !selectedAccount) return null;
 
-    // Usar la fecha completa guardada en la cuenta
+    // Usar la fecha guardada en la cuenta solo si es futura
     if (selectedAccount.fechaCierre) {
       const [y, m, d] = selectedAccount.fechaCierre.split('-').map(Number);
       const fechaCierre = new Date(y, m - 1, d);
-      return {
-        fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
-      };
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (fechaCierre >= today) {
+        return {
+          fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
+        };
+      }
     }
 
-    // Fallback: calcular desde el día de cierre si no hay fecha completa
+    // Calcular próximo cierre desde el día de cierre
     const today = new Date();
     const currentDay = today.getDate();
     let year = today.getFullYear();

@@ -22,7 +22,7 @@ function Expenses() {
       if (showLoading) setLoading(true);
       const [expensesData, accountsData, categoriesData] = await Promise.all([
         getAllExpenses(forceRefresh),
-        getAccounts(),
+        getAccounts(forceRefresh),
         getCategories(),
       ]);
       setExpenses(expensesData.expenses || []);
@@ -52,11 +52,17 @@ function Expenses() {
         await updateSubsequentInstallments(movement);
       }
 
+      // Optimistic update — reflect changes immediately in the list
+      setExpenses(prev => prev.map(e =>
+        (e.rowIndex || e.id) === (movement.rowIndex || movement.id)
+          ? { ...e, ...movement }
+          : e
+      ));
       setEditingMovement(null);
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.EXPENSES_CHANGED);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      await fetchData(true, false); // Force refresh, no loading spinner
+      fetchData(true, false); // Background refresh to sync
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar el gasto', err.message);

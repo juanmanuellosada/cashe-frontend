@@ -21,7 +21,7 @@ function Transfers() {
       if (showLoading) setLoading(true);
       const [transfersData, accountsData] = await Promise.all([
         getAllTransfers(forceRefresh),
-        getAccounts(),
+        getAccounts(forceRefresh),
       ]);
       setTransfers(transfersData.transfers || []);
       setAccounts(accountsData.accounts || []);
@@ -43,11 +43,17 @@ function Transfers() {
     try {
       setSaving(true);
       await updateTransfer(transfer);
+      // Optimistic update — reflect changes immediately in the list
+      setTransfers(prev => prev.map(t =>
+        (t.rowIndex || t.id) === (transfer.rowIndex || transfer.id)
+          ? { ...t, ...transfer }
+          : t
+      ));
       setEditingMovement(null);
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.TRANSFERS_CHANGED);
       emit(DataEvents.ACCOUNTS_CHANGED);
-      await fetchData(true, false); // Force refresh, no loading spinner
+      fetchData(true, false); // Background refresh to sync
     } catch (err) {
       console.error('Error updating:', err);
       showError('No se pudo guardar la transferencia', err.message);

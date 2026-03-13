@@ -91,7 +91,11 @@ const invalidateCache = (type) => {
   }
 
   // Emitir evento según el tipo de datos invalidados
-  if (type.includes('expense')) {
+  if (type === 'movements') {
+    // 'movements' covers both expenses and incomes
+    emit(DataEvents.EXPENSES_CHANGED);
+    emit(DataEvents.INCOMES_CHANGED);
+  } else if (type.includes('expense')) {
     emit(DataEvents.EXPENSES_CHANGED);
   } else if (type.includes('income')) {
     emit(DataEvents.INCOMES_CHANGED);
@@ -271,7 +275,12 @@ const accountTypeFromDb = (type) => {
 // ============================================
 // ACCOUNTS
 // ============================================
-export const getAccounts = () => withDeduplication('accounts', async () => {
+export const getAccounts = (forceRefresh = false) => {
+  if (forceRefresh) {
+    cache.delete('accounts');
+    pendingRequests.delete('accounts');
+  }
+  return withDeduplication('accounts', async () => {
   const userId = await getUserId();
 
   // Fetch accounts and balances in parallel (2 queries instead of 4*N)
@@ -370,6 +379,7 @@ export const getAccounts = () => withDeduplication('accounts', async () => {
   setCachedData('accounts', result);
   return result;
 });
+};
 
 // Calculate next statement balance for credit cards (separated by currency)
 // Returns:
