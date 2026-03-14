@@ -47,17 +47,16 @@ function generarPeriodosResumen(diaCierre) {
   return periodos;
 }
 
-// Calcula una fecha que caiga en el período seleccionado
+// Calcula la fecha de cierre del período seleccionado
 function calcularFechaDePeriodo(periodoId, diaCierre) {
   if (!periodoId) return new Date().toISOString().split('T')[0];
 
   const [year, month] = periodoId.split('-').map(Number);
   const cierre = diaCierre || 1;
 
-  // La fecha debe ser ANTES del día de cierre del mes del período
-  // Por ejemplo: período Marzo 2025, cierre día 15 → fecha: 14 de marzo
-  const dia = Math.max(1, cierre - 1);
-  const fecha = new Date(year, month - 1, dia);
+  // La fecha es el día de cierre del período seleccionado
+  const lastDay = new Date(year, month, 0).getDate();
+  const fecha = new Date(year, month - 1, Math.min(cierre, lastDay));
 
   return fecha.toISOString().split('T')[0];
 }
@@ -281,8 +280,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   // Calcular fecha de primera cuota
   const fechaPrimeraCuota = useMemo(() => {
     if (!esTarjetaCredito || !diaCierre || cantidadCuotas <= 1) return null;
+    // Cuando hay período seleccionado, la primera cuota ES el cierre de ese período
+    if (periodoResumen) {
+      const [year, month] = periodoResumen.split('-').map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      return new Date(year, month - 1, Math.min(diaCierre, lastDay));
+    }
     return calcularFechaPrimeraCuota(formData.fecha, diaCierre);
-  }, [formData.fecha, diaCierre, esTarjetaCredito, cantidadCuotas]);
+  }, [formData.fecha, periodoResumen, diaCierre, esTarjetaCredito, cantidadCuotas]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
