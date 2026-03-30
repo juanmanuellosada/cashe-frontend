@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Pie, PieChart, LabelList, Cell } from "recharts";
 import { TrendingUp } from "lucide-react";
 import {
@@ -47,6 +48,9 @@ const CategoryIcon = ({ icon, size = 14 }) => {
 };
 
 function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
+  const uid = useId().replace(/:/g, '-');
+  const glowId = `${uid}-glow`;
+
   if (loading) {
     return (
       <Card>
@@ -195,7 +199,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
           <PieChart>
             <defs>
               {/* Glow effect */}
-              <filter id="pie-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="4" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
@@ -223,7 +227,7 @@ function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
                   key={`cell-${index}`}
                   fill={entry.fill}
                   stroke="var(--bg-secondary)"
-                  filter="url(#pie-glow)"
+                  filter={`url(#${glowId})`}
                 />
               ))}
 

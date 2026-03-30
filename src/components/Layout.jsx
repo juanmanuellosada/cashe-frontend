@@ -335,6 +335,15 @@ function Layout({ children, darkMode, toggleDarkMode }) {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Skip to main content – accesibilidad para teclado */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium focus:outline-none"
+        style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+      >
+        Ir al contenido principal
+      </a>
+
       {/* Offline Indicator */}
       <OfflineIndicator />
 
@@ -395,6 +404,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                   backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
+                aria-current={location.pathname === '/' ? 'page' : undefined}
                 title={sidebarCollapsed ? 'Inicio' : undefined}
               >
                 <svg className="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,6 +429,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                   backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
+                aria-current={location.pathname === item.path ? 'page' : undefined}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, isActive => isActive ? 'var(--text-primary)' : 'currentColor')}</div>
@@ -441,6 +452,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                   backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
+                aria-current={location.pathname === item.path ? 'page' : undefined}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, 'currentColor')}</div>
@@ -463,6 +475,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
                   backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 })}
+                aria-current={location.pathname === item.path ? 'page' : undefined}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <div className="w-[18px] h-[18px] flex-shrink-0">{renderIcon(item.icon, 'currentColor')}</div>
@@ -555,7 +568,7 @@ function Layout({ children, darkMode, toggleDarkMode }) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
+      <div id="main-content" tabIndex="-1" className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${isDesktop ? (sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]') : ''}`}>
         {/* Mobile Header */}
         {!isDesktop && (
           <header

@@ -47,6 +47,11 @@ function RecurringCard({ recurring, onClick, onPause, selectMode, isSelected }) 
     : isIncome
       ? 'var(--accent-green)'
       : 'var(--accent-blue)';
+  const typeSoftBg = isExpense
+    ? 'var(--accent-red-soft)'
+    : isIncome
+      ? 'var(--accent-green-soft)'
+      : 'var(--accent-blue-soft)';
 
   const typeLabel = isExpense ? 'Gasto' : isIncome ? 'Ingreso' : 'Transferencia';
 
@@ -68,7 +73,7 @@ function RecurringCard({ recurring, onClick, onPause, selectMode, isSelected }) 
         <span
           className="px-2 py-0.5 rounded-full text-xs font-medium"
           style={{
-            backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)`,
+            backgroundColor: typeSoftBg,
             color: typeColor,
           }}
         >

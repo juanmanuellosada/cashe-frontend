@@ -788,7 +788,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       <button
         type="submit"
         disabled={!isValid || loading || showSuccess}
-        className="w-full py-3 sm:py-4 rounded-xl font-semibold text-white text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+        className="w-full py-3 sm:py-4 rounded-xl font-semibold text-white text-sm sm:text-base transition-all duration-300 active:scale-[0.97] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 relative overflow-hidden"
         style={{
           backgroundColor: showSuccess
             ? 'var(--accent-green)'

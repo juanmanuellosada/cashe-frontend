@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -37,6 +38,15 @@ const chartConfig = {
  * Ofrece una vista completa de la situación financiera
  */
 function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
+  const uid = useId().replace(/:/g, '-');
+  const ids = {
+    dots: `${uid}-dots`,
+    incomeGrad: `${uid}-income`,
+    expenseGrad: `${uid}-expense`,
+    barGlow: `${uid}-bar-glow`,
+    lineGlow: `${uid}-line-glow`,
+  };
+
   if (loading) {
     return (
       <Card>
@@ -182,7 +192,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
               <defs>
                 {/* Background pattern */}
                 <pattern
-                  id="composed-pattern-dots"
+                  id={ids.dots}
                   x="0"
                   y="0"
                   width="10"
@@ -199,25 +209,25 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                 </pattern>
 
                 {/* Gradient for Ingresos */}
-                <linearGradient id="ingresosGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={ids.incomeGrad} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.8} />
                   <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0.3} />
                 </linearGradient>
 
                 {/* Gradient for Gastos */}
-                <linearGradient id="gastosGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={ids.expenseGrad} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--accent-red)" stopOpacity={0.8} />
                   <stop offset="100%" stopColor="var(--accent-red)" stopOpacity={0.3} />
                 </linearGradient>
 
                 {/* Glow for bars */}
-                <filter id="composed-bar-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id={ids.barGlow} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="2" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
 
                 {/* Glow for line */}
-                <filter id="composed-line-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id={ids.lineGlow} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="3" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
@@ -228,7 +238,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                 y="0"
                 width="100%"
                 height="85%"
-                fill="url(#composed-pattern-dots)"
+                fill={`url(#${ids.dots})`}
               />
 
               <CartesianGrid
@@ -270,18 +280,18 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
               {/* Bars for income and expenses */}
               <Bar
                 dataKey="ingresos"
-                fill="url(#ingresosGradient)"
+                fill={`url(#${ids.incomeGrad})`}
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
-                filter="url(#composed-bar-glow)"
+                filter={`url(#${ids.barGlow})`}
               />
 
               <Bar
                 dataKey="gastos"
-                fill="url(#gastosGradient)"
+                fill={`url(#${ids.expenseGrad})`}
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
-                filter="url(#composed-bar-glow)"
+                filter={`url(#${ids.barGlow})`}
               />
 
               {/* Line for balance */}
@@ -301,7 +311,7 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
                   stroke: "var(--bg-secondary)",
                   strokeWidth: 2,
                 }}
-                filter="url(#composed-line-glow)"
+                filter={`url(#${ids.lineGlow})`}
               />
             </ComposedChart>
           </ChartContainer>

@@ -57,6 +57,11 @@ function ScheduledCard({ scheduled, onClick, onApprove, onReject, onEdit, onDele
     : isIncome
       ? 'var(--accent-green)'
       : 'var(--accent-blue)';
+  const typeSoftBg = isExpense
+    ? 'var(--accent-red-soft)'
+    : isIncome
+      ? 'var(--accent-green-soft)'
+      : 'var(--accent-blue-soft)';
 
   const typeLabel = isExpense ? 'Gasto' : isIncome ? 'Ingreso' : 'Transferencia';
   const statusInfo = getStatusInfo(scheduled.status, scheduled.fecha);
@@ -79,7 +84,7 @@ function ScheduledCard({ scheduled, onClick, onApprove, onReject, onEdit, onDele
         <span
           className="px-2 py-0.5 rounded-full text-xs font-medium"
           style={{
-            backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)`,
+            backgroundColor: typeSoftBg,
             color: typeColor,
           }}
         >

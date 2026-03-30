@@ -29,6 +29,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
   gridTemplateColumns,
   tipoCambio,
   dateFormat = 'short',
+  virtualStyle,
 }) {
   const itemId = movement.rowIndex || movement.id;
 
@@ -57,6 +58,7 @@ const MovementsTableRow = memo(function MovementsTableRow({
     <div
       className="group grid border-b transition-colors duration-100 cursor-pointer"
       style={{
+        ...virtualStyle,
         gridTemplateColumns,
         backgroundColor: isSelected ? rowTypeBgDim : 'transparent',
         borderColor: 'var(--border-subtle)',

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 import { TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import {
@@ -20,6 +21,8 @@ import { formatCurrency } from "../../utils/format";
  * Ideal para metas y límites de gasto por categoría
  */
 function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
+  const uid = useId().replace(/:/g, '-');
+  const glowId = `${uid}-glow`;
   if (loading) {
     return (
       <Card>
@@ -180,7 +183,7 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
             >
               <defs>
                 {/* Glow effect for bars */}
-                <filter id="radial-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="3" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
@@ -202,7 +205,7 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
                 dataKey="percentage"
                 background
                 cornerRadius={8}
-                filter="url(#radial-glow)"
+                filter={`url(#${glowId})`}
               />
             </RadialBarChart>
           </ChartContainer>

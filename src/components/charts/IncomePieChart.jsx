@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useId } from "react";
 import { Pie, PieChart, LabelList, Cell, Sector } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
@@ -48,6 +48,8 @@ const CategoryIcon = ({ icon, size = 14 }) => {
 };
 
 function IncomePieChart({ data, loading, currency = 'ARS', dateRange }) {
+  const uid = useId().replace(/:/g, '-');
+  const glowId = `${uid}-glow`;
   const [activeIndex, setActiveIndex] = useState(null);
   const [chartPercent, setChartPercent] = useState(65);
   const [legendExpanded, setLegendExpanded] = useState(false);
@@ -272,7 +274,7 @@ function IncomePieChart({ data, loading, currency = 'ARS', dateRange }) {
             >
               <PieChart>
                 <defs>
-                  <filter id="income-pie-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur stdDeviation="4" result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                   </filter>
@@ -314,7 +316,7 @@ function IncomePieChart({ data, loading, currency = 'ARS', dateRange }) {
                       key={`cell-${index}`}
                       fill={entry.fill}
                       stroke="var(--bg-secondary)"
-                      filter="url(#income-pie-glow)"
+                      filter={`url(#${glowId})`}
                     />
                   ))}
 

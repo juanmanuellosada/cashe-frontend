@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -24,6 +25,13 @@ const chartConfig = {
 };
 
 function BalanceLineChart({ data, loading, currency = 'ARS' }) {
+  const uid = useId().replace(/:/g, '-');
+  const ids = {
+    dots: `${uid}-dots`,
+    glow: `${uid}-glow`,
+    gradient: `${uid}-gradient`,
+  };
+
   if (loading) {
     return (
       <Card>
@@ -139,7 +147,7 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
             {/* Background pattern */}
             <defs>
               <pattern
-                id="balance-pattern-dots"
+                id={ids.dots}
                 x="0"
                 y="0"
                 width="10"
@@ -157,7 +165,7 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
 
               {/* Glow effect */}
               <filter
-                id="balance-line-glow"
+                id={ids.glow}
                 x="-50%"
                 y="-50%"
                 width="200%"
@@ -168,7 +176,7 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
               </filter>
 
               {/* Gradient for positive balance */}
-              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={ids.gradient} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.3} />
                 <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
               </linearGradient>
@@ -179,7 +187,7 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
               y="0"
               width="100%"
               height="85%"
-              fill="url(#balance-pattern-dots)"
+              fill={`url(#${ids.dots})`}
             />
 
             <CartesianGrid
@@ -229,7 +237,7 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
                 stroke: "var(--bg-secondary)",
                 strokeWidth: 2,
               }}
-              filter="url(#balance-line-glow)"
+              filter={`url(#${ids.glow})`}
             />
           </LineChart>
         </ChartContainer>

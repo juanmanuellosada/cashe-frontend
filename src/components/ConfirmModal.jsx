@@ -164,7 +164,7 @@ function ConfirmModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium transition-all duration-150 hover:opacity-80 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100"
               style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
             >
               {cancelText}
@@ -172,7 +172,7 @@ function ConfirmModal({
             <button
               onClick={onConfirm}
               disabled={loading}
-              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 min-h-[48px] rounded-xl font-medium text-white transition-all duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
               style={{ backgroundColor: colors.button }}
             >
               {loading ? (

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 import {
@@ -31,6 +32,8 @@ const chartConfig = {
  * Muestra gastos actuales vs promedio histórico
  */
 function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' }) {
+  const uid = useId().replace(/:/g, '-');
+  const ids = { glow: `${uid}-glow`, pattern: `${uid}-pattern` };
   if (loading) {
     return (
       <Card>
@@ -157,14 +160,14 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
             <RadarChart data={data}>
               <defs>
                 {/* Glow effect */}
-                <filter id="radar-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id={ids.glow} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="2" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
 
                 {/* Pattern */}
                 <pattern
-                  id="radar-pattern"
+                  id={ids.pattern}
                   x="0"
                   y="0"
                   width="20"
@@ -180,7 +183,7 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
                 y="0"
                 width="100%"
                 height="100%"
-                fill="url(#radar-pattern)"
+                fill={`url(#${ids.pattern})`}
                 opacity="0.5"
               />
 
@@ -226,7 +229,7 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
                 fill="#14b8a6"
                 fillOpacity={0.5}
                 strokeWidth={2.5}
-                filter="url(#radar-glow)"
+                filter={`url(#${ids.glow})`}
               />
             </RadarChart>
           </ChartContainer>

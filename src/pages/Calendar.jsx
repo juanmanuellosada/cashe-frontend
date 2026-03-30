@@ -158,9 +158,9 @@ function Calendar() {
     if (isScheduled) {
       // Lighter/more transparent for scheduled (pending) transactions
       switch (type) {
-        case 'income': return 'color-mix(in srgb, var(--accent-green) 10%, transparent)';
-        case 'expense': return 'color-mix(in srgb, var(--accent-red) 10%, transparent)';
-        case 'transfer': return 'color-mix(in srgb, var(--accent-blue) 10%, transparent)';
+        case 'income': return 'var(--accent-green-dim)';
+        case 'expense': return 'var(--accent-red-dim)';
+        case 'transfer': return 'var(--accent-blue-dim)';
         default: return 'var(--bg-tertiary)';
       }
     }

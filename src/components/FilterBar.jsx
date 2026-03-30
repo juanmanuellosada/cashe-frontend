@@ -85,11 +85,12 @@ const FilterBar = memo(function FilterBar({
             filters.tipos.map(tipo => {
               const typeLabels = { ingreso: 'Ingresos', gasto: 'Gastos', transferencia: 'Transferencias' };
               const typeColors = { ingreso: 'var(--accent-green)', gasto: 'var(--accent-red)', transferencia: 'var(--accent-blue)' };
+              const typeSoftBg = { ingreso: 'var(--accent-green-soft)', gasto: 'var(--accent-red-soft)', transferencia: 'var(--accent-blue-soft)' };
               return (
                 <span
                   key={tipo}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                  style={{ backgroundColor: `color-mix(in srgb, ${typeColors[tipo]} 15%, transparent)`, color: typeColors[tipo] }}
+                  style={{ backgroundColor: typeSoftBg[tipo], color: typeColors[tipo] }}
                 >
                   {typeLabels[tipo]}
                   <button

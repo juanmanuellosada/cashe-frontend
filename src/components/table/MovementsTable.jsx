@@ -1,7 +1,11 @@
 import { useMemo } from 'react';
+import { List } from 'react-window';
 import { useColumnResize } from './useColumnResize';
 import MovementsTableHeader from './MovementsTableHeader';
 import MovementsTableRow from './MovementsTableRow';
+
+const VIRTUAL_THRESHOLD = 50;
+const ROW_HEIGHT = 44;
 
 function getColumns(type) {
   if (type === 'transferencia') {
@@ -33,6 +37,18 @@ function getColumns(type) {
     { id: 'monto', label: 'Monto', resizable: false, defaultWidth: 120, sortable: true, sortId: 'amount', align: 'right' },
     { id: 'equivalente', label: 'Equivalente', resizable: false, defaultWidth: 130, sortable: false, align: 'right' },
   ];
+}
+
+// react-window v2 row renderer — receives index + style + all rowProps
+function VirtualRow({ index, style, movements, ...rowProps }) {
+  const movement = movements[index];
+  return (
+    <MovementsTableRow
+      movement={movement}
+      virtualStyle={style}
+      {...rowProps}
+    />
+  );
 }
 
 export default function MovementsTable({
@@ -69,6 +85,17 @@ export default function MovementsTable({
     return parts.join(' ');
   }, [columns, columnWidths]);
 
+  const useVirtual = movements.length > VIRTUAL_THRESHOLD;
+
+  // Compute a numeric height for the virtual list from the maxHeight CSS expression
+  const listHeight = useMemo(() => {
+    if (!useVirtual) return 0;
+    if (maxHeight === 'none') return movements.length * ROW_HEIGHT;
+    // Default: 'calc(100vh - 260px)'
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    return Math.min(vh - 260, movements.length * ROW_HEIGHT);
+  }, [useVirtual, maxHeight, movements.length]);
+
   const allSelected = movements.length > 0 && movements.every((m) => selectedItems.has(m.rowIndex || m.id));
   const someSelected = !allSelected && movements.some((m) => selectedItems.has(m.rowIndex || m.id));
 
@@ -80,14 +107,32 @@ export default function MovementsTable({
     }
   };
 
+  // Stable rowProps for react-window v2
+  const rowProps = useMemo(() => ({
+    movements,
+    type,
+    accounts,
+    selectionMode,
+    selectedItems,
+    onToggleSelect,
+    onClick: onMovementClick,
+    onDeleteClick,
+    getTypeColor,
+    getTypeBgDim,
+    isAccountUSD,
+    gridTemplateColumns,
+    tipoCambio,
+    dateFormat,
+  }), [movements, type, accounts, selectionMode, selectedItems, onToggleSelect, onMovementClick, onDeleteClick, getTypeColor, getTypeBgDim, isAccountUSD, gridTemplateColumns, tipoCambio, dateFormat]);
+
   return (
     <div
       className="rounded-xl"
       style={{
         border: '1px solid var(--border-subtle)',
         overflowX: 'auto',
-        overflowY: maxHeight !== 'none' ? 'auto' : 'visible',
-        maxHeight,
+        overflowY: useVirtual ? 'hidden' : (maxHeight !== 'none' ? 'auto' : 'visible'),
+        maxHeight: useVirtual ? 'none' : maxHeight,
       }}
     >
       <div style={{ minWidth: 'max-content', width: '100%' }}>
@@ -102,25 +147,35 @@ export default function MovementsTable({
           selectionMode={selectionMode}
           gridTemplateColumns={gridTemplateColumns}
         />
-        {movements.map((movement) => (
-          <MovementsTableRow
-            key={movement.rowIndex || movement.id}
-            movement={movement}
-            type={type}
-            accounts={accounts}
-            isSelected={selectedItems.has(movement.rowIndex || movement.id)}
-            selectionMode={selectionMode}
-            onToggleSelect={onToggleSelect}
-            onClick={onMovementClick}
-            onDeleteClick={onDeleteClick}
-            getTypeColor={getTypeColor}
-            getTypeBgDim={getTypeBgDim}
-            isAccountUSD={isAccountUSD}
-            gridTemplateColumns={gridTemplateColumns}
-            tipoCambio={tipoCambio}
-            dateFormat={dateFormat}
+        {useVirtual ? (
+          <List
+            rowComponent={VirtualRow}
+            rowCount={movements.length}
+            rowHeight={ROW_HEIGHT}
+            rowProps={rowProps}
+            style={{ height: listHeight, overflowX: 'hidden' }}
           />
-        ))}
+        ) : (
+          movements.map((movement) => (
+            <MovementsTableRow
+              key={movement.rowIndex || movement.id}
+              movement={movement}
+              type={type}
+              accounts={accounts}
+              isSelected={selectedItems.has(movement.rowIndex || movement.id)}
+              selectionMode={selectionMode}
+              onToggleSelect={onToggleSelect}
+              onClick={onMovementClick}
+              onDeleteClick={onDeleteClick}
+              getTypeColor={getTypeColor}
+              getTypeBgDim={getTypeBgDim}
+              isAccountUSD={isAccountUSD}
+              gridTemplateColumns={gridTemplateColumns}
+              tipoCambio={tipoCambio}
+              dateFormat={dateFormat}
+            />
+          ))
+        )}
       </div>
     </div>
   );

@@ -39,10 +39,11 @@ const TABLE_ICON = (
 );
 
 // Renders context menu via portal, auto-clamped to viewport
-function ContextMenuPortal({ x, y, children }) {
+function ContextMenuPortal({ x, y, onClose, children }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState({ top: y + 4, left: x + 4 });
 
+  // Clamp position to viewport
   useEffect(() => {
     if (!menuRef.current) return;
     const { offsetWidth: w, offsetHeight: h } = menuRef.current;
@@ -54,10 +55,35 @@ function ContextMenuPortal({ x, y, children }) {
     });
   }, [x, y]);
 
+  // Auto-focus first menuitem on mount
+  useEffect(() => {
+    const first = menuRef.current?.querySelector('[role="menuitem"]');
+    first?.focus();
+  }, []);
+
+  // Keyboard navigation: Arrow keys, Escape, Tab
+  const handleKeyDown = (e) => {
+    const items = [...(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])];
+    const idx = items.indexOf(document.activeElement);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      items[(idx + 1) % items.length]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(idx - 1 + items.length) % items.length]?.focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.preventDefault();
+      onClose?.();
+    }
+  };
+
   return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[9999] rounded-xl shadow-2xl py-1 min-w-[180px]"
+      role="menu"
+      aria-label="Opciones de vista"
+      className="fixed z-[250] rounded-xl shadow-2xl py-1 min-w-[180px] outline-none"
       style={{
         top: pos.top,
         left: pos.left,
@@ -65,6 +91,7 @@ function ContextMenuPortal({ x, y, children }) {
         border: '1px solid var(--border-subtle)',
       }}
       onMouseDown={(e) => e.stopPropagation()}
+      onKeyDown={handleKeyDown}
     >
       {children}
     </div>,
@@ -1536,10 +1563,12 @@ const MovementsList = memo(function MovementsList({
 
       {/* ── Context Menu (right-click on tabs) ── */}
       {contextMenu && (
-        <ContextMenuPortal x={contextMenu.x} y={contextMenu.y}>
+        <ContextMenuPortal x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)}>
 
           {/* Renombrar — siempre */}
           <button
+            role="menuitem"
+            tabIndex={-1}
             className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
             style={{ color: 'var(--text-primary)' }}
             onClick={() => {
@@ -1561,6 +1590,8 @@ const MovementsList = memo(function MovementsList({
           {/* Establecer como predeterminada — solo tabs no-default */}
           {!contextMenu.isDefaultTab && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
               style={{ color: contextMenu.isViewDefault ? '#f59e0b' : 'var(--text-primary)' }}
               onClick={() => {
@@ -1580,6 +1611,8 @@ const MovementsList = memo(function MovementsList({
           {/* Eliminar — solo tabs no-default */}
           {!contextMenu.isDefaultTab && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-opacity hover:opacity-80"
               style={{ color: 'var(--accent-red)' }}
               onClick={() => {

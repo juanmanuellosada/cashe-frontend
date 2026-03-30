@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useId } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { eachMonthOfInterval, startOfMonth, endOfMonth, format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -42,6 +42,8 @@ const CategoryIcon = ({ icon, size = 12 }) => {
 const stripEmoji = (name) => name.replace(/^[\p{Emoji}\p{Emoji_Presentation}\u200d\uFE0F]+\s*/u, '').trim() || name;
 
 function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIconMap = {} }) {
+  const uid = useId().replace(/:/g, '-');
+  const dotsId = `${uid}-dots`;
   const [hiddenCategories, setHiddenCategories] = useState(new Set());
 
   const { chartData, categorias, chartConfig, topCategory } = useMemo(() => {
@@ -225,7 +227,7 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
             <defs>
               {/* Background pattern */}
               <pattern
-                id="area-pattern-dots"
+                id={dotsId}
                 x="0"
                 y="0"
                 width="10"
@@ -255,7 +257,7 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
               y="0"
               width="100%"
               height="85%"
-              fill="url(#area-pattern-dots)"
+              fill={`url(#${dotsId})`}
             />
 
             <CartesianGrid

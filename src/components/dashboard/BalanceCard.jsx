@@ -9,6 +9,13 @@ const DOLLAR_TYPE_NAMES = {
   contadoconliqui: 'CCL',
 };
 
+const DOLLAR_TYPE_DESCRIPTIONS = {
+  oficial: 'Dólar Oficial – tipo de cambio del Banco Nación',
+  blue: 'Dólar Blue – mercado informal',
+  bolsa: 'Dólar MEP (Bolsa) – compraventa de bonos en pesos',
+  contadoconliqui: 'Dólar CCL (Contado con Liqui) – transferencia al exterior',
+};
+
 function BalanceCard({
   accounts = [],
   dashboard,
@@ -182,8 +189,9 @@ function BalanceCard({
             </span>
             {dashboard?.tipoUsado && (
               <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0"
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 cursor-help"
                 style={{ backgroundColor: 'var(--accent-primary-dim)', color: 'var(--accent-primary)' }}
+                title={DOLLAR_TYPE_DESCRIPTIONS[dashboard.tipoUsado] || dashboard.tipoUsado}
               >
                 {DOLLAR_TYPE_NAMES[dashboard.tipoUsado] || dashboard.tipoUsado}
               </span>
