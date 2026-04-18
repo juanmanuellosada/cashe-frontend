@@ -193,4 +193,23 @@ export default defineConfig({
     })
   ],
   base: basePath,
+  build: {
+    // Split heavy vendor libs into their own chunks so route-level lazy
+    // imports don't re-download them, and so the initial landing/login
+    // bundle stays small. The Statistics page is the main consumer of
+    // recharts/framer-motion — it already lazy-loads via React.lazy.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-recharts': ['recharts'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-date': ['date-fns', 'react-day-picker'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+        },
+      },
+    },
+    // Silence large-chunk warning noise now that chunks are split
+    chunkSizeWarningLimit: 1200,
+  },
 })

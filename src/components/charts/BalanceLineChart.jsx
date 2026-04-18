@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -247,4 +247,4 @@ function BalanceLineChart({ data, loading, currency = 'ARS' }) {
   );
 }
 
-export default BalanceLineChart;
+export default memo(BalanceLineChart);

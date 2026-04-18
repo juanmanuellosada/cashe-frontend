@@ -197,50 +197,50 @@ function Statistics() {
     }).filter(item => item.ingresos > 0 || item.gastos > 0);
   }, [filteredMovements, dateRange, currency]);
 
-  // Process data for line chart (balance evolution)
+  // Process data for line chart (balance evolution) — single O(n) pass
   const lineChartData = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return [];
+    if (!dateRange.from || !dateRange.to || filteredMovements.length === 0) return [];
 
-    // Find first month with movements
-    const sortedMovements = [...filteredMovements].sort(
-      (a, b) => new Date(a.fecha) - new Date(b.fecha)
-    );
+    // Bucket net flow per month key in one pass
+    const netByMonth = {}; // { 'yyyy-MM': { pesos, dolares } }
+    let earliestKey = null;
 
-    if (sortedMovements.length === 0) return [];
+    for (const m of filteredMovements) {
+      const monthKey = m.fecha ? m.fecha.substring(0, 7) : '';
+      if (!monthKey) continue;
+      if (earliestKey === null || monthKey < earliestKey) earliestKey = monthKey;
 
-    const firstMovementDate = new Date(sortedMovements[0].fecha);
-    const firstMonth = startOfMonth(firstMovementDate);
+      const pesos = m.montoPesos || m.monto || 0;
+      const dolares = m.montoDolares || 0;
 
-    // Only generate months from first movement onwards
-    const monthsInRange = eachMonthOfInterval({
-      start: firstMonth > dateRange.from ? firstMonth : dateRange.from,
-      end: dateRange.to,
-    });
+      if (!netByMonth[monthKey]) netByMonth[monthKey] = { pesos: 0, dolares: 0 };
+      if (m.tipo === 'ingreso') {
+        netByMonth[monthKey].pesos += pesos;
+        netByMonth[monthKey].dolares += dolares;
+      } else if (m.tipo === 'gasto') {
+        netByMonth[monthKey].pesos -= pesos;
+        netByMonth[monthKey].dolares -= dolares;
+      }
+    }
 
+    if (!earliestKey) return [];
+    const firstMonth = new Date(`${earliestKey}-01T00:00:00`);
+    const start = firstMonth > dateRange.from ? firstMonth : startOfMonth(dateRange.from);
+    const monthsInRange = eachMonthOfInterval({ start, end: dateRange.to });
+
+    // Cumulate net flows across the ordered month list
+    let cumPesos = 0;
+    let cumDolares = 0;
     return monthsInRange.map(monthDate => {
-      const monthEnd = endOfMonth(monthDate);
+      const monthKey = format(monthDate, 'yyyy-MM');
+      const bucket = netByMonth[monthKey] || { pesos: 0, dolares: 0 };
+      cumPesos += bucket.pesos;
+      cumDolares += bucket.dolares;
+
       const monthLabel = format(monthDate, 'MMM', { locale: es });
-
-      let balancePesos = 0;
-      let balanceDolares = 0;
-      sortedMovements.forEach(m => {
-        const fecha = new Date(m.fecha);
-        if (fecha <= monthEnd) {
-          const pesos = m.montoPesos || m.monto || 0;
-          const dolares = m.montoDolares || 0;
-          if (m.tipo === 'ingreso') {
-            balancePesos += pesos;
-            balanceDolares += dolares;
-          } else if (m.tipo === 'gasto') {
-            balancePesos -= pesos;
-            balanceDolares -= dolares;
-          }
-        }
-      });
-
       return {
         month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
-        balance: currency === 'ARS' ? balancePesos : balanceDolares,
+        balance: currency === 'ARS' ? cumPesos : cumDolares,
       };
     });
   }, [filteredMovements, dateRange, currency]);
@@ -324,32 +324,28 @@ function Statistics() {
       ahorro: savingsRate - prevAhorro,
     };
 
-    // Sparklines: monthly values over the selected period (TAREA 6)
+    // Sparklines: monthly values over the selected period (TAREA 6) — single pass
     const months = eachMonthOfInterval({ start: dateRange.from, end: dateRange.to });
+    const bucket = {}; // { 'yyyy-MM': { ing, gas } }
+    for (const m of filteredMovements) {
+      const mk = m.fecha ? m.fecha.substring(0, 7) : '';
+      if (!mk) continue;
+      if (!bucket[mk]) bucket[mk] = { ing: 0, gas: 0 };
+      const monto = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
+      if (m.tipo === 'ingreso') bucket[mk].ing += monto;
+      else if (m.tipo === 'gasto') bucket[mk].gas += monto;
+    }
     const sparkIngresos = [];
     const sparkGastos = [];
     const sparkBalance = [];
     const sparkAhorro = [];
-
     months.forEach(monthDate => {
-      const mStart = startOfMonth(monthDate);
-      const mEnd = endOfMonth(monthDate);
-      let mIngresos = 0;
-      let mGastos = 0;
-
-      filteredMovements.forEach(m => {
-        const fecha = new Date(m.fecha);
-        if (fecha >= mStart && fecha <= mEnd) {
-          const monto = currency === 'ARS' ? (m.montoPesos || m.monto || 0) : (m.montoDolares || 0);
-          if (m.tipo === 'ingreso') mIngresos += monto;
-          else if (m.tipo === 'gasto') mGastos += monto;
-        }
-      });
-
-      sparkIngresos.push(mIngresos);
-      sparkGastos.push(mGastos);
-      sparkBalance.push(mIngresos - mGastos);
-      sparkAhorro.push(mIngresos > 0 ? ((mIngresos - mGastos) / mIngresos) * 100 : 0);
+      const mk = format(monthDate, 'yyyy-MM');
+      const b = bucket[mk] || { ing: 0, gas: 0 };
+      sparkIngresos.push(b.ing);
+      sparkGastos.push(b.gas);
+      sparkBalance.push(b.ing - b.gas);
+      sparkAhorro.push(b.ing > 0 ? ((b.ing - b.gas) / b.ing) * 100 : 0);
     });
 
     const periodoAnteriorLabel = `${format(periodoAnterior.from, 'd MMM', { locale: es })} - ${format(periodoAnterior.to, 'd MMM', { locale: es })}`;

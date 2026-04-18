@@ -15,6 +15,7 @@ import { isEmoji, resolveIconPath } from '../services/iconStorage';
 import MovementsTable from './table/MovementsTable';
 import { useSavedViews } from '../hooks/useSavedViews';
 import { useViewPreferences } from '../hooks/useViewPreferences';
+import { useDebounce } from '../hooks/useDebounce';
 
 // ─── ViewTab ──────────────────────────────────────────────────────────────────
 const ICON_EDIT = (
@@ -190,6 +191,8 @@ const MovementsList = memo(function MovementsList({
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [searchText, setSearchText] = useState('');
+  // Debounce search to avoid re-filtering on every keystroke
+  const debouncedSearch = useDebounce(searchText, 250);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Exchange rate for equivalente column
@@ -421,8 +424,8 @@ const MovementsList = memo(function MovementsList({
       filtered = filtered.filter(m => selectedCategories.includes(m.categoria));
     }
 
-    if (searchText.trim()) {
-      const search = searchText.toLowerCase().trim();
+    if (debouncedSearch.trim()) {
+      const search = debouncedSearch.toLowerCase().trim();
       filtered = filtered.filter(m => {
         const nota = (m.nota || '').toLowerCase();
         const categoria = (m.categoria || '').toLowerCase();
@@ -479,7 +482,7 @@ const MovementsList = memo(function MovementsList({
     });
 
     return filtered;
-  }, [movements, dateRange, selectedAccounts, selectedCategories, searchText, type, sortConfig]);
+  }, [movements, dateRange, selectedAccounts, selectedCategories, debouncedSearch, type, sortConfig]);
 
   // Calculate subtotals
   const subtotals = useMemo(() => {

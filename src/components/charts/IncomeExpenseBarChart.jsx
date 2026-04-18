@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -273,4 +273,4 @@ function IncomeExpenseBarChart({ data, loading, currency = 'ARS' }) {
   );
 }
 
-export default IncomeExpenseBarChart;
+export default memo(IncomeExpenseBarChart);

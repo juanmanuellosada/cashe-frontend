@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useId } from "react";
+import { memo, useState, useCallback, useRef, useId } from "react";
 import { Pie, PieChart, LabelList, Cell, Sector } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
@@ -356,4 +356,4 @@ function IncomePieChart({ data, loading, currency = 'ARS', dateRange }) {
   );
 }
 
-export default IncomePieChart;
+export default memo(IncomePieChart);

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { Pie, PieChart, LabelList, Cell } from "recharts";
 import { TrendingUp } from "lucide-react";
 import {
@@ -251,4 +251,4 @@ function ExpensePieChart({ data, loading, currency = 'ARS', onSliceClick }) {
   );
 }
 
-export default ExpensePieChart;
+export default memo(ExpensePieChart);

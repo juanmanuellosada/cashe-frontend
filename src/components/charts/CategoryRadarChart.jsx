@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 import {
@@ -257,4 +257,4 @@ function CategoryRadarChart({ data, loading, currency = 'ARS', period = 'mes' })
   );
 }
 
-export default CategoryRadarChart;
+export default memo(CategoryRadarChart);

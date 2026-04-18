@@ -75,12 +75,21 @@ export function StatisticsProvider({ children }) {
     saveFiltersToStorage(dateRange, currency, selectedAccounts, userId);
   }, [dateRange, currency, selectedAccounts, userId]);
 
-  // Load data
+  // Load data — server-side date filter so we don't download years of history
   const loadData = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
+      // Extend the from-date to cover the previous period (for sparklines/variación)
+      // The UI compares current period vs a prior window of the same length.
+      const fromRaw = dateRange?.from || DEFAULT_DATE_RANGE.from;
+      const toRaw = dateRange?.to || DEFAULT_DATE_RANGE.to;
+      const windowMs = Math.max(0, new Date(toRaw).getTime() - new Date(fromRaw).getTime());
+      const extendedFrom = new Date(new Date(fromRaw).getTime() - windowMs - 86400000);
       const [movementsData, accountsData, categoriesData] = await Promise.all([
-        getRecentMovements(5000),
+        getRecentMovements(5000, {
+          fromDate: format(extendedFrom, 'yyyy-MM-dd'),
+          toDate: format(toRaw, 'yyyy-MM-dd'),
+        }),
         getAccounts(),
         getCategories(),
       ]);
@@ -111,7 +120,7 @@ export function StatisticsProvider({ children }) {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, []);
+  }, [dateRange]);
 
   useEffect(() => {
     loadData();

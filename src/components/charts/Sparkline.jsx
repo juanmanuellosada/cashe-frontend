@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 
 /**
  * Sparkline SVG inline chart for summary cards.
@@ -61,4 +61,4 @@ function Sparkline({ data, color = 'var(--accent-primary)', width = 80, height =
   );
 }
 
-export default Sparkline;
+export default memo(Sparkline);

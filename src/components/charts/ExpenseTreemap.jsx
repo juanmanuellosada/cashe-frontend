@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Treemap } from 'recharts';
 import {
   Card,
@@ -171,4 +172,4 @@ function ExpenseTreemap({ data, currency = 'ARS', onCategoryClick }) {
   );
 }
 
-export default ExpenseTreemap;
+export default memo(ExpenseTreemap);

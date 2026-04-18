@@ -1,4 +1,4 @@
-import { useMemo, useState, useId } from 'react';
+import { memo, useMemo, useState, useId } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { eachMonthOfInterval, startOfMonth, endOfMonth, format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -343,4 +343,4 @@ function StackedAreaChart({ movements, dateRange, currency = 'ARS', categoryIcon
   );
 }
 
-export default StackedAreaChart;
+export default memo(StackedAreaChart);

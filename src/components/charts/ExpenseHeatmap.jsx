@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { memo, useState, useMemo, Fragment } from 'react';
 import { format, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/format';
@@ -309,4 +309,4 @@ function ExpenseHeatmap({ movements, dateRange, currency = 'ARS', categoryIconMa
   );
 }
 
-export default ExpenseHeatmap;
+export default memo(ExpenseHeatmap);

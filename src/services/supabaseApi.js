@@ -190,50 +190,19 @@ const getUserId = async () => {
 export const getRecentUsage = () => withDeduplication('recentUsage', async () => {
   const userId = await getUserId();
 
-  // Obtener TODOS los movimientos para contar frecuencia de uso
-  const { data: allMovements } = await supabase
-    .from('movements')
-    .select('account_id, category_id')
-    .eq('user_id', userId);
+  // Usa RPC que hace el agregado server-side (una sola query, usa índices)
+  const { data, error } = await supabase.rpc('get_recent_usage', { p_user_id: userId });
 
-  // Obtener TODAS las transferencias
-  const { data: allTransfers } = await supabase
-    .from('transfers')
-    .select('from_account_id, to_account_id')
-    .eq('user_id', userId);
+  if (error) {
+    console.warn('get_recent_usage RPC failed, falling back:', error.message);
+    return { recentAccountIds: [], recentCategoryIds: [] };
+  }
 
-  // Contar frecuencia de uso por account_id y category_id
-  const accountUsageCount = new Map();
-  const categoryUsageCount = new Map();
-
-  (allMovements || []).forEach(m => {
-    if (m.account_id) {
-      accountUsageCount.set(m.account_id, (accountUsageCount.get(m.account_id) || 0) + 1);
-    }
-    if (m.category_id) {
-      categoryUsageCount.set(m.category_id, (categoryUsageCount.get(m.category_id) || 0) + 1);
-    }
-  });
-
-  (allTransfers || []).forEach(t => {
-    if (t.from_account_id) {
-      accountUsageCount.set(t.from_account_id, (accountUsageCount.get(t.from_account_id) || 0) + 1);
-    }
-    if (t.to_account_id) {
-      accountUsageCount.set(t.to_account_id, (accountUsageCount.get(t.to_account_id) || 0) + 1);
-    }
-  });
-
-  // Convertir a arrays ordenados por frecuencia (más usados primero)
-  const recentAccountIds = [...accountUsageCount.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => id);
-
-  const recentCategoryIds = [...categoryUsageCount.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => id);
-
-  const result = { recentAccountIds, recentCategoryIds };
+  const row = Array.isArray(data) ? data[0] : data;
+  const result = {
+    recentAccountIds: row?.recent_account_ids || [],
+    recentCategoryIds: row?.recent_category_ids || [],
+  };
   setCachedData('recentUsage', result);
   return result;
 });
@@ -1753,65 +1722,24 @@ export const getDashboard = async () => {
 export const getFilteredDashboard = async ({ startDate, endDate }) => {
   const userId = await getUserId();
 
-  // Get exchange rate (auto-updates if stale)
-  const exchangeData = await getExchangeRate();
-  const tipoCambio = exchangeData.tipoCambio;
-
-  // Get accounts with their currencies
-  const { data: accounts } = await supabase
-    .from('accounts')
-    .select('id, currency')
-    .eq('user_id', userId);
-
-  const arsAccountIds = (accounts || []).filter(a => a.currency === 'ARS').map(a => a.id);
-  const usdAccountIds = (accounts || []).filter(a => a.currency === 'USD').map(a => a.id);
-
-  // Excluir transacciones futuras del balance
-  const [{ data: incomes }, { data: expenses }] = await Promise.all([
-    supabase
-      .from('movements')
-      .select('amount, account_id')
-      .eq('user_id', userId)
-      .eq('type', 'income')
-      .or('is_future.is.null,is_future.eq.false')
-      .gte('date', startDate)
-      .lte('date', endDate),
-    supabase
-      .from('movements')
-      .select('amount, account_id')
-      .eq('user_id', userId)
-      .eq('type', 'expense')
-      .or('is_future.is.null,is_future.eq.false')
-      .gte('date', startDate)
-      .lte('date', endDate)
+  // Exchange rate + DB-side aggregation in parallel (single RPC replaces 2 full-scan queries)
+  const [exchangeData, rpcResult] = await Promise.all([
+    getExchangeRate(),
+    supabase.rpc('get_filtered_dashboard', {
+      p_user_id: userId,
+      p_from: startDate || null,
+      p_to: endDate || null,
+    }),
   ]);
 
-  // Calculate totals by currency
-  let ingresosMes = 0;
-  let ingresosMesDolares = 0;
-  let gastosMes = 0;
-  let gastosMesDolares = 0;
+  const tipoCambio = exchangeData.tipoCambio;
+  const row = Array.isArray(rpcResult?.data) ? rpcResult.data[0] : rpcResult?.data;
 
-  (incomes || []).forEach(m => {
-    const amount = parseFloat(m.amount);
-    if (usdAccountIds.includes(m.account_id)) {
-      ingresosMesDolares += amount;
-    } else {
-      ingresosMes += amount;
-    }
-  });
+  const ingresosMes = parseFloat(row?.ingresos_ars || 0) || 0;
+  const ingresosMesDolares = parseFloat(row?.ingresos_usd || 0) || 0;
+  const gastosMes = parseFloat(row?.gastos_ars || 0) || 0;
+  const gastosMesDolares = parseFloat(row?.gastos_usd || 0) || 0;
 
-  (expenses || []).forEach(m => {
-    const amount = parseFloat(m.amount);
-    if (usdAccountIds.includes(m.account_id)) {
-      gastosMesDolares += amount;
-    } else {
-      gastosMes += amount;
-    }
-  });
-
-  // Calculate totals (accounts balances would need separate query)
-  // For now, return the income/expense totals
   return {
     ingresosMes,
     ingresosMesDolares,
@@ -1829,22 +1757,35 @@ export const getFilteredDashboard = async ({ startDate, endDate }) => {
   };
 };
 
-export const getRecentMovements = async (limit = 10) => {
+export const getRecentMovements = async (limit = 10, { fromDate = null, toDate = null } = {}) => {
   const userId = await getUserId();
-  
+
+  let movementsQuery = supabase
+    .from('movements')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  let transfersQuery = supabase
+    .from('transfers')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (fromDate) {
+    movementsQuery = movementsQuery.gte('date', fromDate);
+    transfersQuery = transfersQuery.gte('date', fromDate);
+  }
+  if (toDate) {
+    movementsQuery = movementsQuery.lte('date', toDate);
+    transfersQuery = transfersQuery.lte('date', toDate);
+  }
+
   const [{ data: movements }, { data: transfers }, { data: accounts }, { data: categories }] = await Promise.all([
-    supabase
-      .from('movements')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(limit),
-    supabase
-      .from('transfers')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(limit),
+    movementsQuery,
+    transfersQuery,
     supabase.from('accounts').select('id, name').eq('user_id', userId),
     supabase.from('categories').select('id, name').eq('user_id', userId)
   ]);
@@ -2390,34 +2331,93 @@ export const getDashboardFiltered = async ({ fromDate, toDate }) => {
 export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuentas = [], categorias = [] }) => {
   const userId = await getUserId();
 
-  const [{ data: movements }, { data: transfers }, { data: accounts }, { data: categoriesData }] = await Promise.all([
-    supabase
+  // Fetch accounts/categories first — they're tiny and needed for name→id translation
+  const [{ data: accounts }, { data: categoriesData }] = await Promise.all([
+    supabase.from('accounts').select('id, name').eq('user_id', userId),
+    supabase.from('categories').select('id, name').eq('user_id', userId),
+  ]);
+
+  const wantsIngreso = !tipos.length || tipos.includes('ingreso');
+  const wantsGasto = !tipos.length || tipos.includes('gasto');
+  const wantsTransfer = !tipos.length || tipos.includes('transferencia');
+
+  // Resolve filter names → ids on the client (cheap, already in memory)
+  const wantedAccountIds = cuentas.length
+    ? (accounts || []).filter(a => cuentas.includes(a.name)).map(a => a.id)
+    : null;
+  const wantedCategoryIds = categorias.length
+    ? (categoriesData || []).filter(c => categorias.includes(c.name)).map(c => c.id)
+    : null;
+
+  // Build movements query with server-side filters
+  let movementsQuery = null;
+  if (wantsIngreso || wantsGasto) {
+    movementsQuery = supabase
       .from('movements')
       .select('*')
       .eq('user_id', userId)
       .gte('date', fromDate || '1900-01-01')
       .lte('date', toDate || '2100-12-31')
-      .order('date', { ascending: false }),
-    supabase
+      .order('date', { ascending: false });
+
+    // Type filter (income vs expense)
+    if (wantsIngreso && !wantsGasto) movementsQuery = movementsQuery.eq('type', 'income');
+    else if (wantsGasto && !wantsIngreso) movementsQuery = movementsQuery.eq('type', 'expense');
+    // else: no type filter, keep both
+
+    if (wantedAccountIds) {
+      if (wantedAccountIds.length === 0) {
+        movementsQuery = null; // No matching accounts → no movements
+      } else {
+        movementsQuery = movementsQuery.in('account_id', wantedAccountIds);
+      }
+    }
+    if (movementsQuery && wantedCategoryIds) {
+      if (wantedCategoryIds.length === 0) {
+        movementsQuery = null;
+      } else {
+        movementsQuery = movementsQuery.in('category_id', wantedCategoryIds);
+      }
+    }
+  }
+
+  // Build transfers query
+  let transfersQuery = null;
+  if (wantsTransfer && !categorias.length) {
+    transfersQuery = supabase
       .from('transfers')
       .select('*')
       .eq('user_id', userId)
       .gte('date', fromDate || '1900-01-01')
       .lte('date', toDate || '2100-12-31')
-      .order('date', { ascending: false }),
-    supabase.from('accounts').select('id, name').eq('user_id', userId),
-    supabase.from('categories').select('id, name').eq('user_id', userId)
+      .order('date', { ascending: false });
+
+    if (wantedAccountIds) {
+      if (wantedAccountIds.length === 0) {
+        transfersQuery = null;
+      } else {
+        // Transfers match if from OR to is in list
+        const ids = wantedAccountIds.join(',');
+        transfersQuery = transfersQuery.or(`from_account_id.in.(${ids}),to_account_id.in.(${ids})`);
+      }
+    }
+  }
+
+  const [movementsRes, transfersRes] = await Promise.all([
+    movementsQuery ? movementsQuery : Promise.resolve({ data: [] }),
+    transfersQuery ? transfersQuery : Promise.resolve({ data: [] }),
   ]);
 
-  let result = [];
+  const movements = movementsRes.data || [];
+  const transfers = transfersRes.data || [];
 
-  // Map movements using the same function as other endpoints
-  (movements || []).forEach(m => {
+  const result = [];
+
+  movements.forEach(m => {
     result.push(mapMovementFromDB(m, accounts, categoriesData));
   });
 
-  // Map transfers
-  (transfers || []).forEach(t => {
+  transfers.forEach(t => {
     const fromAccount = accounts?.find(a => a.id === t.from_account_id);
     const toAccount = accounts?.find(a => a.id === t.to_account_id);
     result.push({
@@ -2432,36 +2432,15 @@ export const getMovementsFiltered = async ({ fromDate, toDate, tipos = [], cuent
       monto: parseFloat(t.from_amount),
       nota: t.note || '',
       tipo: 'transferencia',
-      // Attachment info
       attachmentUrl: t.attachment_url,
       attachmentName: t.attachment_name,
-      // Future transaction indicator
       isFuture: t.is_future || false,
-      // Recurring indicator
       isRecurring: !!t.recurring_occurrence_id,
       recurringOccurrenceId: t.recurring_occurrence_id,
     });
   });
 
-  // Sort by date
   result.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-  // Apply filters
-  if (tipos && tipos.length > 0) {
-    result = result.filter(m => tipos.includes(m.tipo));
-  }
-  if (cuentas && cuentas.length > 0) {
-    result = result.filter(m => {
-      // For transfers, check both source and destination accounts
-      if (m.tipo === 'transferencia') {
-        return cuentas.includes(m.cuentaSaliente) || cuentas.includes(m.cuentaEntrante);
-      }
-      return cuentas.includes(m.cuenta);
-    });
-  }
-  if (categorias && categorias.length > 0) {
-    result = result.filter(m => m.categoria && categorias.includes(m.categoria));
-  }
 
   return { success: true, movements: result };
 };

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -321,4 +321,4 @@ function IncomeExpenseComposedChart({ data, loading, currency = 'ARS' }) {
   );
 }
 
-export default IncomeExpenseComposedChart;
+export default memo(IncomeExpenseComposedChart);

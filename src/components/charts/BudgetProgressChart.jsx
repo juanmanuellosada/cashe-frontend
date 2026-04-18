@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 import { TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import {
@@ -252,4 +252,4 @@ function BudgetProgressChart({ data, loading, currency = 'ARS' }) {
   );
 }
 
-export default BudgetProgressChart;
+export default memo(BudgetProgressChart);
