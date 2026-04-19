@@ -1,6 +1,6 @@
 import React from 'react';
 import ProgressBar from '../common/ProgressBar';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 /**
  * GoalCard - Card de meta con barra de progreso
@@ -26,6 +26,8 @@ function GoalCard({
     account_ids = [],
     icon,
     isOnTrack,
+    notStarted,
+    start_date,
   } = goal;
 
   // Get category/account names for display
@@ -169,9 +171,13 @@ function GoalCard({
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>{daysRemaining} días restantes</span>
+          <span>
+            {notStarted
+              ? `Comienza el ${formatDate(start_date, 'medium')}`
+              : `${daysRemaining} días restantes`}
+          </span>
         </div>
-        {!is_completed && (
+        {!is_completed && !notStarted && (
           <span
             className="flex items-center gap-1"
             style={{ color: isOnTrack ? 'var(--accent-green)' : 'var(--accent-yellow, #eab308)' }}

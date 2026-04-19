@@ -3198,6 +3198,26 @@ export const getGoalsWithProgress = async () => {
       }
 
       const periodDates = calculatePeriodDates(goal.period_type, goal.start_date, goal.end_date);
+
+      // Future-start goals haven't begun: report zero progress so negative "elapsed"
+      // doesn't flip the card to "Atrasado" and any already-scheduled movements don't
+      // get counted as progress against a period that hasn't started.
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      const periodStartDate = new Date(periodDates.start);
+      periodStartDate.setHours(0, 0, 0, 0);
+      if (periodStartDate > todayDate) {
+        return {
+          ...goal,
+          currentAmount: 0,
+          percentageAchieved: 0,
+          currentPeriod: periodDates,
+          daysRemaining: calculateDaysRemaining(periodDates.end),
+          isOnTrack: true,
+          notStarted: true,
+        };
+      }
+
       const currentAmount = await calculateGoalProgress(goal, periodDates.start, periodDates.end);
       const percentageAchieved = goal.target_amount > 0 ? (currentAmount / goal.target_amount) * 100 : 0;
       const daysRemaining = calculateDaysRemaining(periodDates.end);
