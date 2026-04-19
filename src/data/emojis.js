@@ -258,6 +258,7 @@ export const EMOJI_CATEGORIES = [
       { emoji: '🌟', keywords: ['brillante', 'especial', 'destacado'] },
       { emoji: '❓', keywords: ['pregunta', 'duda', 'question'] },
       { emoji: '❗', keywords: ['importante', 'atencion', 'warning'] },
+      { emoji: '🆘', keywords: ['sos', 'emergencia', 'ayuda', 'urgencia', 'fondo'] },
       { emoji: '➕', keywords: ['mas', 'agregar', 'plus'] },
       { emoji: '➖', keywords: ['menos', 'quitar', 'minus'] },
       { emoji: '🔄', keywords: ['actualizar', 'refresh', 'sync'] },
