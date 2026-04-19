@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import PeriodSelector from '../common/PeriodSelector';
 import MultiSelectDropdown from '../common/MultiSelectDropdown';
 import DatePicker from '../DatePicker';
 import ConfirmModal from '../ConfirmModal';
 import IconPicker from '../IconPicker';
 import { isEmoji } from '../../services/iconStorage';
+import { getIconCatalogUrl } from '../../hooks/useIconCatalog';
 
 /**
  * GoalModal - Modal para crear/editar metas
@@ -171,7 +173,8 @@ function GoalModal({
     onDelete?.(goal);
   };
 
-  // Prepare categories based on goal type
+  // Prepare categories based on goal type.
+  // Resolve icon_catalog (catalog image) when the category stores its icon there instead of the icon field.
   const relevantCategories = categories
     .filter((c) => {
       if (formData.goalType === 'income') {
@@ -182,7 +185,9 @@ function GoalModal({
     .map((c, index) => ({
       id: c.id || c.rowIndex || `cat-${index}`,
       name: c.nombre || c.name || c.label,
-      icon: c.icon,
+      icon: c.icon_catalog?.filename
+        ? getIconCatalogUrl(c.icon_catalog.filename)
+        : c.icon,
     }));
 
   const accountOptions = accounts.map((a, index) => ({
@@ -201,9 +206,8 @@ function GoalModal({
   const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
   const shouldClose = dragY > 100;
 
-  return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
         {/* Backdrop */}
         <div
           className="absolute inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -556,30 +560,30 @@ function GoalModal({
             </div>
           </form>
         </div>
-      </div>
 
-      {/* Delete confirmation */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDelete}
-        title="Eliminar meta"
-        message={`¿Estás seguro de que quieres eliminar "${goal?.name}"? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        variant="danger"
-      />
+        {/* Nested inside outer div so its z-50 stacks above the modal body within this z-[100] context */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
+          title="Eliminar meta"
+          message={`¿Estás seguro de que quieres eliminar "${goal?.name}"? Esta acción no se puede deshacer.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          variant="danger"
+        />
 
-      {/* Icon picker */}
-      <IconPicker
-        isOpen={showIconPicker}
-        onClose={() => setShowIconPicker(false)}
-        onSelect={(icon) => handleChange('icon', icon)}
-        currentValue={formData.icon}
-        showPredefined={false}
-        title="Seleccionar ícono"
-      />
-    </>
+        {/* Icon picker */}
+        <IconPicker
+          isOpen={showIconPicker}
+          onClose={() => setShowIconPicker(false)}
+          onSelect={(icon) => handleChange('icon', icon)}
+          currentValue={formData.icon}
+          showPredefined={false}
+          title="Seleccionar ícono"
+        />
+      </div>,
+    document.body
   );
 }
 
