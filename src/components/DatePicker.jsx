@@ -128,8 +128,9 @@ function DatePicker({ value, onChange, name, compact = false }) {
               month: 'relative space-y-2 sm:space-y-3',
               month_caption: 'flex justify-center relative items-center h-8 sm:h-10 mb-1 sm:mb-2',
               caption_label: 'text-xs sm:text-sm font-semibold',
-              // Overlay the nav on the caption row so prev/next align vertically with the month label
-              nav: 'absolute top-0 left-0 right-0 h-8 sm:h-10 flex items-center pointer-events-none',
+              // Overlay the nav on the caption row so prev/next align vertically with the month label;
+              // z-10 keeps the buttons' hit area above the caption, pointer-events-none lets empty nav area pass clicks through
+              nav: 'absolute top-0 left-0 right-0 h-8 sm:h-10 flex items-center pointer-events-none z-10',
               button_previous: 'pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
               button_next: 'pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 bg-transparent p-0 hover:opacity-70 inline-flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)]',
               month_grid: 'w-full border-collapse',
