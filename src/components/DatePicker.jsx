@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { DayPicker } from 'react-day-picker';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -7,7 +8,10 @@ import 'react-day-picker/style.css';
 
 function DatePicker({ value, onChange, name, compact = false }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, placeAbove: false });
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Convertir string yyyy-mm-dd a Date usando parseLocalDate para evitar timezone issues
   const selectedDate = value ? parseLocalDate(value) : new Date();
@@ -26,10 +30,36 @@ function DatePicker({ value, onChange, name, compact = false }) {
     setIsOpen(false);
   };
 
-  // Cerrar al hacer click fuera
+  // Track trigger position so the portaled menu follows it on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      if (!triggerRef.current) return;
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuHeight = 360;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const placeAbove = spaceBelow < menuHeight && rect.top > menuHeight;
+      setMenuPos({
+        top: placeAbove ? rect.top - 8 : rect.bottom + 8,
+        left: rect.left,
+        placeAbove,
+      });
+    };
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
+  // Cerrar al hacer click fuera (incluye el menú portaleado)
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      const insideTrigger = containerRef.current?.contains(event.target);
+      const insideMenu = menuRef.current?.contains(event.target);
+      if (!insideTrigger && !insideMenu) {
         setIsOpen(false);
       }
     };
@@ -41,6 +71,7 @@ function DatePicker({ value, onChange, name, compact = false }) {
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Seleccionar fecha${displayDate ? `: ${displayDate}` : ''}`}
@@ -65,10 +96,14 @@ function DatePicker({ value, onChange, name, compact = false }) {
         <span>{displayDate}</span>
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className="absolute z-50 mt-2 rounded-xl shadow-xl p-3 sm:p-4 left-0 sm:left-0 max-w-[calc(100vw-32px)] sm:max-w-none"
+          ref={menuRef}
+          className="fixed z-[200] rounded-xl shadow-xl p-3 sm:p-4 max-w-[calc(100vw-32px)] sm:max-w-none"
           style={{
+            top: menuPos.top,
+            left: menuPos.left,
+            transform: menuPos.placeAbove ? 'translateY(-100%)' : undefined,
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--bg-tertiary)',
             minWidth: 'min(280px, calc(100vw - 32px))',
@@ -115,7 +150,8 @@ function DatePicker({ value, onChange, name, compact = false }) {
               button_next: { color: 'var(--text-primary)' },
             }}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
