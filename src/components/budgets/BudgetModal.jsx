@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import PeriodSelector from '../common/PeriodSelector';
 import MultiSelectDropdown from '../common/MultiSelectDropdown';
 import DatePicker from '../DatePicker';
@@ -170,9 +171,8 @@ function BudgetModal({
   const backdropOpacity = Math.max(0.6 - (dragY / 300), 0);
   const shouldClose = dragY > 100;
 
-  return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
         {/* Backdrop */}
         <div
           className="absolute inset-0 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -502,30 +502,30 @@ function BudgetModal({
             </div>
           </form>
         </div>
-      </div>
 
-      {/* Delete confirmation */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDelete}
-        title="Eliminar presupuesto"
-        message={`¿Estás seguro de que quieres eliminar "${budget?.name}"? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        variant="danger"
-      />
+        {/* Nested inside outer div so its z-50 stacks above the modal body within this z-[100] context */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
+          title="Eliminar presupuesto"
+          message={`¿Estás seguro de que quieres eliminar "${budget?.name}"? Esta acción no se puede deshacer.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          variant="danger"
+        />
 
-      {/* Icon picker */}
-      <IconPicker
-        isOpen={showIconPicker}
-        onClose={() => setShowIconPicker(false)}
-        onSelect={(icon) => handleChange('icon', icon)}
-        currentValue={formData.icon}
-        showPredefined={false}
-        title="Seleccionar ícono"
-      />
-    </>
+        {/* Icon picker */}
+        <IconPicker
+          isOpen={showIconPicker}
+          onClose={() => setShowIconPicker(false)}
+          onSelect={(icon) => handleChange('icon', icon)}
+          currentValue={formData.icon}
+          showPredefined={false}
+          title="Seleccionar ícono"
+        />
+      </div>,
+    document.body
   );
 }
 
