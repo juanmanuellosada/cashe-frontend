@@ -55,6 +55,8 @@ export const EMOJI_CATEGORIES = [
       { emoji: '🍷', keywords: ['vino', 'wine', 'alcohol'] },
       { emoji: '🛒', keywords: ['super', 'supermercado', 'compras', 'carrito'] },
       { emoji: '🛍️', keywords: ['bolsas', 'compras', 'shopping'] },
+      { emoji: '🏪', keywords: ['kiosko', 'kiosco', 'almacen', 'tienda', 'minimercado', 'store'] },
+      { emoji: '🏬', keywords: ['tienda', 'departamento', 'shopping', 'mall'] },
     ]
   },
   {

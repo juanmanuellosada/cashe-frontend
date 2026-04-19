@@ -6,6 +6,7 @@ import DatePicker from '../DatePicker';
 import ConfirmModal from '../ConfirmModal';
 import IconPicker from '../IconPicker';
 import { isEmoji } from '../../services/iconStorage';
+import { getIconCatalogUrl } from '../../hooks/useIconCatalog';
 
 /**
  * BudgetModal - Modal para crear/editar presupuestos
@@ -155,13 +156,16 @@ function BudgetModal({
     onDelete?.(budget);
   };
 
-  // Prepare categories and accounts for MultiSelectChips
+  // Prepare categories and accounts for MultiSelectChips.
+  // Categories may use icon_catalog (catalog image) instead of the icon field — resolve either.
   const expenseCategories = categories
     .filter((c) => c.tipo === 'Gasto' || c.type === 'expense')
     .map((c, index) => ({
       id: c.id || c.rowIndex || `cat-${index}`,
       name: c.nombre || c.name || c.label,
-      icon: c.icon,
+      icon: c.icon_catalog?.filename
+        ? getIconCatalogUrl(c.icon_catalog.filename)
+        : c.icon,
     }));
 
   const accountOptions = accounts.map((a, index) => ({
