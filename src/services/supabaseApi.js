@@ -2668,15 +2668,23 @@ export const cancelStatementPayment = async (paymentId, transferId) => {
 // Helper: Calculate period dates based on type
 const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  // If the budget's start_date is in the future, anchor the current period to it
+  // so spent is computed from that date onward (prevents "exceeded" state before the budget starts).
+  const budgetStart = customStartDate ? new Date(customStartDate) : null;
+  if (budgetStart) budgetStart.setHours(0, 0, 0, 0);
+  const ref = budgetStart && budgetStart > now ? budgetStart : now;
+
   let start, end;
 
   switch (periodType) {
     case 'weekly': {
       // Start of week (Monday)
-      const dayOfWeek = now.getDay();
+      const dayOfWeek = ref.getDay();
       const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      start = new Date(now);
-      start.setDate(now.getDate() - diff);
+      start = new Date(ref);
+      start.setDate(ref.getDate() - diff);
       start.setHours(0, 0, 0, 0);
       end = new Date(start);
       end.setDate(start.getDate() + 6);
@@ -2684,13 +2692,13 @@ const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
       break;
     }
     case 'monthly': {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+      end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
       break;
     }
     case 'yearly': {
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 11, 31);
+      start = new Date(ref.getFullYear(), 0, 1);
+      end = new Date(ref.getFullYear(), 11, 31);
       break;
     }
     case 'custom': {
@@ -2699,9 +2707,14 @@ const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
       break;
     }
     default: {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+      end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
     }
+  }
+
+  // For future-start budgets, clamp the period start so spent is 0 until the budget begins
+  if (budgetStart && budgetStart > now && budgetStart > start) {
+    start = budgetStart;
   }
 
   return {

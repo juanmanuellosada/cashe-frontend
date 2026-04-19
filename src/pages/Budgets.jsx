@@ -440,6 +440,10 @@ function Budgets() {
           onSave={handleSave}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
+          onPause={async (b) => {
+            await handlePause(b);
+            setEditingBudget(null);
+          }}
           onClose={() => {
             setIsAdding(false);
             setEditingBudget(null);

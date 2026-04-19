@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { isEmoji, resolveIconPath } from '../../services/iconStorage';
 
 /**
@@ -14,17 +15,47 @@ function MultiSelectDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0, placeAbove: false });
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Filter items based on search
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Close on click outside
+  // Position the menu relative to the trigger; re-measure on scroll/resize so it tracks the button
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      if (!triggerRef.current) return;
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuHeight = 280;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const placeAbove = spaceBelow < menuHeight && rect.top > menuHeight;
+      setMenuPos({
+        top: placeAbove ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        placeAbove,
+      });
+    };
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
+  // Close on click outside (check both trigger and portaled menu)
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      const insideTrigger = containerRef.current?.contains(event.target);
+      const insideMenu = menuRef.current?.contains(event.target);
+      if (!insideTrigger && !insideMenu) {
         setIsOpen(false);
         setSearch('');
       }
@@ -67,6 +98,7 @@ function MultiSelectDropdown({
 
       {/* Trigger button */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-3 py-2.5 rounded-lg text-left flex items-center gap-2 text-sm transition-all"
@@ -95,11 +127,16 @@ function MultiSelectDropdown({
         </svg>
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
+      {/* Dropdown — portaled to body so it can render above the containing modal's overflow */}
+      {isOpen && createPortal(
         <div
-          className="absolute z-50 mt-1 w-full rounded-lg shadow-xl overflow-hidden animate-scale-in"
+          ref={menuRef}
+          className="fixed z-[200] rounded-lg shadow-xl overflow-hidden animate-scale-in"
           style={{
+            top: menuPos.top,
+            left: menuPos.left,
+            width: menuPos.width,
+            transform: menuPos.placeAbove ? 'translateY(-100%)' : undefined,
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)'
           }}
@@ -199,7 +236,8 @@ function MultiSelectDropdown({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

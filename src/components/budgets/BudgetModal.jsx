@@ -17,10 +17,12 @@ function BudgetModal({
   onSave,
   onDelete,
   onDuplicate,
+  onPause,
   onClose,
   loading = false,
 }) {
   const isEditing = !!budget;
+  const isPaused = !!budget?.is_paused;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -485,6 +487,21 @@ function BudgetModal({
                   }}
                 >
                   Duplicar
+                </button>
+              )}
+
+              {isEditing && onPause && (
+                <button
+                  type="button"
+                  onClick={() => onPause(budget)}
+                  disabled={loading}
+                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {isPaused ? 'Reanudar' : 'Pausar'}
                 </button>
               )}
 
