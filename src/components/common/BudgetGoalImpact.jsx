@@ -10,6 +10,7 @@ import { formatCurrency } from '../../utils/format';
  * @param {string} categoryId - ID de la categoría
  * @param {string} accountId - ID de la cuenta
  * @param {string} currency - Moneda del movimiento
+ * @param {string} date - Fecha del movimiento (yyyy-mm-dd)
  * @param {Array} budgets - Lista de presupuestos con progreso
  * @param {Array} goals - Lista de metas con progreso
  */
@@ -19,9 +20,17 @@ function BudgetGoalImpact({
   categoryId,
   accountId,
   currency = 'ARS',
+  date,
   budgets = [],
   goals = [],
 }) {
+  // Verifica si la fecha del movimiento cae dentro del período actual
+  const isDateInPeriod = (movementDate, period) => {
+    if (!period?.start || !period?.end) return false;
+    if (!movementDate) return true;
+    return movementDate >= period.start && movementDate <= period.end;
+  };
+
   // Encontrar presupuestos afectados (solo para gastos)
   const affectedBudgets = useMemo(() => {
     if (type !== 'expense' || !amount || amount <= 0) return [];
@@ -32,6 +41,9 @@ function BudgetGoalImpact({
 
       // Verificar moneda
       if (budget.currency !== currency) return false;
+
+      // La fecha del movimiento debe caer en el período actual del presupuesto
+      if (!isDateInPeriod(date, budget.currentPeriod)) return false;
 
       // Presupuesto global afecta todos los gastos
       if (budget.is_global) return true;
@@ -61,9 +73,9 @@ function BudgetGoalImpact({
         willExceed,
       };
     });
-  }, [type, amount, categoryId, accountId, currency, budgets]);
+  }, [type, amount, categoryId, accountId, currency, date, budgets]);
 
-  // Encontrar metas afectadas (para ingresos o reducción de gastos)
+  // Encontrar metas afectadas
   const affectedGoals = useMemo(() => {
     if (!amount || amount <= 0) return [];
 
@@ -79,6 +91,9 @@ function BudgetGoalImpact({
 
       // Meta de reducción de gasto solo afectada por gastos
       if (goal.goal_type === 'spending_reduction' && type !== 'expense') return false;
+
+      // La fecha del movimiento debe caer en el período actual de la meta
+      if (!isDateInPeriod(date, goal.currentPeriod)) return false;
 
       // Meta global afecta todos
       if (goal.is_global) return true;
@@ -100,16 +115,30 @@ function BudgetGoalImpact({
       let isPositive = false;
 
       if (goal.goal_type === 'income') {
+        // Meta de ingreso: cada ingreso suma al progreso
         newAmount = currentAmount + amount;
         isPositive = true;
+      } else if (goal.goal_type === 'savings') {
+        // Meta de ahorro = ingresos - gastos del período
+        if (type === 'income') {
+          newAmount = currentAmount + amount;
+          isPositive = true;
+        } else {
+          newAmount = currentAmount - amount;
+          isPositive = false;
+        }
       } else if (goal.goal_type === 'spending_reduction') {
-        // Para reducción de gasto, más gasto significa más lejos de la meta
-        newAmount = currentAmount + amount;
+        // currentAmount = max(0, baseline - gastado). Más gasto reduce el ahorro.
+        newAmount = Math.max(0, currentAmount - amount);
         isPositive = false;
       }
 
-      const newPercentage = (newAmount / goal.target_amount) * 100;
-      const willComplete = goal.goal_type === 'income' && newAmount >= goal.target_amount;
+      const newPercentage = goal.target_amount > 0
+        ? (newAmount / goal.target_amount) * 100
+        : 0;
+      const willComplete =
+        (goal.goal_type === 'income' || goal.goal_type === 'savings') &&
+        newAmount >= goal.target_amount;
 
       return {
         ...goal,
@@ -119,7 +148,7 @@ function BudgetGoalImpact({
         isPositive,
       };
     });
-  }, [type, amount, categoryId, accountId, currency, goals]);
+  }, [type, amount, categoryId, accountId, currency, date, goals]);
 
   // Si no hay impacto, no mostrar nada
   if (affectedBudgets.length === 0 && affectedGoals.length === 0) {
@@ -262,7 +291,7 @@ function BudgetGoalImpact({
           </div>
 
           <ProgressBar
-            value={goal.newAmount}
+            value={Math.max(0, goal.newAmount)}
             max={goal.target_amount}
             variant="goal"
             size="sm"

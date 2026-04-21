@@ -768,6 +768,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
           categoryId={selectedCategoryId}
           accountId={selectedAccount?.id}
           currency={esTarjetaCredito ? monedaGasto : (selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS')}
+          date={formData.fecha}
           budgets={budgets || []}
           goals={goals || []}
         />

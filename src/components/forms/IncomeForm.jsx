@@ -322,6 +322,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
           categoryId={selectedCategoryId}
           accountId={selectedAccount?.id}
           currency={selectedAccount?.moneda === 'Dólar' ? 'USD' : 'ARS'}
+          date={formData.fecha}
           budgets={budgets || []}
           goals={goals || []}
         />
