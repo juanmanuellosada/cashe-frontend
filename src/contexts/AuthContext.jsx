@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../config/supabase';
 import { clear as clearDataListeners } from '../services/dataEvents';
 import { clearUserStorage } from '../hooks/useUserStorage';
@@ -50,12 +50,26 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Handle visibility change (user returns to tab)
+  // Handle visibility change (user returns to tab). Only validate if the tab
+  // was hidden long enough to matter — brief tab switches were triggering
+  // refreshSession → TOKEN_REFRESHED → setUser cascades that made the open
+  // movement modal feel like it was reloading every time the user came back.
+  const hiddenAtRef = useRef(null);
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && user) {
-        await validateSession();
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now();
+        return;
       }
+      if (document.visibilityState !== 'visible' || !user) return;
+
+      const hiddenAt = hiddenAtRef.current;
+      hiddenAtRef.current = null;
+      // Under 2 minutes away? Nothing to do — Supabase's built-in auto-refresh
+      // will keep the token valid in the background.
+      if (hiddenAt && Date.now() - hiddenAt < 2 * 60 * 1000) return;
+
+      await validateSession();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -124,10 +138,19 @@ export const AuthProvider = ({ children }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Fetch profile in background, don't block
-          fetchProfile(session.user.id);
+        const nextUser = session?.user ?? null;
+        setUser((prev) => {
+          // On TOKEN_REFRESHED the user object comes back semantically identical
+          // but as a new reference. Returning the previous reference keeps
+          // AuthContext consumers (StoreInitializer, Home, the open modal)
+          // from re-rendering every ~hour on token refresh.
+          if (prev && nextUser && prev.id === nextUser.id && prev.email === nextUser.email) {
+            return prev;
+          }
+          return nextUser;
+        });
+        if (nextUser) {
+          fetchProfile(nextUser.id);
         } else {
           setProfile(null);
         }
@@ -266,7 +289,11 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
-  const value = {
+  // Memoize so the context value reference only changes when something that
+  // actually matters to subscribers does — otherwise every AuthProvider
+  // re-render (e.g. on setLoading flicks) would trigger re-renders in every
+  // consumer, including open modals.
+  const value = useMemo(() => ({
     user,
     profile,
     loading,
@@ -275,7 +302,7 @@ export const AuthProvider = ({ children }) => {
     signInWithGoogle,
     signOut,
     resetPassword,
-  };
+  }), [user, profile, loading]);
 
   return (
     <AuthContext.Provider value={value}>
