@@ -31,17 +31,10 @@ function BudgetGoalImpact({
   // its own start date).
   const toDateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
 
-  // Verifica si la fecha del movimiento cae dentro del período actual
-  const isDateInPeriod = (movementDate, period) => {
-    if (!period?.start || !period?.end) return false;
-    if (!movementDate) return true;
-    const m = toDateOnly(movementDate);
-    return m >= toDateOnly(period.start) && m <= toDateOnly(period.end);
-  };
-
-  // Verifica si la fecha del movimiento cae dentro de la vigencia del ítem
-  // (start_date / end_date en la BD). Evita mostrar presupuestos/metas cuya fecha
-  // de inicio es posterior a la fecha del movimiento (o que ya finalizaron).
+  // Verifica si la fecha del movimiento cae dentro de la vigencia del ítem.
+  // Usamos start_date/end_date directamente (no currentPeriod, que está
+  // anclado a "hoy") — si el usuario registra un gasto de mayo y el
+  // presupuesto mensual arrancó en enero, debe aparecer igual.
   const isWithinLifetime = (movementDate, item) => {
     if (!movementDate) return true;
     const m = toDateOnly(movementDate);
@@ -50,6 +43,16 @@ function BudgetGoalImpact({
     if (s && m < s) return false;
     if (e && m > e) return false;
     return true;
+  };
+
+  // Determina si la fecha del movimiento cae dentro del período actual del
+  // ítem (el mes/semana/año que contiene "hoy"). Se usa solo para decidir si
+  // los números de `spent`/`currentAmount` son aplicables al impacto.
+  const isInCurrentPeriod = (movementDate, period) => {
+    if (!period?.start || !period?.end) return false;
+    if (!movementDate) return false;
+    const m = toDateOnly(movementDate);
+    return m >= toDateOnly(period.start) && m <= toDateOnly(period.end);
   };
 
   // Encontrar presupuestos afectados (solo para gastos)
@@ -66,9 +69,6 @@ function BudgetGoalImpact({
       // La fecha del movimiento debe caer dentro de la vigencia del presupuesto
       if (!isWithinLifetime(date, budget)) return false;
 
-      // La fecha del movimiento debe caer en el período actual del presupuesto
-      if (!isDateInPeriod(date, budget.currentPeriod)) return false;
-
       // Presupuesto global afecta todos los gastos
       if (budget.is_global) return true;
 
@@ -84,17 +84,26 @@ function BudgetGoalImpact({
 
       return true;
     }).map((budget) => {
-      const newSpent = (budget.spent || 0) + amount;
+      // If the movement falls in the current period, current `spent` is the
+      // right baseline. If the movement is in a different period (past or
+      // future of the recurring cycle), baseline is 0 for that period — we
+      // can't know another period's spent from what's in memory, and showing
+      // "April spent + May charge" would be misleading.
+      const inCurrent = isInCurrentPeriod(date, budget.currentPeriod);
+      const baseline = inCurrent ? (budget.spent || 0) : 0;
+      const newSpent = baseline + amount;
       const newRemaining = budget.amount - newSpent;
-      const newPercentage = (newSpent / budget.amount) * 100;
+      const newPercentage = budget.amount > 0 ? (newSpent / budget.amount) * 100 : 0;
       const willExceed = newSpent > budget.amount;
 
       return {
         ...budget,
+        spent: baseline,
         newSpent,
         newRemaining,
         newPercentage,
         willExceed,
+        outOfCurrentPeriod: !inCurrent,
       };
     });
   }, [type, amount, categoryId, accountId, currency, date, budgets]);
@@ -119,9 +128,6 @@ function BudgetGoalImpact({
       // La fecha del movimiento debe caer dentro de la vigencia de la meta
       if (!isWithinLifetime(date, goal)) return false;
 
-      // La fecha del movimiento debe caer en el período actual de la meta
-      if (!isDateInPeriod(date, goal.currentPeriod)) return false;
-
       // Meta global afecta todos
       if (goal.is_global) return true;
 
@@ -137,26 +143,32 @@ function BudgetGoalImpact({
 
       return true;
     }).map((goal) => {
-      const currentAmount = goal.currentAmount || 0;
-      let newAmount = currentAmount;
+      // Same rationale as budgets: if the movement isn't in the goal's
+      // current period, the in-memory currentAmount is for a different
+      // window — start from 0 instead of adding the two together.
+      const inCurrent = isInCurrentPeriod(date, goal.currentPeriod);
+      const baseline = inCurrent ? (goal.currentAmount || 0) : 0;
+      let newAmount = baseline;
       let isPositive = false;
 
       if (goal.goal_type === 'income') {
         // Meta de ingreso: cada ingreso suma al progreso
-        newAmount = currentAmount + amount;
+        newAmount = baseline + amount;
         isPositive = true;
       } else if (goal.goal_type === 'savings') {
         // Meta de ahorro = ingresos - gastos del período
         if (type === 'income') {
-          newAmount = currentAmount + amount;
+          newAmount = baseline + amount;
           isPositive = true;
         } else {
-          newAmount = currentAmount - amount;
+          newAmount = baseline - amount;
           isPositive = false;
         }
       } else if (goal.goal_type === 'spending_reduction') {
         // currentAmount = max(0, baseline - gastado). Más gasto reduce el ahorro.
-        newAmount = Math.max(0, currentAmount - amount);
+        const baselineReduction = goal.baseline_amount || goal.target_amount;
+        const startFrom = inCurrent ? (goal.currentAmount || 0) : baselineReduction;
+        newAmount = Math.max(0, startFrom - amount);
         isPositive = false;
       }
 
@@ -169,10 +181,12 @@ function BudgetGoalImpact({
 
       return {
         ...goal,
+        currentAmount: baseline,
         newAmount,
         newPercentage,
         willComplete,
         isPositive,
+        outOfCurrentPeriod: !inCurrent,
       };
     });
   }, [type, amount, categoryId, accountId, currency, date, goals]);
@@ -224,27 +238,41 @@ function BudgetGoalImpact({
               : 'var(--bg-secondary)',
           }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-lg">{budget.icon || '💰'}</span>
               <span
-                className="text-sm font-medium"
+                className="text-sm font-medium truncate"
                 style={{ color: 'var(--text-primary)' }}
               >
                 {budget.name}
               </span>
             </div>
-            {budget.willExceed && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{
-                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                  color: 'var(--accent-red)',
-                }}
-              >
-                ⚠️ Excederá
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {budget.outOfCurrentPeriod && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-muted)',
+                  }}
+                  title="Este movimiento cae fuera del período actual del presupuesto"
+                >
+                  Otro período
+                </span>
+              )}
+              {budget.willExceed && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    color: 'var(--accent-red)',
+                  }}
+                >
+                  ⚠️ Excederá
+                </span>
+              )}
+            </div>
           </div>
 
           <ProgressBar
@@ -294,27 +322,41 @@ function BudgetGoalImpact({
               : 'var(--bg-secondary)',
           }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-lg">{goal.icon || '🎯'}</span>
               <span
-                className="text-sm font-medium"
+                className="text-sm font-medium truncate"
                 style={{ color: 'var(--text-primary)' }}
               >
                 {goal.name}
               </span>
             </div>
-            {goal.willComplete && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{
-                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                  color: 'var(--accent-green)',
-                }}
-              >
-                🎉 ¡Completada!
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {goal.outOfCurrentPeriod && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-muted)',
+                  }}
+                  title="Este movimiento cae fuera del período actual de la meta"
+                >
+                  Otro período
+                </span>
+              )}
+              {goal.willComplete && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{
+                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                    color: 'var(--accent-green)',
+                  }}
+                >
+                  🎉 ¡Completada!
+                </span>
+              )}
+            </div>
           </div>
 
           <ProgressBar
