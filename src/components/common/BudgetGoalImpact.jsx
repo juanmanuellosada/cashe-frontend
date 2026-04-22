@@ -24,11 +24,19 @@ function BudgetGoalImpact({
   budgets = [],
   goals = [],
 }) {
+  // Supabase can return a `date` column as "YYYY-MM-DD" or as a fuller ISO
+  // timestamp depending on the postgrest version. Trim to the first 10 chars
+  // before comparing so `"2026-04-22" < "2026-04-22T00:00:00"` doesn't fire
+  // (the shorter string would otherwise sort first and filter out a goal on
+  // its own start date).
+  const toDateOnly = (v) => (typeof v === 'string' ? v.slice(0, 10) : v);
+
   // Verifica si la fecha del movimiento cae dentro del período actual
   const isDateInPeriod = (movementDate, period) => {
     if (!period?.start || !period?.end) return false;
     if (!movementDate) return true;
-    return movementDate >= period.start && movementDate <= period.end;
+    const m = toDateOnly(movementDate);
+    return m >= toDateOnly(period.start) && m <= toDateOnly(period.end);
   };
 
   // Verifica si la fecha del movimiento cae dentro de la vigencia del ítem
@@ -36,8 +44,11 @@ function BudgetGoalImpact({
   // de inicio es posterior a la fecha del movimiento (o que ya finalizaron).
   const isWithinLifetime = (movementDate, item) => {
     if (!movementDate) return true;
-    if (item?.start_date && movementDate < item.start_date) return false;
-    if (item?.end_date && movementDate > item.end_date) return false;
+    const m = toDateOnly(movementDate);
+    const s = toDateOnly(item?.start_date);
+    const e = toDateOnly(item?.end_date);
+    if (s && m < s) return false;
+    if (e && m > e) return false;
     return true;
   };
 
