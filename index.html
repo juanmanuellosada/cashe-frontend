@@ -105,19 +105,8 @@
     <!-- iPad Pro 12.9" (portrait) -->
     <link rel="apple-touch-startup-image" href="/splash/splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
 
-    <!-- GitHub Pages SPA routing restore -->
-    <script>
-      (function () {
-        var redirect = sessionStorage.getItem('__spa_redirect');
-        if (redirect) {
-          sessionStorage.removeItem('__spa_redirect');
-          var url = new URL(redirect);
-          if (url.pathname !== '/') {
-            window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-          }
-        }
-      })();
-    </script>
+    <!-- GitHub Pages SPA routing restore (external so CSP 'script-src self' allows it) -->
+    <script src="/spa-redirect.js"></script>
 
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />

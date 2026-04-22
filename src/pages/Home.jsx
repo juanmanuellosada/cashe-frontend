@@ -87,14 +87,20 @@ function Home() {
   // Track if movement filters have been initialized with visible accounts
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-  // Fetch accounts — standalone so data events can retrigger it
+  // Fetch accounts — standalone so data events can retrigger it.
+  // Returns the account array on success, or `null` on failure (so callers
+  // can tell "legitimately empty" from "network/auth error" and not retry
+  // into the same broken state).
   const fetchAccounts = useCallback(async (forceRefresh = false) => {
     try {
       const data = await getAccounts(forceRefresh);
-      setAccounts(data.accounts || []);
-      return data.accounts || [];
+      const list = data.accounts || [];
+      setAccounts(list);
+      return list;
     } catch (err) {
-      console.error('Error fetching accounts:', err);
+      if (err?.name !== 'AbortError') {
+        console.error('Error fetching accounts:', err);
+      }
       return null;
     }
   }, []);
@@ -104,13 +110,17 @@ function Home() {
       const data = await getCategories();
       setCategories(data.categorias || { ingresos: [], gastos: [] });
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      if (err?.name !== 'AbortError') {
+        console.error('Error fetching categories:', err);
+      }
     }
   }, []);
 
-  // Initial load. If accounts come back empty we retry once with a forced
-  // refresh (bypasses any stale `[]` cache from a half-broken earlier fetch),
-  // then give up and let the user see the empty state / error.
+  // Initial load. Only retry with forceRefresh when the first call *succeeded
+  // with an empty array* — that's the "stuck on stale `[]` cache" scenario.
+  // If fetchAccounts returned `null` the fetch itself errored (e.g. an auth
+  // recovery aborted the request); retrying against the same broken network
+  // just doubles the error noise.
   useEffect(() => {
     let cancelled = false;
     async function fetchInitialData() {
@@ -120,10 +130,8 @@ function Home() {
           fetchCategoriesData(),
         ]);
         if (cancelled) return;
-        if (!accountsList || accountsList.length === 0) {
-          const retried = await fetchAccounts(true);
-          if (cancelled) return;
-          void retried;
+        if (Array.isArray(accountsList) && accountsList.length === 0) {
+          await fetchAccounts(true);
         }
       } finally {
         if (!cancelled) setLoadingInitial(false);

@@ -124,27 +124,14 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
-          // Supabase API calls - NetworkFirst with short TTL (financial data)
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 // 1 minute max
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          // Supabase Auth - NetworkOnly (no caching, no timeout)
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
-            handler: 'NetworkOnly',
-          },
+          // Supabase auth and REST endpoints are NOT registered here on
+          // purpose: every runtimeCaching rule makes Workbox intercept the
+          // fetch, and on a brief network hiccup NetworkOnly throws
+          // `no-response`, which Supabase-js surfaces as
+          // "AbortError: signal is aborted without reason" and cascades into
+          // every dependent fetcher. Letting the browser talk directly to
+          // Supabase avoids that whole class of failure. The in-app cache in
+          // supabaseApi.js already covers the data-freshness story.
           // Cache dollar API
           {
             urlPattern: /^https:\/\/dolarapi\.com\/.*/i,

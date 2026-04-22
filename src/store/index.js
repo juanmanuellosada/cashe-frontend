@@ -80,7 +80,7 @@ export const useAppStore = create((set, get) => ({
       _markInitialized('accounts');
     } catch (err) {
       _setError('accounts', err.message);
-      console.error('[store] Error fetching accounts:', err);
+      if (err?.name !== 'AbortError') console.error('[store] Error fetching accounts:', err);
     } finally {
       _setLoading('accounts', false);
     }
@@ -102,7 +102,7 @@ export const useAppStore = create((set, get) => ({
       _markInitialized('categories');
     } catch (err) {
       _setError('categories', err.message);
-      console.error('[store] Error fetching categories:', err);
+      if (err?.name !== 'AbortError') console.error('[store] Error fetching categories:', err);
     } finally {
       _setLoading('categories', false);
     }
@@ -129,7 +129,7 @@ export const useAppStore = create((set, get) => ({
       _markInitialized('movements');
     } catch (err) {
       _setError('dashboard', err.message);
-      console.error('[store] Error fetching dashboard:', err);
+      if (err?.name !== 'AbortError') console.error('[store] Error fetching dashboard:', err);
     } finally {
       _setLoading('dashboard', false);
     }
@@ -145,7 +145,7 @@ export const useAppStore = create((set, get) => ({
       _markInitialized('movements');
     } catch (err) {
       _setError('movements', err.message);
-      console.error('[store] Error fetching movements:', err);
+      if (err?.name !== 'AbortError') console.error('[store] Error fetching movements:', err);
     } finally {
       _setLoading('movements', false);
     }
