@@ -4,6 +4,7 @@ import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
 import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
 import { emit, DataEvents } from '../services/dataEvents';
+import { clearMovementDrafts } from '../hooks/useFormDraft';
 import MovementForm from '../components/forms/MovementForm';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
@@ -54,6 +55,9 @@ function NewMovement() {
         message: successMessage,
         type: 'success',
       });
+
+      // Wipe any persisted drafts so the next visit starts fresh.
+      clearMovementDrafts();
 
       // Emitir eventos para propagar cambios a otros componentes
       emit(DataEvents.ACCOUNTS_CHANGED);

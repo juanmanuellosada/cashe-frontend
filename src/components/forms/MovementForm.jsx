@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import IncomeForm from './IncomeForm';
 import ExpenseForm from './ExpenseForm';
 import TransferForm from './TransferForm';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 const MOVEMENT_TYPES = [
   {
@@ -33,10 +34,14 @@ function MovementForm({ accounts, categories, categoriesWithId, budgets, goals, 
     return 'gasto';
   };
 
-  const [movementType, setMovementType] = useState(getInitialType());
+  // Persist type and shared amount across remounts (tab discards, SW updates
+  // on a reopened modal). When prefillData explicitly pins a type or the type
+  // selector is hidden, skip the draft so the caller's choice wins.
+  const typeDraftKey = (hideTypeSelector || prefillData?.tipo) ? null : 'cashe_draft_movement_type';
+  const amountDraftKey = prefillData?.monto ? null : 'cashe_draft_shared_amount';
 
-  // Shared amount state that persists across tab changes
-  const [sharedAmount, setSharedAmount] = useState(prefillData?.monto?.toString() || '');
+  const [movementType, setMovementType] = useFormDraft(typeDraftKey, getInitialType());
+  const [sharedAmount, setSharedAmount] = useFormDraft(amountDraftKey, prefillData?.monto?.toString() || '');
 
   // Callback to update shared amount from child forms
   const handleAmountChange = useCallback((newAmount) => {

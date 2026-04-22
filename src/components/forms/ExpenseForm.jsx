@@ -12,6 +12,7 @@ import { formatCurrency } from '../../utils/format';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useFormDraft } from '../../hooks/useFormDraft';
 import { evaluateAutoRules, getStatementPayments } from '../../services/supabaseApi';
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
@@ -97,7 +98,15 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
     return sortByRecency(categories, recentCategoryIds, 'id');
   }, [categories, recentCategoryIds]);
 
-  const [formData, setFormData] = useState({
+  // Skip the persisted draft when the form has an explicit prefill (e.g.
+  // duplicating a movement) — the caller's data wins over whatever draft
+  // happened to still be in sessionStorage.
+  const hasRealPrefill = !!(
+    prefillData && (prefillData.fecha || prefillData.monto || prefillData.cuenta || prefillData.categoria || prefillData.nota)
+  );
+  const draftKey = hasRealPrefill ? null : 'cashe_draft_expense';
+
+  const [formData, setFormData, clearFormDraft] = useFormDraft(draftKey, {
     fecha: prefillData?.fecha || today,
     monto: prefillData?.monto?.toString() || sharedAmount || '',
     cuenta: prefillData?.cuenta || '',
@@ -378,6 +387,8 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
       setShowSuccess(true);
       setAttachment(null);
       setAttachment2(null);
+      // Wipe the persisted draft so the next "Nuevo gasto" starts fresh.
+      clearFormDraft();
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };

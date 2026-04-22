@@ -6,6 +6,7 @@ import { useBudgets } from '../hooks/useBudgets';
 import { useGoals } from '../hooks/useGoals';
 import { addIncome, addExpense, addExpenseWithInstallments, addTransfer } from '../services/supabaseApi';
 import { emit, DataEvents } from '../services/dataEvents';
+import { clearMovementDrafts } from '../hooks/useFormDraft';
 import MovementForm from './forms/MovementForm';
 import LoadingSpinner from './LoadingSpinner';
 import Toast from './Toast';
@@ -27,6 +28,7 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
   const [toast, setToast] = useState(null);
   const [formKey, setFormKey] = useState(0);
   const closeTimeoutRef = useRef(null);
+  const prevIsOpenRef = useRef(isOpen);
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -70,12 +72,16 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
     };
   }, [isOpen, submitting, onClose]);
 
-  // Reset form cuando se abre el modal
+  // Only bump formKey on a real closed→open transition. On the initial mount
+  // we want to keep whatever draft sessionStorage has, not wipe it; and if
+  // the component happens to remount with isOpen already true (Chrome tab
+  // discard, SW update) we also want to keep the draft.
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setFormKey(prev => prev + 1);
       setToast(null);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   // Handle touch start
@@ -142,6 +148,10 @@ function NewMovementModal({ isOpen, onClose, defaultType, prefillData: externalP
         message: successMessage,
         type: 'success',
       });
+
+      // Wipe any orphan drafts from other movement types (e.g. if the user
+      // had started an income and then switched to submit an expense).
+      clearMovementDrafts();
 
       // Emitir eventos para que otros componentes se actualicen
       emit(DataEvents.ACCOUNTS_CHANGED);

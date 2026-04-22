@@ -9,6 +9,7 @@ import RuleSuggestionBanner from '../rules/RuleSuggestionBanner';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useFormDraft } from '../../hooks/useFormDraft';
 import { evaluateAutoRules } from '../../services/supabaseApi';
 
 function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated, sharedAmount, onAmountChange }) {
@@ -25,7 +26,13 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
     return sortByRecency(categories, recentCategoryIds, 'id');
   }, [categories, recentCategoryIds]);
 
-  const [formData, setFormData] = useState({
+  // Skip the persisted draft when we have a real prefill (duplicate flow).
+  const hasRealPrefill = !!(
+    prefillData && (prefillData.fecha || prefillData.monto || prefillData.cuenta || prefillData.categoria || prefillData.nota)
+  );
+  const draftKey = hasRealPrefill ? null : 'cashe_draft_income';
+
+  const [formData, setFormData, clearFormDraft] = useFormDraft(draftKey, {
     fecha: prefillData?.fecha || today,
     monto: prefillData?.monto?.toString() || sharedAmount || '',
     cuenta: prefillData?.cuenta || '',
@@ -160,6 +167,7 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
     if (result !== false) {
       setShowSuccess(true);
       setAttachment(null); // Limpiar adjunto despues de guardar
+      clearFormDraft();
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };

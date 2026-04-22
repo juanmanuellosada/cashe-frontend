@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { supabase } from '../config/supabase';
 import { clear as clearDataListeners } from '../services/dataEvents';
 import { clearUserStorage } from '../hooks/useUserStorage';
+import { clearMovementDrafts } from '../hooks/useFormDraft';
 
 const AuthContext = createContext({});
 
@@ -233,6 +234,9 @@ export const AuthProvider = ({ children }) => {
       if (user?.id) {
         clearUserStorage(user.id);
       }
+
+      // Drop any in-progress movement drafts so a next account can't see them
+      clearMovementDrafts();
 
       // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();

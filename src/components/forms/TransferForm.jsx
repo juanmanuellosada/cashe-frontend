@@ -5,6 +5,7 @@ import { AccountIcon, NoteIcon } from './FormIcons';
 import AttachmentInput from '../AttachmentInput';
 import { useRecentUsage } from '../../hooks/useRecentUsage';
 import { sortByRecency } from '../../utils/sortByRecency';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, onAmountChange }) {
   const today = new Date().toISOString().split('T')[0];
@@ -16,7 +17,16 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
     return sortByRecency(accounts, recentAccountIds, 'id');
   }, [accounts, recentAccountIds]);
 
-  const [formData, setFormData] = useState({
+  // Skip the persisted draft when we have a real prefill (duplicate flow).
+  const hasRealPrefill = !!(
+    prefillData && (
+      prefillData.fecha || prefillData.cuentaSaliente || prefillData.cuentaEntrante ||
+      prefillData.montoSaliente || prefillData.montoEntrante || prefillData.nota
+    )
+  );
+  const draftKey = hasRealPrefill ? null : 'cashe_draft_transfer';
+
+  const [formData, setFormData, clearFormDraft] = useFormDraft(draftKey, {
     fecha: prefillData?.fecha || today,
     cuentaSaliente: prefillData?.cuentaSaliente || '',
     cuentaEntrante: prefillData?.cuentaEntrante || '',
@@ -97,6 +107,7 @@ function TransferForm({ accounts, onSubmit, loading, prefillData, sharedAmount, 
     if (result !== false) {
       setShowSuccess(true);
       setAttachment(null); // Limpiar adjunto despues de guardar
+      clearFormDraft();
       setTimeout(() => setShowSuccess(false), 1500);
     }
   };
