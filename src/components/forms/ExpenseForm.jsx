@@ -771,8 +771,10 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         </div>
       )}
 
-      {/* Impacto en presupuestos y metas */}
-      {formData.monto && parseFloat(formData.monto) > 0 && (budgets?.length > 0 || goals?.length > 0) && (
+      {/* Impacto en presupuestos y metas — aparece con sólo la fecha y se
+           va achicando a medida que el usuario elige categoría/cuenta, y
+           se vuelve cuantitativo cuando se ingresa el monto. */}
+      {formData.fecha && (budgets?.length > 0 || goals?.length > 0) && (
         <BudgetGoalImpact
           type="expense"
           amount={parseFloat(formData.monto)}

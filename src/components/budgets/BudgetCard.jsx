@@ -32,6 +32,8 @@ function BudgetCard({
     projectedTotal = 0,
     projectedRemaining = 0,
     projectedPercentageUsed = 0,
+    // Future-dated movements already registered (credit-card cuotas, etc.)
+    futureSpent = 0,
   } = budget;
 
   // Get category/account names for display
@@ -60,6 +62,8 @@ function BudgetCard({
 
   const isExceeded = percentageUsed > 100;
   const hasProjectedRecurring = projectedRecurring > 0;
+  const hasFutureSpent = futureSpent > 0;
+  const hasProjection = hasProjectedRecurring || hasFutureSpent;
   const willBeExceeded = !isExceeded && projectedPercentageUsed > 100;
 
   // Calculate daily averages
@@ -191,8 +195,8 @@ function BudgetCard({
         )}
       </div>
 
-      {/* Projected recurring section */}
-      {hasProjectedRecurring && !is_paused && (
+      {/* Projected section — future-dated movements (cuotas) + recurring */}
+      {hasProjection && !is_paused && (
         <div
           className="mt-3 pt-3 border-t"
           style={{ borderColor: 'var(--border-subtle)' }}
@@ -211,7 +215,11 @@ function BudgetCard({
               className="text-xs font-medium"
               style={{ color: 'var(--accent-purple)' }}
             >
-              Recurrentes pendientes
+              {hasFutureSpent && hasProjectedRecurring
+                ? 'Cuotas y recurrentes pendientes'
+                : hasFutureSpent
+                ? 'Cuotas pendientes'
+                : 'Recurrentes pendientes'}
             </span>
           </div>
 
@@ -241,7 +249,7 @@ function BudgetCard({
           {/* Projected amounts */}
           <div className="flex items-center justify-between text-xs">
             <span style={{ color: 'var(--text-muted)' }}>
-              +{formatCurrency(projectedRecurring, currency)} programados
+              +{formatCurrency(futureSpent + projectedRecurring, currency)} programados
             </span>
             <span
               className="font-medium"

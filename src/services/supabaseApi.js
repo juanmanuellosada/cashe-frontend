@@ -2794,15 +2794,21 @@ const calculateDaysRemaining = (endDate) => {
 };
 
 // Helper: Calculate spent amount for a budget in a period
+// Splits the movements in the period into "actually spent" (date <= today)
+// vs "future-dated" (date > today). Future-dated movements are typically
+// credit-card installments the user has already scheduled — they shouldn't
+// count as "already spent" on the progress bar, but they do belong in the
+// projection so the user sees the real committed load on the period.
 const calculateBudgetSpent = async (budget, startDate, endDate) => {
   const userId = await getUserId();
+  const todayISO = new Date().toISOString().split('T')[0];
 
   let query = supabase
     .from('movements')
-    .select('amount')
+    .select('amount, date')
     .eq('user_id', userId)
     .eq('type', 'expense')
-    .or('is_future.is.null,is_future.eq.false') // Exclude future transactions
+    .or('is_future.is.null,is_future.eq.false') // Exclude future-flagged transactions
     .gte('date', startDate)
     .lte('date', endDate);
 
@@ -2817,7 +2823,14 @@ const calculateBudgetSpent = async (budget, startDate, endDate) => {
   }
 
   const { data: movements } = await query;
-  return (movements || []).reduce((sum, m) => sum + parseFloat(m.amount), 0);
+  let actualSpent = 0;
+  let futureSpent = 0;
+  for (const m of (movements || [])) {
+    const amt = parseFloat(m.amount) || 0;
+    if (m.date && m.date > todayISO) futureSpent += amt;
+    else actualSpent += amt;
+  }
+  return { actualSpent, futureSpent };
 };
 
 // Calculate projected recurring expenses for a budget period
@@ -2921,27 +2934,34 @@ export const getBudgetsWithProgress = async () => {
       }
 
       const periodDates = calculatePeriodDates(budget.period_type, budget.start_date, budget.end_date);
-      const [spent, projectedRecurring] = await Promise.all([
+      const [spentData, projectedRecurring] = await Promise.all([
         calculateBudgetSpent(budget, periodDates.start, periodDates.end),
         calculateProjectedRecurringExpenses(budget, periodDates.start, periodDates.end),
       ]);
+      const { actualSpent, futureSpent } = spentData;
+      // `spent` is what's *actually* been paid so far — future-dated cuotas
+      // don't inflate the progress bar into "Excedido" on day 1 of the period.
+      const spent = actualSpent;
       const remaining = budget.amount - spent;
       const percentageUsed = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
       const daysRemaining = calculateDaysRemaining(periodDates.end);
 
-      // Projected total includes current spent + future recurring expenses
-      const projectedTotal = spent + projectedRecurring;
+      // Projected total = already spent + future-dated movements already in
+      // the DB (credit-card installments, etc.) + expected recurring charges.
+      const projectedTotal = actualSpent + futureSpent + projectedRecurring;
       const projectedRemaining = budget.amount - projectedTotal;
       const projectedPercentageUsed = budget.amount > 0 ? (projectedTotal / budget.amount) * 100 : 0;
 
       return {
         ...budget,
         spent,
+        actualSpent,
+        futureSpent,
         remaining,
         percentageUsed,
         currentPeriod: periodDates,
         daysRemaining,
-        // Recurring projections
+        // Recurring + future-dated projections
         projectedRecurring,
         projectedTotal,
         projectedRemaining,
@@ -2966,7 +2986,8 @@ export const getBudgetWithProgress = async (budgetId) => {
   if (error) throw error;
 
   const periodDates = calculatePeriodDates(budget.period_type, budget.start_date, budget.end_date);
-  const spent = await calculateBudgetSpent(budget, periodDates.start, periodDates.end);
+  const { actualSpent, futureSpent } = await calculateBudgetSpent(budget, periodDates.start, periodDates.end);
+  const spent = actualSpent;
   const remaining = budget.amount - spent;
   const percentageUsed = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
   const daysRemaining = calculateDaysRemaining(periodDates.end);
@@ -2974,6 +2995,8 @@ export const getBudgetWithProgress = async (budgetId) => {
   return {
     ...budget,
     spent,
+    actualSpent,
+    futureSpent,
     remaining,
     percentageUsed,
     currentPeriod: periodDates,

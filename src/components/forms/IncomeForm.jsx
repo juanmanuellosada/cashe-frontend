@@ -322,8 +322,8 @@ function IncomeForm({ accounts, categories, categoriesWithId, budgets, goals, on
         disabled={loading}
       />
 
-      {/* Impacto en presupuestos y metas */}
-      {formData.monto && parseFloat(formData.monto) > 0 && (budgets?.length > 0 || goals?.length > 0) && (
+      {/* Impacto en metas — aparece con sólo la fecha. */}
+      {formData.fecha && (budgets?.length > 0 || goals?.length > 0) && (
         <BudgetGoalImpact
           type="income"
           amount={parseFloat(formData.monto)}

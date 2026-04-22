@@ -55,9 +55,14 @@ function BudgetGoalImpact({
     return m >= toDateOnly(period.start) && m <= toDateOnly(period.end);
   };
 
+  // Normalize amount — we still show applicable items when amount is 0/NaN
+  // so the user can see what's affected as they pick date/account/category.
+  const parsedAmount = Number.isFinite(amount) && amount > 0 ? amount : 0;
+  const hasAmount = parsedAmount > 0;
+
   // Encontrar presupuestos afectados (solo para gastos)
   const affectedBudgets = useMemo(() => {
-    if (type !== 'expense' || !amount || amount <= 0) return [];
+    if (type !== 'expense') return [];
 
     return budgets.filter((budget) => {
       // Solo presupuestos activos y no pausados
@@ -91,7 +96,7 @@ function BudgetGoalImpact({
       // "April spent + May charge" would be misleading.
       const inCurrent = isInCurrentPeriod(date, budget.currentPeriod);
       const baseline = inCurrent ? (budget.spent || 0) : 0;
-      const newSpent = baseline + amount;
+      const newSpent = baseline + parsedAmount;
       const newRemaining = budget.amount - newSpent;
       const newPercentage = budget.amount > 0 ? (newSpent / budget.amount) * 100 : 0;
       const willExceed = newSpent > budget.amount;
@@ -106,12 +111,10 @@ function BudgetGoalImpact({
         outOfCurrentPeriod: !inCurrent,
       };
     });
-  }, [type, amount, categoryId, accountId, currency, date, budgets]);
+  }, [type, parsedAmount, categoryId, accountId, currency, date, budgets]);
 
   // Encontrar metas afectadas
   const affectedGoals = useMemo(() => {
-    if (!amount || amount <= 0) return [];
-
     return goals.filter((goal) => {
       // Solo metas activas y no completadas
       if (!goal.is_active || goal.is_completed) return false;
@@ -149,26 +152,26 @@ function BudgetGoalImpact({
       const inCurrent = isInCurrentPeriod(date, goal.currentPeriod);
       const baseline = inCurrent ? (goal.currentAmount || 0) : 0;
       let newAmount = baseline;
-      let isPositive = false;
+      let isPositive = type === 'income';
 
       if (goal.goal_type === 'income') {
         // Meta de ingreso: cada ingreso suma al progreso
-        newAmount = baseline + amount;
+        newAmount = baseline + parsedAmount;
         isPositive = true;
       } else if (goal.goal_type === 'savings') {
         // Meta de ahorro = ingresos - gastos del período
         if (type === 'income') {
-          newAmount = baseline + amount;
+          newAmount = baseline + parsedAmount;
           isPositive = true;
         } else {
-          newAmount = baseline - amount;
+          newAmount = baseline - parsedAmount;
           isPositive = false;
         }
       } else if (goal.goal_type === 'spending_reduction') {
         // currentAmount = max(0, baseline - gastado). Más gasto reduce el ahorro.
         const baselineReduction = goal.baseline_amount || goal.target_amount;
         const startFrom = inCurrent ? (goal.currentAmount || 0) : baselineReduction;
-        newAmount = Math.max(0, startFrom - amount);
+        newAmount = Math.max(0, startFrom - parsedAmount);
         isPositive = false;
       }
 
@@ -189,7 +192,7 @@ function BudgetGoalImpact({
         outOfCurrentPeriod: !inCurrent,
       };
     });
-  }, [type, amount, categoryId, accountId, currency, date, goals]);
+  }, [type, parsedAmount, categoryId, accountId, currency, date, goals]);
 
   // Si no hay impacto, no mostrar nada
   if (affectedBudgets.length === 0 && affectedGoals.length === 0) {
@@ -223,8 +226,13 @@ function BudgetGoalImpact({
           className="text-sm font-medium"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Impacto en tus finanzas
+          {hasAmount ? 'Impacto en tus finanzas' : 'Se contará acá'}
         </span>
+        {!hasAmount && (
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            · ingresá un monto para ver el impacto
+          </span>
+        )}
       </div>
 
       {/* Presupuestos afectados */}
@@ -275,39 +283,47 @@ function BudgetGoalImpact({
             </div>
           </div>
 
-          <ProgressBar
-            value={budget.newSpent}
-            max={budget.amount}
-            variant="budget"
-            size="sm"
-            showLabel={false}
-          />
+          {hasAmount ? (
+            <>
+              <ProgressBar
+                value={budget.newSpent}
+                max={budget.amount}
+                variant="budget"
+                size="sm"
+                showLabel={false}
+              />
 
-          <div className="flex justify-between mt-2 text-xs">
-            <span style={{ color: 'var(--text-muted)' }}>
-              {formatCurrency(budget.spent || 0, budget.currency)} →{' '}
-              <span
-                style={{
-                  color: budget.willExceed
-                    ? 'var(--accent-red)'
-                    : 'var(--text-primary)',
-                  fontWeight: 500,
-                }}
-              >
-                {formatCurrency(budget.newSpent, budget.currency)}
-              </span>
-            </span>
-            <span
-              style={{
-                color: budget.newRemaining < 0
-                  ? 'var(--accent-red)'
-                  : 'var(--text-muted)',
-              }}
-            >
-              {budget.newRemaining >= 0 ? 'Queda: ' : 'Exceso: '}
-              {formatCurrency(Math.abs(budget.newRemaining), budget.currency)}
-            </span>
-          </div>
+              <div className="flex justify-between mt-2 text-xs">
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {formatCurrency(budget.spent || 0, budget.currency)} →{' '}
+                  <span
+                    style={{
+                      color: budget.willExceed
+                        ? 'var(--accent-red)'
+                        : 'var(--text-primary)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {formatCurrency(budget.newSpent, budget.currency)}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    color: budget.newRemaining < 0
+                      ? 'var(--accent-red)'
+                      : 'var(--text-muted)',
+                  }}
+                >
+                  {budget.newRemaining >= 0 ? 'Queda: ' : 'Exceso: '}
+                  {formatCurrency(Math.abs(budget.newRemaining), budget.currency)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {formatCurrency(budget.spent || 0, budget.currency)} de {formatCurrency(budget.amount, budget.currency)}
+            </div>
+          )}
         </div>
       ))}
 
@@ -359,32 +375,40 @@ function BudgetGoalImpact({
             </div>
           </div>
 
-          <ProgressBar
-            value={Math.max(0, goal.newAmount)}
-            max={goal.target_amount}
-            variant="goal"
-            size="sm"
-            showLabel={false}
-          />
+          {hasAmount ? (
+            <>
+              <ProgressBar
+                value={Math.max(0, goal.newAmount)}
+                max={goal.target_amount}
+                variant="goal"
+                size="sm"
+                showLabel={false}
+              />
 
-          <div className="flex justify-between mt-2 text-xs">
-            <span style={{ color: 'var(--text-muted)' }}>
-              {formatCurrency(goal.currentAmount || 0, goal.currency)} →{' '}
-              <span
-                style={{
-                  color: goal.isPositive
-                    ? 'var(--accent-green)'
-                    : 'var(--accent-red)',
-                  fontWeight: 500,
-                }}
-              >
-                {formatCurrency(goal.newAmount, goal.currency)}
-              </span>
-            </span>
-            <span style={{ color: 'var(--text-muted)' }}>
-              Meta: {formatCurrency(goal.target_amount, goal.currency)}
-            </span>
-          </div>
+              <div className="flex justify-between mt-2 text-xs">
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {formatCurrency(goal.currentAmount || 0, goal.currency)} →{' '}
+                  <span
+                    style={{
+                      color: goal.isPositive
+                        ? 'var(--accent-green)'
+                        : 'var(--accent-red)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {formatCurrency(goal.newAmount, goal.currency)}
+                  </span>
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Meta: {formatCurrency(goal.target_amount, goal.currency)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {formatCurrency(goal.currentAmount || 0, goal.currency)} de {formatCurrency(goal.target_amount, goal.currency)}
+            </div>
+          )}
         </div>
       ))}
     </div>
