@@ -1,7 +1,7 @@
 import { supabase } from '../config/supabase';
 import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from './attachmentStorage';
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
-import { emit, DataEvents } from './dataEvents';
+import { emit, emitQuiet, DataEvents } from './dataEvents';
 
 // ============================================
 // CACHE MANAGEMENT - Stale-While-Revalidate
@@ -24,6 +24,39 @@ const setCachedData = (key, data) => {
   cache.set(key, { data, timestamp: Date.now() });
 };
 
+// Map cache keys → DataEvent so BG refreshes can notify subscribers when
+// stale data changes. Without this, a component that got handed `[]` from
+// stale-while-revalidate stays stuck on `[]` until it remounts.
+const KEY_TO_EVENT = {
+  accounts: DataEvents.ACCOUNTS_CHANGED,
+  categories: DataEvents.CATEGORIES_CHANGED,
+  budgets: DataEvents.BUDGETS_CHANGED,
+  goals: DataEvents.GOALS_CHANGED,
+  recurring: DataEvents.RECURRING_CHANGED,
+  autoRules: DataEvents.RULES_CHANGED,
+};
+
+// Lightweight structural compare — enough to tell "same result" from
+// "new array/object" without dragging in lodash.
+const sameShape = (a, b) => {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+};
+
+const maybeEmitForKey = (key, prevData, nextData) => {
+  const event = KEY_TO_EVENT[key];
+  if (!event) return;
+  if (sameShape(prevData, nextData)) return;
+  // Quiet emit: just nudge the specific subscriber, don't cascade to
+  // ALL_DATA_CHANGED (that's for user-initiated mutations, not cache refresh).
+  emitQuiet(event);
+};
+
 // Stale-while-revalidate: returns stale data immediately + refreshes in background
 const withDeduplication = async (key, fetchFn) => {
   const { data, status } = getCacheEntry(key);
@@ -34,7 +67,11 @@ const withDeduplication = async (key, fetchFn) => {
   if (status === 'stale') {
     if (!pendingRequests.has(key)) {
       const bgPromise = fetchFn()
-        .then(result => { setCachedData(key, result); return result; })
+        .then(result => {
+          setCachedData(key, result);
+          maybeEmitForKey(key, data, result);
+          return result;
+        })
         .finally(() => pendingRequests.delete(key));
       pendingRequests.set(key, bgPromise);
     }

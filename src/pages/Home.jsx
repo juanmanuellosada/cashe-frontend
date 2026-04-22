@@ -87,24 +87,51 @@ function Home() {
   // Track if movement filters have been initialized with visible accounts
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-  // Fetch accounts and categories on mount
+  // Fetch accounts — standalone so data events can retrigger it
+  const fetchAccounts = useCallback(async (forceRefresh = false) => {
+    try {
+      const data = await getAccounts(forceRefresh);
+      setAccounts(data.accounts || []);
+      return data.accounts || [];
+    } catch (err) {
+      console.error('Error fetching accounts:', err);
+      return null;
+    }
+  }, []);
+
+  const fetchCategoriesData = useCallback(async () => {
+    try {
+      const data = await getCategories();
+      setCategories(data.categorias || { ingresos: [], gastos: [] });
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  }, []);
+
+  // Initial load. If accounts come back empty we retry once with a forced
+  // refresh (bypasses any stale `[]` cache from a half-broken earlier fetch),
+  // then give up and let the user see the empty state / error.
   useEffect(() => {
+    let cancelled = false;
     async function fetchInitialData() {
       try {
-        const [accountsData, categoriesData] = await Promise.all([
-          getAccounts(),
-          getCategories(),
+        const [accountsList] = await Promise.all([
+          fetchAccounts(false),
+          fetchCategoriesData(),
         ]);
-        setAccounts(accountsData.accounts || []);
-        setCategories(categoriesData.categorias || { ingresos: [], gastos: [] });
-      } catch (err) {
-        console.error('Error fetching initial data:', err);
+        if (cancelled) return;
+        if (!accountsList || accountsList.length === 0) {
+          const retried = await fetchAccounts(true);
+          if (cancelled) return;
+          void retried;
+        }
       } finally {
-        setLoadingInitial(false);
+        if (!cancelled) setLoadingInitial(false);
       }
     }
     fetchInitialData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [fetchAccounts, fetchCategoriesData]);
 
   // Initialize movement filters with visible accounts (only on first load, no saved filters)
   useEffect(() => {
@@ -208,13 +235,26 @@ function Home() {
     fetchWeeklyMovements();
   }, [fetchWeeklyMovements]);
 
-  // Combined refresh for pull-to-refresh
+  // Combined refresh for pull-to-refresh — accounts/categories included so
+  // stale balances don't linger after a movement is edited elsewhere.
   const handleRefresh = useCallback(async () => {
-    await Promise.all([fetchDashboard(), fetchMovements(), fetchWeeklyMovements()]);
-  }, [fetchDashboard, fetchMovements, fetchWeeklyMovements]);
+    await Promise.all([
+      fetchAccounts(true),
+      fetchCategoriesData(),
+      fetchDashboard(),
+      fetchMovements(),
+      fetchWeeklyMovements(),
+    ]);
+  }, [fetchAccounts, fetchCategoriesData, fetchDashboard, fetchMovements, fetchWeeklyMovements]);
 
   // Suscribirse a cambios de datos para refrescar automáticamente
   useDataEvent(DataEvents.ALL_DATA_CHANGED, handleRefresh);
+
+  // Stale-while-revalidate on accounts/categories fires these events when the
+  // BG refresh brings back different data; pick that up so the balance card
+  // updates instead of sitting on whatever was in the cache.
+  useDataEvent(DataEvents.ACCOUNTS_CHANGED, () => { fetchAccounts(false); });
+  useDataEvent(DataEvents.CATEGORIES_CHANGED, fetchCategoriesData);
 
   // Handle movement edit save
   const handleSaveMovement = async (updatedMovement) => {

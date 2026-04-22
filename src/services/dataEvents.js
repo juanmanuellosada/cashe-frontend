@@ -39,6 +39,14 @@ export const emit = (event) => {
   }
 };
 
+// Surgical variant: only notify specific-event subscribers, do NOT cascade to
+// ALL_DATA_CHANGED. Used for internal cache-refresh signals where we want the
+// affected component to pick up new data without triggering a full dashboard
+// refetch on every unrelated subscriber.
+export const emitQuiet = (event) => {
+  listeners.get(event)?.forEach(callback => callback());
+};
+
 // Clear all listeners (useful on logout)
 export const clear = () => {
   listeners.clear();
