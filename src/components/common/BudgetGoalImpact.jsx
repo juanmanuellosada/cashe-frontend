@@ -31,6 +31,16 @@ function BudgetGoalImpact({
     return movementDate >= period.start && movementDate <= period.end;
   };
 
+  // Verifica si la fecha del movimiento cae dentro de la vigencia del ítem
+  // (start_date / end_date en la BD). Evita mostrar presupuestos/metas cuya fecha
+  // de inicio es posterior a la fecha del movimiento (o que ya finalizaron).
+  const isWithinLifetime = (movementDate, item) => {
+    if (!movementDate) return true;
+    if (item?.start_date && movementDate < item.start_date) return false;
+    if (item?.end_date && movementDate > item.end_date) return false;
+    return true;
+  };
+
   // Encontrar presupuestos afectados (solo para gastos)
   const affectedBudgets = useMemo(() => {
     if (type !== 'expense' || !amount || amount <= 0) return [];
@@ -41,6 +51,9 @@ function BudgetGoalImpact({
 
       // Verificar moneda
       if (budget.currency !== currency) return false;
+
+      // La fecha del movimiento debe caer dentro de la vigencia del presupuesto
+      if (!isWithinLifetime(date, budget)) return false;
 
       // La fecha del movimiento debe caer en el período actual del presupuesto
       if (!isDateInPeriod(date, budget.currentPeriod)) return false;
@@ -91,6 +104,9 @@ function BudgetGoalImpact({
 
       // Meta de reducción de gasto solo afectada por gastos
       if (goal.goal_type === 'spending_reduction' && type !== 'expense') return false;
+
+      // La fecha del movimiento debe caer dentro de la vigencia de la meta
+      if (!isWithinLifetime(date, goal)) return false;
 
       // La fecha del movimiento debe caer en el período actual de la meta
       if (!isDateInPeriod(date, goal.currentPeriod)) return false;

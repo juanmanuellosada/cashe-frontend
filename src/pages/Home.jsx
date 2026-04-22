@@ -335,7 +335,7 @@ function Home() {
       {/* Balance and Flow Cards - side by side on desktop, stacked on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Balance Card - Saldo actual */}
-        {loadingDashboard ? (
+        {(loadingDashboard || loadingInitial) ? (
           <div className="card-glass rounded-xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="h-4 w-24 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
@@ -359,7 +359,7 @@ function Home() {
         )}
 
         {/* Period Flow Card - Flujo del período */}
-        {loadingDashboard ? (
+        {(loadingDashboard || loadingInitial) ? (
           <div className="card-glass rounded-xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="h-4 w-32 skeleton-shimmer rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }} />

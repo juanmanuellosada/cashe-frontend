@@ -2665,6 +2665,28 @@ export const cancelStatementPayment = async (paymentId, transferId) => {
 // BUDGETS (Presupuestos)
 // ============================================
 
+// Helper: parse a yyyy-MM-dd string as a local-midnight Date.
+// `new Date('2026-04-23')` parses as UTC and, in negative offsets (e.g. AR UTC-3),
+// lands on the previous day once read with local getters — that's been shifting
+// future-start budgets into the current period.
+const parseLocalDateString = (dateStr) => {
+  if (!dateStr) return null;
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const parsed = new Date(dateStr);
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+};
+
+const formatLocalDate = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 // Helper: Calculate period dates based on type
 const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
   const now = new Date();
@@ -2672,8 +2694,8 @@ const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
 
   // If the budget's start_date is in the future, anchor the current period to it
   // so spent is computed from that date onward (prevents "exceeded" state before the budget starts).
-  const budgetStart = customStartDate ? new Date(customStartDate) : null;
-  if (budgetStart) budgetStart.setHours(0, 0, 0, 0);
+  const budgetStart = parseLocalDateString(customStartDate);
+  const budgetEnd = parseLocalDateString(customEndDate);
   const ref = budgetStart && budgetStart > now ? budgetStart : now;
 
   let start, end;
@@ -2702,8 +2724,8 @@ const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
       break;
     }
     case 'custom': {
-      start = customStartDate ? new Date(customStartDate) : new Date();
-      end = customEndDate ? new Date(customEndDate) : new Date();
+      start = budgetStart ? new Date(budgetStart) : new Date();
+      end = budgetEnd ? new Date(budgetEnd) : new Date();
       break;
     }
     default: {
@@ -2718,8 +2740,8 @@ const calculatePeriodDates = (periodType, customStartDate, customEndDate) => {
   }
 
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: formatLocalDate(start),
+    end: formatLocalDate(end),
   };
 };
 
@@ -3204,9 +3226,8 @@ export const getGoalsWithProgress = async () => {
       // get counted as progress against a period that hasn't started.
       const todayDate = new Date();
       todayDate.setHours(0, 0, 0, 0);
-      const periodStartDate = new Date(periodDates.start);
-      periodStartDate.setHours(0, 0, 0, 0);
-      if (periodStartDate > todayDate) {
+      const periodStartDate = parseLocalDateString(periodDates.start);
+      if (periodStartDate && periodStartDate > todayDate) {
         return {
           ...goal,
           currentAmount: 0,
