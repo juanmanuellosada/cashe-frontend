@@ -95,7 +95,13 @@
       "WebFetch(domain:recharts.github.io)",
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(find /c/Users/juanm/OneDrive/Escritorio/cashe-frontend -type f \\\\\\( -name \"*example*\" -o -name \"*demo*\" -o -name \"*story*\" \\\\\\) -i 2>/dev/null | head -20)",
-      "Bash(find .playwright-mcp/ -name \"*.png\" -delete && rm -f nul && echo \"done\")"
+      "Bash(find .playwright-mcp/ -name \"*.png\" -delete && rm -f nul && echo \"done\")",
+      "Bash(npx skills *)",
+      "Bash(npx *)",
+      "mcp__claude_ai_Supabase__get_project_url",
+      "mcp__claude_ai_Supabase__get_publishable_keys",
+      "Bash(npm --version)",
+      "mcp__claude_ai_Supabase__list_projects"
     ]
   },
   "enableAllProjectMcpServers": true,
