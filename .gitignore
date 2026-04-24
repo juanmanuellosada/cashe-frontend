@@ -31,3 +31,6 @@ dist-ssr
 *.sln
 *.sw?
 .playwright-mcp/
+
+# Snapshots de reestructura de docs (temporal, borrar tras validar)
+.claude/backup-*/
