@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import DatePicker from './DatePicker';
 import Combobox from './Combobox';
@@ -19,7 +19,8 @@ function EditMovementModal({
   onDuplicate,
   onClose,
   onConvertedToRecurring,
-  loading = false
+  loading = false,
+  anchorY = null,
 }) {
   const { showError } = useError();
 
@@ -68,6 +69,33 @@ function EditMovementModal({
   const startY = useRef(0);
   const modalRef = useRef(null);
   const isDraggingRef = useRef(false);
+
+  // Anchor modal near click position on desktop when anchorY is provided
+  const [topOffset, setTopOffset] = useState(null);
+
+  useLayoutEffect(() => {
+    if (!movement || anchorY == null) {
+      setTopOffset(null);
+      return;
+    }
+    const compute = () => {
+      if (window.innerWidth < 640) {
+        setTopOffset(null);
+        return;
+      }
+      const el = modalRef.current;
+      if (!el) return;
+      const height = el.offsetHeight;
+      const vh = window.innerHeight;
+      const margin = 24;
+      const desired = anchorY - height / 2;
+      const top = Math.max(margin, Math.min(desired, vh - height - margin));
+      setTopOffset(top);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [anchorY, movement]);
 
   const isTransfer = movement?.tipo === 'transferencia';
 
@@ -341,7 +369,7 @@ function EditMovementModal({
   const shouldClose = dragY > 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto sm:py-6">
+    <div className={`fixed inset-0 z-50 flex justify-center overflow-y-auto ${topOffset != null ? 'items-start' : 'items-start sm:items-center sm:py-6'}`}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -357,6 +385,7 @@ function EditMovementModal({
           transform: `translateY(${dragY}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           opacity: shouldClose ? 0.5 : 1,
+          marginTop: topOffset != null ? `${topOffset}px` : undefined,
         }}
         ref={modalRef}
         onTouchStart={handleTouchStart}

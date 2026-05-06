@@ -44,6 +44,7 @@ function CreditCards() {
 
   // Estado para editar movimiento
   const [editingMovement, setEditingMovement] = useState(null);
+  const [editAnchorY, setEditAnchorY] = useState(null);
 
   // Estado para selección masiva
   const [selectionMode, setSelectionMode] = useState(false);
@@ -542,7 +543,8 @@ function CreditCards() {
   };
 
   // Handler para abrir el modal de edición
-  const handleEditMovement = (item) => {
+  const handleEditMovement = (item, event) => {
+    setEditAnchorY(event?.clientY ?? null);
     // Convertir item del statement a formato de movimiento
     setEditingMovement({
       id: item.id,
@@ -570,6 +572,7 @@ function CreditCards() {
       emit(DataEvents.ACCOUNTS_CHANGED);
 
       setEditingMovement(null);
+      setEditAnchorY(null);
 
       // Actualización optimista: actualizar viewingStatement inmediatamente
       if (viewingStatement) {
@@ -616,6 +619,7 @@ function CreditCards() {
       emit(DataEvents.ACCOUNTS_CHANGED);
 
       setEditingMovement(null);
+      setEditAnchorY(null);
 
       // Actualización optimista: remover el item del viewingStatement
       if (viewingStatement) {
@@ -1662,7 +1666,7 @@ function CreditCards() {
                       backgroundColor: isSelected ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-secondary)',
                       border: isSelected ? '1px solid var(--accent-primary)' : '1px solid transparent',
                     }}
-                    onClick={() => selectionMode ? toggleItemSelection(item.id) : handleEditMovement(item)}
+                    onClick={(e) => selectionMode ? toggleItemSelection(item.id) : handleEditMovement(item, e)}
                   >
                     {/* Checkbox en modo selección */}
                     {selectionMode && (
@@ -1930,8 +1934,9 @@ function CreditCards() {
           categories={allCategories}
           onSave={handleSaveMovement}
           onDelete={handleDeleteMovement}
-          onClose={() => setEditingMovement(null)}
+          onClose={() => { setEditingMovement(null); setEditAnchorY(null); }}
           onConvertedToRecurring={() => fetchData(true, false)}
+          anchorY={editAnchorY}
         />
       )}
 
