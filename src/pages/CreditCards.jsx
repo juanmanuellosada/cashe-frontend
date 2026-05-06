@@ -155,15 +155,15 @@ function CreditCards() {
     if (cardExpenses.length === 0) return [];
 
     // For an expense date, find the first closing date >= expenseDate by walking
-    // from anchor in monthly steps. Returns the closing Date object.
+    // from anchor in monthly steps. Uses anchor-indexed addMonths(anchor, n) to
+    // avoid day-of-month drift when passing through short months (e.g. February).
     const getStatementCloseDate = (dateStr) => {
       const expenseDate = parseLocalDate(dateStr);
-      let candidate = addMonths(anchor, -24);
-      for (let i = 0; i < 48; i++) {
+      for (let n = -24; n <= 48; n++) {
+        const candidate = addMonths(anchor, n);
         if (candidate >= expenseDate) return candidate;
-        candidate = addMonths(candidate, 1);
       }
-      return candidate;
+      return addMonths(anchor, 48);
     };
 
     // Agrupar gastos por período (clave = fecha de cierre en yyyy-MM-dd)

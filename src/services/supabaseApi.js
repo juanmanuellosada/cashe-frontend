@@ -1,4 +1,4 @@
-import { addMonths } from 'date-fns';
+import { addMonths, format } from 'date-fns';
 import { supabase } from '../config/supabase';
 import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from './attachmentStorage';
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
@@ -443,33 +443,32 @@ const calculateCreditCardNextStatement = async (accountId, closingDate) => {
   const anchor = parseLocalDate(closingDate);
 
   // For an expense date, find the first closing date >= expenseDate by walking
-  // from anchor in monthly steps. The period key is the closing date string yyyy-MM-dd.
+  // from anchor in monthly steps. Always uses addMonths(anchor, n) to avoid
+  // day-of-month drift when passing through short months (e.g. February).
   const getStatementPeriod = (dateStr) => {
     const expenseDate = parseLocalDate(dateStr);
-    // Walk forward from anchor until we find the first closing >= expenseDate
-    // Start from a point several months before the expense so we don't miss it
-    let candidate = anchor;
-    // Step back far enough (24 months) so the forward walk covers the expense
-    candidate = addMonths(anchor, -24);
-    for (let i = 0; i < 48; i++) {
+    for (let n = -24; n <= 48; n++) {
+      const candidate = addMonths(anchor, n);
       if (candidate >= expenseDate) {
-        return candidate.toISOString().split('T')[0];
+        return format(candidate, 'yyyy-MM-dd');
       }
-      candidate = addMonths(candidate, 1);
     }
-    // Fallback: return the anchor advanced until past the expense
-    return candidate.toISOString().split('T')[0];
+    // Fallback
+    return format(addMonths(anchor, 48), 'yyyy-MM-dd');
   };
 
-  // Determine the "current" period key — the first closing >= today
+  // Determine the "current" period key — the first closing >= today.
+  // Uses anchor-indexed addMonths to avoid drift.
   const today = new Date();
-  let currentClosing = anchor;
-  currentClosing = addMonths(anchor, -24);
-  for (let i = 0; i < 48; i++) {
-    if (currentClosing >= today) break;
-    currentClosing = addMonths(currentClosing, 1);
+  let currentClosing = addMonths(anchor, -24);
+  for (let n = -23; n <= 48; n++) {
+    const candidate = addMonths(anchor, n);
+    if (candidate >= today) {
+      currentClosing = candidate;
+      break;
+    }
   }
-  const currentPeriodKey = currentClosing.toISOString().split('T')[0];
+  const currentPeriodKey = format(currentClosing, 'yyyy-MM-dd');
 
   // Group expenses by period (period key = closing date yyyy-MM-dd)
   const expensesByPeriod = {};

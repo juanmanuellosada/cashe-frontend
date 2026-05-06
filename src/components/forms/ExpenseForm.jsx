@@ -30,24 +30,20 @@ function generarPeriodosResumen(fechaCierre) {
   const [ay, am, ad] = fechaCierre.split('-').map(Number);
   const anchor = new Date(ay, am - 1, ad);
 
-  // Walk backward from anchor to find a closing date that is before today
-  // (i.e., at least 1 month back), then walk forward to cover current + 4 future.
-  // We want: 1 past, 1 current (first closing >= today), and 4 more futures = 6 total.
-  // Find the first closing >= today
-  let firstFuture = anchor;
-  // Go back far enough to find a closing in the past
-  while (firstFuture > today) {
-    firstFuture = addMonths(firstFuture, -1);
+  // Find the first closing >= today using anchor-indexed addMonths to avoid
+  // day-of-month drift when passing through short months (e.g. February).
+  let currentN = 0;
+  for (let n = -24; n <= 48; n++) {
+    if (addMonths(anchor, n) >= today) {
+      currentN = n;
+      break;
+    }
   }
-  while (firstFuture < today) {
-    firstFuture = addMonths(firstFuture, 1);
-  }
-  // firstFuture is now the first closing >= today (i.e., "current")
-  const currentClosing = firstFuture;
+  const currentClosing = addMonths(anchor, currentN);
 
   // Generar 6 períodos: 1 anterior, actual, y 4 futuros
   for (let i = -1; i <= 4; i++) {
-    const closing = addMonths(currentClosing, i);
+    const closing = addMonths(anchor, currentN + i);
     const periodoId = format(closing, 'yyyy-MM-dd');
     const periodoLabel = format(closing, "MMMM yyyy", { locale: es });
 
@@ -64,7 +60,7 @@ function generarPeriodosResumen(fechaCierre) {
 // Calcula la fecha del período seleccionado.
 // periodoId is now a yyyy-MM-dd closing date string — return it directly.
 function calcularFechaDePeriodo(periodoId) {
-  if (!periodoId) return new Date().toISOString().split('T')[0];
+  if (!periodoId) return format(new Date(), 'yyyy-MM-dd');
   return periodoId;
 }
 
@@ -75,15 +71,14 @@ function calcularFechaPrimeraCuota(fechaCompra, fechaCierre) {
 
   const compra = new Date(fechaCompra + 'T00:00:00');
   const [ay, am, ad] = fechaCierre.split('-').map(Number);
-  let candidate = new Date(ay, am - 1, ad);
+  const anchor = new Date(ay, am - 1, ad);
 
-  // Walk back to find a candidate near the purchase date
-  candidate = addMonths(candidate, -24);
-  for (let i = 0; i < 48; i++) {
+  // Use anchor-indexed addMonths to avoid day-of-month drift through short months.
+  for (let n = -24; n <= 48; n++) {
+    const candidate = addMonths(anchor, n);
     if (candidate >= compra) return candidate;
-    candidate = addMonths(candidate, 1);
   }
-  return candidate;
+  return addMonths(anchor, 48);
 }
 
 function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated, sharedAmount, onAmountChange }) {
@@ -185,16 +180,17 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   const infoCierreTarjeta = useMemo(() => {
     if (!esTarjetaCredito || !selectedAccount || !fechaCierre) return null;
 
-    // Walk anchor sequence to find the next closing >= today
+    // Walk anchor sequence to find the next closing >= today.
+    // Uses anchor-indexed addMonths(anchor, n) to avoid day-of-month drift.
     const [ay, am, ad] = fechaCierre.split('-').map(Number);
     const anchor = new Date(ay, am - 1, ad);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let next = addMonths(anchor, -24);
-    for (let i = 0; i < 48; i++) {
-      if (next >= today) break;
-      next = addMonths(next, 1);
+    let next = anchor;
+    for (let n = -24; n <= 48; n++) {
+      const candidate = addMonths(anchor, n);
+      if (candidate >= today) { next = candidate; break; }
     }
 
     return {
