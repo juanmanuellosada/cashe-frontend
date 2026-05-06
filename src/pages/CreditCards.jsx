@@ -1711,15 +1711,13 @@ function CreditCards() {
                             />
                           );
                         } else {
-                          // Fallback: try to extract emoji from category string
-                          const firstChar = item.categoria?.split(' ')[0] || '💳';
-                          return <span className="text-lg">{firstChar}</span>;
+                          return <span className="text-lg">💳</span>;
                         }
                       })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                        {item.categoria?.replace(/^[^\s]+\s*/, '') || item.categoria || 'Sin categoría'}
+                        {item.categoria || 'Sin categoría'}
                         {item.isInstallment && (
                           <span
                             className="ml-2 px-1.5 py-0.5 rounded text-xs"
