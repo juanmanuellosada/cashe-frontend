@@ -20,6 +20,14 @@ import type {
   QueryPeriod,
 } from "./types.ts";
 import { periodToDateRange } from "./entityExtractor.ts";
+import {
+  addMonthsClampedISO,
+  getStatementClosingForExpense,
+  getStatementStart,
+  nextOccurrenceOnOrAfter,
+  parseISODate,
+  formatISODate,
+} from "../creditCardDates.ts";
 
 /**
  * Ejecuta una acción de registro (gasto/ingreso/transferencia)
@@ -92,11 +100,12 @@ async function createMovement(
   if (entities.firstInstallmentDate) {
     date = entities.firstInstallmentDate;
   }
-  // PRIORIDAD 2: Si es tarjeta de crédito sin fecha especificada, calcular automáticamente
-  else if (isCreditCard) {
+  // PRIORIDAD 2: Si es tarjeta de crédito sin fecha especificada, derivar del anchor.
+  // Si no hay closing_date configurado, caemos al comportamiento de PRIORIDAD 3.
+  else if (isCreditCard && account?.closing_date) {
     const purchaseDate = entities.date || getTodayISO();
-    const closingDay = account?.closing_day || 1;
-    date = calculateFirstInstallmentDate(purchaseDate, closingDay);
+    const statementClosing = getStatementClosingForExpense(account.closing_date, purchaseDate);
+    date = statementClosing || purchaseDate;
   }
   // PRIORIDAD 3: Usar fecha especificada o hoy
   else {
@@ -173,10 +182,13 @@ async function createInstallmentPurchase(
 
   // Obtener info de la cuenta (tarjeta)
   const account = context.accounts.find(a => a.id === entities.accountId);
-  const closingDay = account?.closing_day || 1;
 
-  // Usar la fecha de primera cuota especificada por el usuario, o calcularla automáticamente
-  const firstInstallmentDate = entities.firstInstallmentDate || calculateFirstInstallmentDate(startDate, closingDay);
+  // Usar la fecha de primera cuota especificada por el usuario, o derivarla del anchor de cierre.
+  // Si la tarjeta no tiene closing_date configurado, fallback a startDate (la fecha de la compra).
+  const firstInstallmentDate =
+    entities.firstInstallmentDate ||
+    getStatementClosingForExpense(account?.closing_date ?? null, startDate) ||
+    startDate;
 
   // Crear registro de compra en cuotas
   const purchaseData = {
@@ -206,7 +218,7 @@ async function createInstallmentPurchase(
   // Crear los movimientos individuales para cada cuota
   const movementsToInsert = [];
   for (let i = 0; i < installments; i++) {
-    const cuotaDate = addMonths(firstInstallmentDate, i);
+    const cuotaDate = addMonthsClampedISO(firstInstallmentDate, i);
     movementsToInsert.push({
       user_id: userId,
       type: "expense",
@@ -260,58 +272,6 @@ async function createInstallmentPurchase(
       date: firstInstallmentDate,
     },
   };
-}
-
-/**
- * Calcula la fecha de la primera cuota basada en la fecha de compra y el día de cierre
- */
-function calculateFirstInstallmentDate(purchaseDate: string, closingDay: number): string {
-  const purchase = new Date(purchaseDate + "T12:00:00");
-  const purchaseDay = purchase.getDate();
-
-  let year = purchase.getFullYear();
-  let month = purchase.getMonth();
-
-  // Si la compra es antes del cierre, la primera cuota es el mes siguiente
-  // Si es después del cierre, la primera cuota es en 2 meses
-  if (purchaseDay <= closingDay) {
-    month += 1;
-  } else {
-    month += 2;
-  }
-
-  // Ajustar año si es necesario
-  if (month > 11) {
-    month -= 12;
-    year += 1;
-  }
-
-  // Usar el día de cierre como fecha de la cuota (o el último día del mes si es menor)
-  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  const day = Math.min(closingDay, lastDayOfMonth);
-
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-/**
- * Suma meses a una fecha
- */
-function addMonths(dateStr: string, months: number): string {
-  const date = new Date(dateStr + "T12:00:00");
-  let year = date.getFullYear();
-  let month = date.getMonth() + months;
-  const day = date.getDate();
-
-  while (month > 11) {
-    month -= 12;
-    year += 1;
-  }
-
-  // Ajustar día si el mes no tiene suficientes días
-  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  const adjustedDay = Math.min(day, lastDayOfMonth);
-
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(adjustedDay).padStart(2, "0")}`;
 }
 
 /**
@@ -1255,50 +1215,96 @@ async function queryIngresos(
 }
 
 /**
- * Obtiene el período de un resumen de tarjeta
+ * Obtiene el período de un resumen de tarjeta basado en el anchor `closing_date`.
+ *
+ * El resumen "actual" es el primer cierre >= hoy (i.e., el próximo a cerrar).
+ * Para un mes específico (ej. "marzo"), buscamos el cierre cuyo MES corresponda.
+ * El período cubre `(prevClosing, closing]`.
+ *
+ * Si la tarjeta no tiene `closing_date`, hacemos un fallback al mes calendario
+ * (comportamiento del modelo viejo) para no romper consultas.
  */
 function getStatementPeriod(
   card: UserAccount,
   month: string
 ): { startDate: string; endDate: string; monthLabel: string } {
-  const now = new Date();
-  const closingDay = card.closing_day || 1;
-
-  let year = now.getFullYear();
-  let monthNum: number;
-
-  if (month === "actual") {
-    // Determinar el mes del resumen actual basado en la fecha y día de cierre
-    if (now.getDate() <= closingDay) {
-      // Estamos antes del cierre, el resumen actual es del mes anterior
-      monthNum = now.getMonth(); // 0-indexed, así que getMonth() da el mes anterior
-      if (monthNum === 0) {
-        monthNum = 12;
-        year--;
-      }
-    } else {
-      // Estamos después del cierre, el resumen actual es de este mes
-      monthNum = now.getMonth() + 1;
-    }
-  } else {
-    // Mes específico
-    const monthNames: Record<string, number> = {
-      enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
-      julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
-    };
-    monthNum = monthNames[month.toLowerCase()] || now.getMonth() + 1;
-  }
-
-  // Calcular fechas del período
-  const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, monthNum, 0).getDate();
-  const endDate = `${year}-${String(monthNum).padStart(2, "0")}-${lastDay}`;
-
   const monthLabels = [
     "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
-  const monthLabel = `${monthLabels[monthNum]} ${year}`;
+
+  // Fallback: tarjeta sin anchor configurado → usar mes calendario.
+  if (!card.closing_date) {
+    const now = new Date();
+    const monthNames: Record<string, number> = {
+      enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+      julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
+    };
+    const monthNum =
+      month === "actual"
+        ? now.getMonth() + 1
+        : (monthNames[month.toLowerCase()] || now.getMonth() + 1);
+    const year = now.getFullYear();
+    const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const endDate = `${year}-${String(monthNum).padStart(2, "0")}-${lastDay}`;
+    return {
+      startDate,
+      endDate,
+      monthLabel: `${monthLabels[monthNum]} ${year}`,
+    };
+  }
+
+  // Con anchor: encontrar el cierre objetivo y el cierre previo.
+  const todayISO = formatISODate(new Date());
+
+  let closingISO: string;
+
+  if (month === "actual") {
+    // Próximo cierre a partir de hoy (incluye hoy).
+    closingISO = nextOccurrenceOnOrAfter(card.closing_date, todayISO);
+  } else {
+    // Mes específico (en español): buscar el cierre cuyo mes calendario coincida.
+    const monthNames: Record<string, number> = {
+      enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+      julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+    };
+    const targetMonthIdx = monthNames[month.toLowerCase()];
+    if (targetMonthIdx === undefined) {
+      // No reconocemos el mes → fallback a "actual".
+      closingISO = nextOccurrenceOnOrAfter(card.closing_date, todayISO);
+    } else {
+      // Buscar el cierre cuyo mes calendario sea targetMonthIdx, eligiendo el
+      // más cercano (en valor absoluto) al año actual.
+      const today = parseISODate(todayISO);
+      const anchor = parseISODate(card.closing_date);
+      const currentYear = today.getUTCFullYear();
+      const todayMonthDelta =
+        (today.getUTCFullYear() - anchor.getUTCFullYear()) * 12 +
+        (today.getUTCMonth() - anchor.getUTCMonth());
+      let bestN: number | null = null;
+      let bestDistance = Infinity;
+      for (let n = todayMonthDelta - 12; n <= todayMonthDelta + 12; n++) {
+        const cand = parseISODate(addMonthsClampedISO(card.closing_date, n));
+        if (cand.getUTCMonth() === targetMonthIdx) {
+          const distance = Math.abs(cand.getUTCFullYear() - currentYear) * 12;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestN = n;
+          }
+        }
+      }
+      closingISO =
+        bestN !== null
+          ? addMonthsClampedISO(card.closing_date, bestN)
+          : nextOccurrenceOnOrAfter(card.closing_date, todayISO);
+    }
+  }
+
+  const startDate = getStatementStart(card.closing_date, closingISO);
+  const endDate = closingISO;
+  const closingDate = parseISODate(closingISO);
+  const monthLabel = `${monthLabels[closingDate.getUTCMonth() + 1]} ${closingDate.getUTCFullYear()}`;
 
   return { startDate, endDate, monthLabel };
 }

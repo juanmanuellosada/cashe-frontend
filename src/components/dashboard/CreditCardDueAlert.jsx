@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatNumberAR } from '../../utils/format';
+import { formatNumberAR, parseLocalDate } from '../../utils/format';
 
 function CreditCardDueAlert({ accounts }) {
   const navigate = useNavigate();
@@ -10,30 +10,24 @@ function CreditCardDueAlert({ accounts }) {
     if (!accounts || accounts.length === 0) return [];
 
     const now = new Date();
-    const today = now.getDate();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Get the last day of the current month
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    // Calculate tomorrow's date
-    const tomorrow = today + 1 > lastDayOfMonth ? 1 : today + 1;
+    // Normalise today to midnight for date-only comparisons
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
 
     return accounts
       .filter(account => {
-        // Only credit cards with due_day set
-        if (!account.esTarjetaCredito || !account.diaVencimiento) return false;
+        // Only credit cards with a due date anchor set
+        if (!account.esTarjetaCredito || !account.fechaVencimiento) return false;
 
-        // Handle months with fewer days than due_day
-        const effectiveDueDay = Math.min(account.diaVencimiento, lastDayOfMonth);
-
-        // Check if due today or tomorrow
-        return effectiveDueDay === today || effectiveDueDay === tomorrow;
+        const dueDate = parseLocalDate(account.fechaVencimiento);
+        // Normalise to midnight
+        const dueMidnight = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        return dueMidnight.getTime() === todayStart.getTime() || dueMidnight.getTime() === tomorrowStart.getTime();
       })
       .map(account => {
-        const effectiveDueDay = Math.min(account.diaVencimiento, lastDayOfMonth);
-        const isDueToday = effectiveDueDay === today;
+        const dueDate = parseLocalDate(account.fechaVencimiento);
+        const dueMidnight = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        const isDueToday = dueMidnight.getTime() === todayStart.getTime();
 
         return {
           ...account,

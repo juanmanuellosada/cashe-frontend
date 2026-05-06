@@ -31,6 +31,7 @@ import {
 } from "./stateManager.ts";
 import { getExpectedCategoryType } from "./intentClassifier.ts";
 import { filterRelevantAccounts } from "./fuzzyMatcher.ts";
+import { getStatementClosingForExpense } from "../creditCardDates.ts";
 
 /**
  * Genera el mensaje de preview para confirmación
@@ -51,11 +52,14 @@ export function buildConfirmationPreview(
   // Calcular fecha del resumen para tarjetas de crédito (incluso con 1 cuota)
   let resumenLabel = "-";
   if (isCreditCard || installments > 1) {
-    // Si el usuario especificó fecha de primera cuota, usarla; si no, calcular automáticamente
-    const closingDay = account?.closing_day || 1;
+    // Si el usuario especificó fecha de primera cuota, usarla; si no, derivarla del anchor.
     const purchaseDate = entities.date || new Date().toISOString().split("T")[0];
-    const firstDate = entities.firstInstallmentDate || calculateFirstCuotaDate(purchaseDate, closingDay);
-    resumenLabel = getMonthYearLabel(firstDate);
+    const firstDate =
+      entities.firstInstallmentDate ||
+      getStatementClosingForExpense(account?.closing_date ?? null, purchaseDate);
+    if (firstDate) {
+      resumenLabel = getMonthYearLabel(firstDate);
+    }
   }
 
   const values: Record<string, string> = {
@@ -121,33 +125,6 @@ export function buildConfirmationPreview(
   }
 
   return result;
-}
-
-/**
- * Calcula la fecha de la primera cuota basada en la fecha de compra y el día de cierre
- */
-function calculateFirstCuotaDate(purchaseDate: string, closingDay: number): string {
-  const purchase = new Date(purchaseDate + "T12:00:00");
-  const purchaseDay = purchase.getDate();
-
-  let year = purchase.getFullYear();
-  let month = purchase.getMonth();
-
-  // Si la compra es antes del cierre, la primera cuota es el mes siguiente
-  // Si es después del cierre, la primera cuota es en 2 meses
-  if (purchaseDay <= closingDay) {
-    month += 1;
-  } else {
-    month += 2;
-  }
-
-  // Ajustar año si es necesario
-  if (month > 11) {
-    month -= 12;
-    year += 1;
-  }
-
-  return `${year}-${String(month + 1).padStart(2, "0")}-01`;
 }
 
 /**

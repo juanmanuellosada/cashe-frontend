@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DatePicker from '../DatePicker';
 import Combobox from '../Combobox';
@@ -17,26 +17,39 @@ import { evaluateAutoRules, getStatementPayments } from '../../services/supabase
 
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12, 18, 24];
 
-// Genera opciones de períodos de resumen para tarjetas de crédito
-function generarPeriodosResumen(diaCierre) {
+// Genera opciones de períodos de resumen para tarjetas de crédito.
+// fechaCierre: yyyy-MM-dd anchor string from the account.
+// Returns period options whose IDs are yyyy-MM-dd closing-date strings.
+function generarPeriodosResumen(fechaCierre) {
+  if (!fechaCierre) return [];
+
   const periodos = [];
   const today = new Date();
-  const currentDay = today.getDate();
-  const cierre = diaCierre || 1;
+  today.setHours(0, 0, 0, 0);
 
-  // Determinar el período actual
-  let baseDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [ay, am, ad] = fechaCierre.split('-').map(Number);
+  const anchor = new Date(ay, am - 1, ad);
 
-  // Si estamos después del día de cierre, el período actual es el siguiente mes
-  if (currentDay >= cierre) {
-    baseDate = addMonths(baseDate, 1);
+  // Walk backward from anchor to find a closing date that is before today
+  // (i.e., at least 1 month back), then walk forward to cover current + 4 future.
+  // We want: 1 past, 1 current (first closing >= today), and 4 more futures = 6 total.
+  // Find the first closing >= today
+  let firstFuture = anchor;
+  // Go back far enough to find a closing in the past
+  while (firstFuture > today) {
+    firstFuture = addMonths(firstFuture, -1);
   }
+  while (firstFuture < today) {
+    firstFuture = addMonths(firstFuture, 1);
+  }
+  // firstFuture is now the first closing >= today (i.e., "current")
+  const currentClosing = firstFuture;
 
   // Generar 6 períodos: 1 anterior, actual, y 4 futuros
   for (let i = -1; i <= 4; i++) {
-    const periodoDate = addMonths(baseDate, i);
-    const periodoId = format(periodoDate, 'yyyy-MM');
-    const periodoLabel = format(periodoDate, "MMMM yyyy", { locale: es });
+    const closing = addMonths(currentClosing, i);
+    const periodoId = format(closing, 'yyyy-MM-dd');
+    const periodoLabel = format(closing, "MMMM yyyy", { locale: es });
 
     periodos.push({
       value: periodoId,
@@ -48,40 +61,29 @@ function generarPeriodosResumen(diaCierre) {
   return periodos;
 }
 
-// Calcula la fecha de cierre del período seleccionado
-function calcularFechaDePeriodo(periodoId, diaCierre) {
+// Calcula la fecha del período seleccionado.
+// periodoId is now a yyyy-MM-dd closing date string — return it directly.
+function calcularFechaDePeriodo(periodoId) {
   if (!periodoId) return new Date().toISOString().split('T')[0];
-
-  const [year, month] = periodoId.split('-').map(Number);
-  const cierre = diaCierre || 1;
-
-  // La fecha es el día de cierre del período seleccionado
-  const lastDay = new Date(year, month, 0).getDate();
-  const fecha = new Date(year, month - 1, Math.min(cierre, lastDay));
-
-  return fecha.toISOString().split('T')[0];
+  return periodoId;
 }
 
-// Calcula la fecha de la primera cuota basada en la fecha de compra y día de cierre
-function calcularFechaPrimeraCuota(fechaCompra, diaCierre) {
-  if (!fechaCompra || !diaCierre) return null;
+// Calcula la fecha de la primera cuota basada en la fecha de compra y fecha de cierre ancla.
+// fechaCierre: yyyy-MM-dd anchor string from the account.
+function calcularFechaPrimeraCuota(fechaCompra, fechaCierre) {
+  if (!fechaCompra || !fechaCierre) return null;
 
-  const fecha = new Date(fechaCompra);
-  const diaCompra = fecha.getDate();
+  const compra = new Date(fechaCompra + 'T00:00:00');
+  const [ay, am, ad] = fechaCierre.split('-').map(Number);
+  let candidate = new Date(ay, am - 1, ad);
 
-  // Si compra antes o en el día de cierre → primera cuota mes siguiente
-  // Si compra después del cierre → primera cuota en 2 meses
-  if (diaCompra <= diaCierre) {
-    fecha.setMonth(fecha.getMonth() + 1);
-  } else {
-    fecha.setMonth(fecha.getMonth() + 2);
+  // Walk back to find a candidate near the purchase date
+  candidate = addMonths(candidate, -24);
+  for (let i = 0; i < 48; i++) {
+    if (candidate >= compra) return candidate;
+    candidate = addMonths(candidate, 1);
   }
-
-  // Ajustar el día al día de cierre (manejando meses con menos días)
-  const lastDayOfMonth = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
-  fecha.setDate(Math.min(diaCierre, lastDayOfMonth));
-
-  return fecha;
+  return candidate;
 }
 
 function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, onSubmit, loading, prefillData, onCategoryCreated, sharedAmount, onAmountChange }) {
@@ -137,13 +139,13 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   }, [accounts, formData.cuenta]);
 
   const esTarjetaCredito = selectedAccount?.esTarjetaCredito || false;
-  const diaCierre = selectedAccount?.diaCierre || 1;
+  const fechaCierre = selectedAccount?.fechaCierre || null;
 
   // Generar opciones de períodos para tarjetas de crédito
   const periodosResumen = useMemo(() => {
-    if (!esTarjetaCredito) return [];
-    return generarPeriodosResumen(diaCierre);
-  }, [esTarjetaCredito, diaCierre]);
+    if (!esTarjetaCredito || !fechaCierre) return [];
+    return generarPeriodosResumen(fechaCierre);
+  }, [esTarjetaCredito, fechaCierre]);
 
   // Cargar pagos de la tarjeta seleccionada
   useEffect(() => {
@@ -181,37 +183,24 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   // Leer fecha de cierre directamente de la cuenta
   const infoCierreTarjeta = useMemo(() => {
-    if (!esTarjetaCredito || !selectedAccount) return null;
+    if (!esTarjetaCredito || !selectedAccount || !fechaCierre) return null;
 
-    // Usar la fecha guardada en la cuenta solo si es futura
-    if (selectedAccount.fechaCierre) {
-      const [y, m, d] = selectedAccount.fechaCierre.split('-').map(Number);
-      const fechaCierre = new Date(y, m - 1, d);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (fechaCierre >= today) {
-        return {
-          fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
-        };
-      }
-    }
-
-    // Calcular próximo cierre desde el día de cierre
+    // Walk anchor sequence to find the next closing >= today
+    const [ay, am, ad] = fechaCierre.split('-').map(Number);
+    const anchor = new Date(ay, am - 1, ad);
     const today = new Date();
-    const currentDay = today.getDate();
-    let year = today.getFullYear();
-    let month = today.getMonth();
-    if (currentDay > diaCierre) {
-      month += 1;
-      if (month > 11) { month = 0; year += 1; }
+    today.setHours(0, 0, 0, 0);
+
+    let next = addMonths(anchor, -24);
+    for (let i = 0; i < 48; i++) {
+      if (next >= today) break;
+      next = addMonths(next, 1);
     }
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const fechaCierre = new Date(year, month, Math.min(diaCierre, lastDay));
 
     return {
-      fechaCierre: format(fechaCierre, "d 'de' MMMM yyyy", { locale: es }),
+      fechaCierre: format(next, "d 'de' MMMM yyyy", { locale: es }),
     };
-  }, [esTarjetaCredito, selectedAccount, diaCierre]);
+  }, [esTarjetaCredito, selectedAccount, fechaCierre]);
 
   // Establecer período por defecto: primer período no pagado (espera a que carguen pagos)
   useEffect(() => {
@@ -231,10 +220,10 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   // Actualizar la fecha automáticamente cuando cambia el período
   useEffect(() => {
     if (esTarjetaCredito && periodoResumen) {
-      const fechaCalculada = calcularFechaDePeriodo(periodoResumen, diaCierre);
+      const fechaCalculada = calcularFechaDePeriodo(periodoResumen);
       setFormData(prev => ({ ...prev, fecha: fechaCalculada }));
     }
-  }, [periodoResumen, diaCierre, esTarjetaCredito]);
+  }, [periodoResumen, esTarjetaCredito]);
 
   // Evaluar reglas automáticas cuando cambia nota o monto (debounced)
   useEffect(() => {
@@ -288,15 +277,14 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
 
   // Calcular fecha de primera cuota
   const fechaPrimeraCuota = useMemo(() => {
-    if (!esTarjetaCredito || !diaCierre || cantidadCuotas <= 1) return null;
-    // Cuando hay período seleccionado, la primera cuota ES el cierre de ese período
+    if (!esTarjetaCredito || !fechaCierre || cantidadCuotas <= 1) return null;
+    // Cuando hay período seleccionado, la primera cuota ES la fecha de cierre de ese período
     if (periodoResumen) {
-      const [year, month] = periodoResumen.split('-').map(Number);
-      const lastDay = new Date(year, month, 0).getDate();
-      return new Date(year, month - 1, Math.min(diaCierre, lastDay));
+      const [y, m, d] = periodoResumen.split('-').map(Number);
+      return new Date(y, m - 1, d);
     }
-    return calcularFechaPrimeraCuota(formData.fecha, diaCierre);
-  }, [formData.fecha, periodoResumen, diaCierre, esTarjetaCredito, cantidadCuotas]);
+    return calcularFechaPrimeraCuota(formData.fecha, fechaCierre);
+  }, [formData.fecha, periodoResumen, fechaCierre, esTarjetaCredito, cantidadCuotas]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

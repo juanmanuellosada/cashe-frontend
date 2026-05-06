@@ -4,6 +4,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  addMonthsClampedISO,
+  daysBetweenISO,
+  getStatementClosingForExpense,
+  nextOccurrenceOnOrAfter,
+} from '../_shared/creditCardDates.ts'
 
 // Environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -24,8 +30,8 @@ interface CreditCard {
   id: string
   user_id: string
   name: string
-  closing_day: number | null
-  due_day: number
+  closing_date: string | null
+  due_date: string | null
   currency: string
 }
 
@@ -63,19 +69,14 @@ serve(async (req) => {
     const argentinaTime = new Date(nowUTC.getTime() + argentinaOffset * 60 * 1000)
     const currentHour = argentinaTime.getUTCHours()
 
-    // Calculate tomorrow's date in Argentina
+    // Calculate today and tomorrow in Argentina (ISO YYYY-MM-DD)
+    const todayISO = `${argentinaTime.getUTCFullYear()}-${String(argentinaTime.getUTCMonth() + 1).padStart(2, '0')}-${String(argentinaTime.getUTCDate()).padStart(2, '0')}`
     const tomorrowArgentina = new Date(argentinaTime)
     tomorrowArgentina.setUTCDate(tomorrowArgentina.getUTCDate() + 1)
-    const tomorrowDay = tomorrowArgentina.getUTCDate()
-    const tomorrowMonth = tomorrowArgentina.getUTCMonth() + 1
-    const tomorrowYear = tomorrowArgentina.getUTCFullYear()
-
-    // Get the last day of tomorrow's month (for handling due_day=31 in shorter months)
-    const lastDayOfMonth = new Date(tomorrowYear, tomorrowMonth, 0).getDate()
+    const tomorrowISO = `${tomorrowArgentina.getUTCFullYear()}-${String(tomorrowArgentina.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrowArgentina.getUTCDate()).padStart(2, '0')}`
 
     console.log(`Processing due date notifications at Argentina hour ${currentHour}`)
-    console.log(`Tomorrow: ${tomorrowYear}-${tomorrowMonth.toString().padStart(2, '0')}-${tomorrowDay.toString().padStart(2, '0')}`)
-    console.log(`Last day of month: ${lastDayOfMonth}`)
+    console.log(`Today: ${todayISO} | Tomorrow: ${tomorrowISO}`)
     console.log(`Config: Telegram=${!!telegramToken}, WhatsApp=${!!whatsappToken && !!whatsappPhoneId}, Push=${!!vapidPrivateKey && !!vapidPublicKey}`)
 
     // Get all users whose notification_hour matches current Argentina hour
@@ -101,10 +102,8 @@ serve(async (req) => {
       try {
         const result = await processUserCards(
           userPrefs,
-          tomorrowDay,
-          tomorrowMonth,
-          tomorrowYear,
-          lastDayOfMonth
+          todayISO,
+          tomorrowISO
         )
         results.cardsChecked += result.cardsChecked
         results.notificationsSent += result.sent
@@ -137,20 +136,18 @@ serve(async (req) => {
 // ============================================
 async function processUserCards(
   userPrefs: UserPreferences,
-  tomorrowDay: number,
-  tomorrowMonth: number,
-  tomorrowYear: number,
-  lastDayOfMonth: number
+  todayISO: string,
+  tomorrowISO: string
 ): Promise<{ cardsChecked: number; sent: number; telegram: number; whatsapp: number; push: number }> {
   const result = { cardsChecked: 0, sent: 0, telegram: 0, whatsapp: 0, push: 0 }
 
-  // Get user's credit cards with due_day set
+  // Get user's credit cards with due_date anchor configured
   const { data: creditCards, error: cardsError } = await supabase
     .from('accounts')
-    .select('id, user_id, name, closing_day, due_day, currency')
+    .select('id, user_id, name, closing_date, due_date, currency')
     .eq('user_id', userPrefs.user_id)
     .eq('is_credit_card', true)
-    .not('due_day', 'is', null)
+    .not('due_date', 'is', null)
 
   if (cardsError) {
     throw new Error(`Error fetching credit cards: ${cardsError.message}`)
@@ -158,20 +155,24 @@ async function processUserCards(
 
   result.cardsChecked = creditCards?.length || 0
 
-  // Filter cards that are due tomorrow
-  const cardsDueTomorrow = (creditCards || []).filter((card: CreditCard) => {
-    // Handle months with fewer days than due_day
-    // e.g., if due_day=31 and month has 30 days, due date is the 30th
-    const effectiveDueDay = Math.min(card.due_day, lastDayOfMonth)
-    return effectiveDueDay === tomorrowDay
-  })
+  // For each card, roll the due_date anchor forward to the next occurrence
+  // >= today, then check if that next due is exactly tomorrow.
+  type CardWithNextDue = CreditCard & { _nextDueISO: string }
+  const cardsDueTomorrow: CardWithNextDue[] = []
+  for (const card of (creditCards || []) as CreditCard[]) {
+    if (!card.due_date) continue
+    const nextDue = nextOccurrenceOnOrAfter(card.due_date, todayISO)
+    if (daysBetweenISO(todayISO, nextDue) === 1) {
+      cardsDueTomorrow.push({ ...card, _nextDueISO: nextDue })
+    }
+  }
 
   if (cardsDueTomorrow.length === 0) {
     return result
   }
 
-  // Format due date for notification log
-  const dueDate = `${tomorrowYear}-${tomorrowMonth.toString().padStart(2, '0')}-${tomorrowDay.toString().padStart(2, '0')}`
+  // The due date used for the notification log key.
+  const dueDate = tomorrowISO
 
   // Get user's linked services
   const [telegramUser, whatsappUser, pushSubscriptions] = await Promise.all([
@@ -196,7 +197,7 @@ async function processUserCards(
       .then(r => r.data || []) : []
   ])
 
-  for (const card of cardsDueTomorrow as CreditCard[]) {
+  for (const card of cardsDueTomorrow) {
     // Check if notification was already sent for this card and due date
     const { data: existingLog } = await supabase
       .from('notification_log')
@@ -211,8 +212,8 @@ async function processUserCards(
       continue
     }
 
-    // Calculate statement amount
-    const statementAmounts = await calculateStatementAmount(card)
+    // Calculate statement amount for the period that vences tomorrow.
+    const statementAmounts = await calculateStatementAmount(card, card._nextDueISO)
 
     // Build notification message
     const message = buildNotificationMessage(card.name, statementAmounts, dueDate)
@@ -268,21 +269,42 @@ async function processUserCards(
 // ============================================
 // CALCULATE STATEMENT AMOUNT
 // ============================================
-async function calculateStatementAmount(card: CreditCard): Promise<{ ars: number; usd: number }> {
-  // We need to calculate the statement that is due tomorrow
-  // The statement period is determined by the closing_day
-  // Example: closing_day=20, due_day=6
-  // - Statement closing on Jan 20 is due on Feb 6
-  // - That statement contains expenses from Dec 20 to Jan 19 (before closing)
+async function calculateStatementAmount(
+  card: CreditCard,
+  upcomingDueISO: string
+): Promise<{ ars: number; usd: number }> {
+  // The statement that vences tomorrow closed BEFORE that due date.
+  // We map "the closing for this due" to the closing-anchor sequence by
+  // taking the previous due period (due - 1 month). Then for each expense,
+  // we ask which closing it lands on (first closing >= expense_date) and
+  // compare against the target closing.
 
-  const closingDay = card.closing_day || 1
+  if (!card.closing_date) {
+    // Sin anchor de cierre no podemos agrupar por período. Devolver 0.
+    console.warn(`Card ${card.id} (${card.name}) has no closing_date anchor; skipping statement total.`)
+    return { ars: 0, usd: 0 }
+  }
 
-  // Get all expenses for this card
+  // The closing for the statement that vences `upcomingDueISO` is the closing
+  // that occurred immediately before that due. Heuristic: it's the closing at
+  // or before (upcomingDue - 1 day). Then snap it to the closing anchor series.
+  // Equivalent: walk forward from the closing anchor until we find the
+  // greatest closing <= upcomingDue. nextOccurrenceOnOrAfter gives us the next
+  // closing >= a reference; we want the previous one, so we step back 1 month
+  // from the next closing >= upcomingDue.
+  const nextClosingOnOrAfterDue = nextOccurrenceOnOrAfter(card.closing_date, upcomingDueISO)
+  const targetClosingISO =
+    nextClosingOnOrAfterDue === upcomingDueISO
+      ? upcomingDueISO // closing happens to fall on the due date itself
+      : addMonthsClampedISO(nextClosingOnOrAfterDue, -1)
+
+  // Get all expenses for this card up to the closing date.
   const { data: expenses, error } = await supabase
     .from('movements')
     .select('amount, date, original_currency')
     .eq('account_id', card.id)
     .eq('type', 'expense')
+    .lte('date', targetClosingISO)
 
   if (error) {
     console.error(`Error fetching expenses for card ${card.id}:`, error)
@@ -293,66 +315,16 @@ async function calculateStatementAmount(card: CreditCard): Promise<{ ars: number
     return { ars: 0, usd: 0 }
   }
 
-  // Calculate the statement period that is due tomorrow
-  // Due tomorrow means the statement closed recently (last month or so)
-  const now = new Date()
-  const currentDay = now.getDate()
-  const currentMonth = now.getMonth()
-  const currentYear = now.getFullYear()
+  console.log(`Calculating statement for ${card.name}: target closing ${targetClosingISO} (due ${upcomingDueISO})`)
 
-  // The statement period key uses the format "YYYY-MM" where MM is 1-indexed
-  // If we're before or at the closing day, the "current" statement period is this month
-  // If we're after the closing day, the "current" statement period is next month
-  // But we want the statement that VENCES tomorrow, which closed BEFORE now
-
-  let statementYear = currentYear
-  let statementMonth = currentMonth // 0-indexed
-
-  // The statement that's due tomorrow closed on the closing day of the previous period
-  // We need to go back one period from "current"
-  if (currentDay >= closingDay) {
-    // Current period is next month, so the one due tomorrow is this month
-    statementMonth = currentMonth
-  } else {
-    // Current period is this month, so the one due tomorrow is last month
-    statementMonth = currentMonth - 1
-    if (statementMonth < 0) {
-      statementMonth = 11
-      statementYear -= 1
-    }
-  }
-
-  // Convert to 1-indexed with padding for the statement period key
-  const periodKey = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`
-
-  console.log(`Calculating statement amount for ${card.name}, period: ${periodKey}, closing_day: ${closingDay}`)
-
-  // Function to get statement period for a date (same logic as frontend)
-  const getStatementPeriod = (dateStr: string): string => {
-    const d = new Date(dateStr)
-    const day = d.getDate()
-    let year = d.getFullYear()
-    let month = d.getMonth()
-
-    if (day >= closingDay) {
-      month += 1
-      if (month > 11) {
-        month = 0
-        year += 1
-      }
-    }
-    return `${year}-${String(month + 1).padStart(2, '0')}`
-  }
-
-  // Sum amounts by currency for the target period
+  // Sum amounts by currency for expenses whose statement closing == target.
   let totalARS = 0
   let totalUSD = 0
 
   for (const expense of expenses) {
-    const expensePeriod = getStatementPeriod(expense.date)
-    if (expensePeriod === periodKey) {
+    const expenseClosing = getStatementClosingForExpense(card.closing_date, expense.date)
+    if (expenseClosing === targetClosingISO) {
       const amount = Number(expense.amount) || 0
-      // Use original_currency to determine if expense is in USD or ARS
       if (expense.original_currency === 'USD') {
         totalUSD += amount
       } else {
@@ -361,7 +333,7 @@ async function calculateStatementAmount(card: CreditCard): Promise<{ ars: number
     }
   }
 
-  console.log(`Statement ${periodKey} for ${card.name}: ARS=${totalARS}, USD=${totalUSD}`)
+  console.log(`Statement closing ${targetClosingISO} for ${card.name}: ARS=${totalARS}, USD=${totalUSD}`)
 
   return { ars: totalARS, usd: totalUSD }
 }

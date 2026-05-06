@@ -56,7 +56,7 @@ export const seedDemoData = async (userId) => {
     { id: uid(), user_id: userId, name: 'Banco Galicia', currency: 'ARS', initial_balance: 50000, account_type: 'Caja de ahorro', is_credit_card: false },
     { id: uid(), user_id: userId, name: 'Mercado Pago', currency: 'ARS', initial_balance: 5000, account_type: 'Billetera virtual', is_credit_card: false },
     { id: uid(), user_id: userId, name: 'Efectivo', currency: 'ARS', initial_balance: 15000, account_type: 'Efectivo', is_credit_card: false },
-    { id: uid(), user_id: userId, name: 'Naranja X Visa', currency: 'ARS', initial_balance: 0, account_type: 'Tarjeta de crédito', is_credit_card: true, closing_day: 25 },
+    { id: uid(), user_id: userId, name: 'Naranja X Visa', currency: 'ARS', initial_balance: 0, account_type: 'Tarjeta de crédito', is_credit_card: true, closing_date: new Date(new Date().getFullYear(), new Date().getMonth(), 25).toISOString().slice(0, 10) },
     { id: uid(), user_id: userId, name: 'Dólares', currency: 'USD', initial_balance: 500, account_type: 'Efectivo', is_credit_card: false },
   ];
   await supabase.from('accounts').insert(accts);

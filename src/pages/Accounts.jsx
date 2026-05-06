@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { format } from 'date-fns';
 import { getAccounts, invalidateMovementCache, addAccount, updateAccount, deleteAccount, bulkDeleteAccounts } from '../services/supabaseApi';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseLocalDate } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
 import SortDropdown from '../components/SortDropdown';
 import AccountModal from '../components/AccountModal';
+import DatePicker from '../components/DatePicker';
 import { useError } from '../contexts/ErrorContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
@@ -943,7 +945,7 @@ function Accounts() {
                             </p>
                           </div>
                         </div>
-                        <ClosingDayEditor
+                        <AccountDatesEditor
                           account={account}
                           onSave={handleSave}
                           loading={saving}
@@ -1031,25 +1033,35 @@ function Accounts() {
 
 export default Accounts;
 
-// Componente para mostrar/editar días de cierre y vencimiento
-function ClosingDayEditor({ account, onSave, loading }) {
+// Componente para mostrar/editar fechas de cierre y vencimiento
+function AccountDatesEditor({ account, onSave, loading }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [diaCierre, setDiaCierre] = useState(account.diaCierre?.toString() || '1');
-  const [diaVencimiento, setDiaVencimiento] = useState(account.diaVencimiento?.toString() || '');
+  const [fechaCierre, setFechaCierre] = useState(account.fechaCierre || '');
+  const [fechaVencimiento, setFechaVencimiento] = useState(account.fechaVencimiento || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSave = async () => {
-    const newCierre = parseInt(diaCierre) || 1;
-    const newVencimiento = parseInt(diaVencimiento) || null;
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+      return format(parseLocalDate(dateStr), 'dd/MM/yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
 
-    // Validate that closing and due days are different
-    if (newVencimiento && newCierre === newVencimiento) {
+  const handleSave = async () => {
+    if (!fechaCierre) {
+      setError('Seleccioná la fecha de cierre');
+      return;
+    }
+
+    if (fechaVencimiento && fechaCierre === fechaVencimiento) {
       setError('El día de cierre y vencimiento no pueden ser iguales');
       return;
     }
 
-    if (newCierre === account.diaCierre && newVencimiento === account.diaVencimiento) {
+    if (fechaCierre === account.fechaCierre && fechaVencimiento === account.fechaVencimiento) {
       setIsEditing(false);
       return;
     }
@@ -1066,8 +1078,10 @@ function ClosingDayEditor({ account, onSave, loading }) {
         numeroCuenta: account.numeroCuenta,
         tipo: account.tipo,
         esTarjetaCredito: account.esTarjetaCredito,
-        diaCierre: newCierre,
-        diaVencimiento: newVencimiento,
+        diaCierre: null,
+        diaVencimiento: null,
+        fechaCierre: fechaCierre || null,
+        fechaVencimiento: fechaVencimiento || null,
         icon: account.icon,
         ocultaDelBalance: account.ocultaDelBalance,
       });
@@ -1103,14 +1117,14 @@ function ClosingDayEditor({ account, onSave, loading }) {
               <div>
                 <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Cierre</p>
                 <p className="text-sm font-semibold" style={{ color: 'var(--accent-purple)' }}>
-                  Día {account.diaCierre || 1}
+                  {formatDisplayDate(account.fechaCierre) || 'Sin definir'}
                 </p>
               </div>
               <div className="w-px h-6" style={{ backgroundColor: 'var(--border-subtle)' }} />
               <div>
                 <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Vencimiento</p>
-                <p className="text-sm font-semibold" style={{ color: account.diaVencimiento ? 'var(--accent-purple)' : 'var(--text-muted)' }}>
-                  {account.diaVencimiento ? `Día ${account.diaVencimiento}` : 'Sin definir'}
+                <p className="text-sm font-semibold" style={{ color: account.fechaVencimiento ? 'var(--accent-purple)' : 'var(--text-muted)' }}>
+                  {formatDisplayDate(account.fechaVencimiento) || 'Sin definir'}
                 </p>
               </div>
             </div>
@@ -1134,29 +1148,19 @@ function ClosingDayEditor({ account, onSave, loading }) {
       </p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Día de cierre</label>
-          <input
-            type="number"
-            value={diaCierre}
-            onChange={(e) => setDiaCierre(e.target.value)}
-            min="1"
-            max="31"
-            className="w-full px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
-            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-            autoFocus
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Cierre</label>
+          <DatePicker
+            name="fechaCierre"
+            value={fechaCierre}
+            onChange={(e) => setFechaCierre(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Día de vencimiento</label>
-          <input
-            type="number"
-            value={diaVencimiento}
-            onChange={(e) => setDiaVencimiento(e.target.value)}
-            min="1"
-            max="31"
-            placeholder="—"
-            className="w-full px-3 py-2 rounded-lg text-center font-semibold transition-all duration-200 border-2 border-transparent focus:border-[var(--accent-purple)]"
-            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Vencimiento</label>
+          <DatePicker
+            name="fechaVencimiento"
+            value={fechaVencimiento}
+            onChange={(e) => setFechaVencimiento(e.target.value)}
           />
         </div>
       </div>
@@ -1166,8 +1170,8 @@ function ClosingDayEditor({ account, onSave, loading }) {
       <div className="flex gap-2 mt-3">
         <button
           onClick={() => {
-            setDiaCierre(account.diaCierre?.toString() || '1');
-            setDiaVencimiento(account.diaVencimiento?.toString() || '');
+            setFechaCierre(account.fechaCierre || '');
+            setFechaVencimiento(account.fechaVencimiento || '');
             setError('');
             setIsEditing(false);
           }}

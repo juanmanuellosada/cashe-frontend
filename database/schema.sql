@@ -46,8 +46,8 @@ CREATE TABLE accounts (
     account_number text,
     account_type text DEFAULT 'Caja de ahorro'::text,
     is_credit_card boolean DEFAULT false,
-    closing_day integer, -- Día de cierre del resumen (1-31)
-    due_day integer, -- Día de vencimiento del pago (1-31)
+    closing_date date, -- Fecha ancla del próximo cierre del resumen
+    due_date date, -- Fecha ancla del próximo vencimiento del pago
     icon text,
     hidden_from_balance boolean DEFAULT false, -- Ocultar cuenta del balance general
     created_at timestamp with time zone DEFAULT now(),

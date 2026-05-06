@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, deleteMovement, getStatementPayments, registerStatementPayment, cancelStatementPayment } from '../services/supabaseApi';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseLocalDate } from '../utils/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
 import { useError } from '../contexts/ErrorContext';
@@ -147,52 +147,46 @@ function CreditCards() {
   const statements = useMemo(() => {
     if (!selectedCard) return [];
 
-    const diaCierre = selectedCard.diaCierre || 1;
+    const anchor = selectedCard.fechaCierre ? parseLocalDate(selectedCard.fechaCierre) : null;
+    if (!anchor) return [];
+
     const cardExpenses = allExpenses.filter(e => e.cuenta === selectedCard.nombre);
-    
+
     if (cardExpenses.length === 0) return [];
-    
-    // Encontrar el rango de fechas de los gastos
-    const expenseDates = cardExpenses.map(e => new Date(e.fecha));
-    const minDate = new Date(Math.min(...expenseDates));
-    const maxDate = new Date(Math.max(...expenseDates));
-    
-    // Función para obtener el período de cierre de una fecha
-    const getStatementPeriod = (date) => {
-      const d = new Date(date);
-      const day = d.getDate();
-      let year = d.getFullYear();
-      let month = d.getMonth();
-      
-      // Si el día es >= día de cierre, pertenece al siguiente período
-      if (day >= diaCierre) {
-        month += 1;
-        if (month > 11) {
-          month = 0;
-          year += 1;
-        }
+
+    // For an expense date, find the first closing date >= expenseDate by walking
+    // from anchor in monthly steps. Returns the closing Date object.
+    const getStatementCloseDate = (dateStr) => {
+      const expenseDate = parseLocalDate(dateStr);
+      let candidate = addMonths(anchor, -24);
+      for (let i = 0; i < 48; i++) {
+        if (candidate >= expenseDate) return candidate;
+        candidate = addMonths(candidate, 1);
       }
-      
-      return `${year}-${String(month + 1).padStart(2, '0')}`;
+      return candidate;
     };
-    
-    // Agrupar gastos por período
+
+    // Agrupar gastos por período (clave = fecha de cierre en yyyy-MM-dd)
     const expensesByPeriod = {};
+    const closeDateByPeriod = {};
     cardExpenses.forEach(expense => {
-      const period = getStatementPeriod(expense.fecha);
+      const closeDate = getStatementCloseDate(expense.fecha);
+      const period = format(closeDate, 'yyyy-MM-dd');
       if (!expensesByPeriod[period]) {
         expensesByPeriod[period] = [];
+        closeDateByPeriod[period] = closeDate;
       }
       expensesByPeriod[period].push(expense);
     });
-    
+
     // Crear resúmenes solo para períodos con gastos
     const result = [];
     const today = new Date();
-    
+
     Object.entries(expensesByPeriod).forEach(([period, expenses]) => {
-      const [year, month] = period.split('-').map(Number);
-      const closeDate = new Date(year, month - 1, Math.min(diaCierre, new Date(year, month, 0).getDate()));
+      const closeDate = closeDateByPeriod[period];
+      const year = closeDate.getFullYear();
+      const month = closeDate.getMonth();
       
       // Calcular totales separando por moneda original
       // Un gasto es en dólares si tiene montoDolares > 0 y el monto original (columna B) 
@@ -250,7 +244,7 @@ function CreditCards() {
       result.push({
         id: period,
         year,
-        month: month - 1,
+        month,
         monthName: format(closeDate, 'MMMM yyyy', { locale: es }),
         closeDate,
         totalPesos: totalPesosOriginal,      // Total de gastos en pesos
@@ -700,25 +694,16 @@ function CreditCards() {
   };
 
   // Calcular una fecha válida para un período de resumen dado
-  const getDateForStatementPeriod = (statement, diaCierre) => {
-    // El período es "YYYY-MM" donde el mes es el mes del cierre
-    // Para que un gasto caiga en ese período, la fecha debe ser < diaCierre de ese mes
-    // Por ejemplo: período "2026-03" con cierre día 29 → usar fecha como "2026-03-15" (cualquier día < 29)
-    const year = statement.year;
-    const month = statement.month; // 0-indexed
-
-    // Usar el día 15 del mes del período (seguro que está antes del cierre)
-    const dia = Math.min(15, diaCierre - 1);
-    const fecha = new Date(year, month, dia);
-    return format(fecha, 'yyyy-MM-dd');
+  // El período va desde (addMonths(closeDate, -1), closeDate]; el cierre mismo es siempre válido.
+  const getDateForStatementPeriod = (statement) => {
+    return format(statement.closeDate, 'yyyy-MM-dd');
   };
 
   // Abrir modal para agregar gasto al resumen actual
   const handleAddExpenseToStatement = () => {
     if (!viewingStatement || !selectedCard) return;
 
-    const diaCierre = selectedCard.diaCierre || 1;
-    const fecha = getDateForStatementPeriod(viewingStatement, diaCierre);
+    const fecha = getDateForStatementPeriod(viewingStatement);
 
     setAddExpensePrefill({
       tipo: 'gasto',
@@ -732,8 +717,7 @@ function CreditCards() {
   const handleBulkMoveToStatement = async (targetStatement) => {
     if (!viewingStatement || !selectedCard) return;
 
-    const diaCierre = selectedCard.diaCierre || 1;
-    const newDate = getDateForStatementPeriod(targetStatement, diaCierre);
+    const newDate = getDateForStatementPeriod(targetStatement);
     const movementsToUpdate = getSelectedMovementsFromStatement();
     const movedIds = new Set(movementsToUpdate.map(m => m.id));
 
@@ -898,10 +882,12 @@ function CreditCards() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-secondary)' }}>
-                Día de cierre
+                Fecha de cierre
               </p>
               <p className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
-                {selectedCard.diaCierre || 'No configurado'}
+                {selectedCard.fechaCierre
+                  ? format(parseLocalDate(selectedCard.fechaCierre), 'dd/MM/yyyy')
+                  : 'No configurado'}
               </p>
             </div>
             <div className="text-right">

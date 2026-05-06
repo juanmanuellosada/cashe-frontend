@@ -1,7 +1,9 @@
+import { addMonths } from 'date-fns';
 import { supabase } from '../config/supabase';
 import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from './attachmentStorage';
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 import { emit, emitQuiet, DataEvents } from './dataEvents';
+import { parseLocalDate } from '../utils/format';
 
 // ============================================
 // CACHE MANAGEMENT - Stale-While-Revalidate
@@ -327,7 +329,7 @@ export const getAccounts = (forceRefresh = false) => {
 
   if (creditCardAccounts.length > 0) {
     const creditCardPromises = creditCardAccounts.map(async (account) => {
-      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_day, account.due_day);
+      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_date);
       return { accountId: account.id, data: nextStatement };
     });
     const creditCardResults = await Promise.all(creditCardPromises);
@@ -364,8 +366,6 @@ export const getAccounts = (forceRefresh = false) => {
       numeroCuenta: account.account_number || '',
       tipo: accountTypeFromDb(account.account_type),
       esTarjetaCredito: account.is_credit_card,
-      diaCierre: account.closing_day,
-      diaVencimiento: account.due_day,
       fechaCierre: account.closing_date || null,
       fechaVencimiento: account.due_date || null,
       balanceActual: balanceData.balance,
@@ -388,13 +388,25 @@ export const getAccounts = (forceRefresh = false) => {
 };
 
 // Calculate next statement balance for credit cards (separated by currency)
+// Uses closingDate (yyyy-MM-dd anchor) + addMonths for period assignment.
 // Returns:
 // - proximoResumenPesos/Dolares: first UNPAID statement amounts
 // - resumenVencePesos/Dolares: amounts for the statement that's due now (for due alerts)
 // - resumenVencePagado: whether the due statement is fully paid
-const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) => {
+const calculateCreditCardNextStatement = async (accountId, closingDate) => {
   const userId = await getUserId();
-  const diaCierre = closingDay || 1;
+
+  // If no closing date anchor, we can't group statements — return zeros gracefully.
+  if (!closingDate) {
+    return {
+      proximoResumenPesos: 0,
+      proximoResumenDolares: 0,
+      promedioMensual: 0,
+      resumenVencePesos: 0,
+      resumenVenceDolares: 0,
+      resumenVencePagado: false,
+    };
+  }
 
   // Get all expenses for this credit card
   const { data: expenses } = await supabase
@@ -428,41 +440,38 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     paidSet.add(`${p.statement_period}_${p.currency}`);
   });
 
-  // Calculate current statement period (the one we're accumulating now)
-  const today = new Date();
-  const currentDay = today.getDate();
-  let statementYear = today.getFullYear();
-  let statementMonth = today.getMonth();
+  const anchor = parseLocalDate(closingDate);
 
-  // If we're past the closing day, we're in the next month's statement
-  if (currentDay >= diaCierre) {
-    statementMonth += 1;
-    if (statementMonth > 11) {
-      statementMonth = 0;
-      statementYear += 1;
-    }
-  }
-
-  // Function to get statement period for a date
-  // Format: "YYYY-MM" (1-indexed month with zero padding) to match CreditCards.jsx
+  // For an expense date, find the first closing date >= expenseDate by walking
+  // from anchor in monthly steps. The period key is the closing date string yyyy-MM-dd.
   const getStatementPeriod = (dateStr) => {
-    const [y, m, dayNum] = dateStr.split('-').map(Number);
-    const day = dayNum;
-    let year = y;
-    let month = m - 1; // 0-indexed like getMonth()
-
-    if (day >= diaCierre) {
-      month += 1;
-      if (month > 11) {
-        month = 0;
-        year += 1;
+    const expenseDate = parseLocalDate(dateStr);
+    // Walk forward from anchor until we find the first closing >= expenseDate
+    // Start from a point several months before the expense so we don't miss it
+    let candidate = anchor;
+    // Step back far enough (24 months) so the forward walk covers the expense
+    candidate = addMonths(anchor, -24);
+    for (let i = 0; i < 48; i++) {
+      if (candidate >= expenseDate) {
+        return candidate.toISOString().split('T')[0];
       }
+      candidate = addMonths(candidate, 1);
     }
-    // Convert to 1-indexed and pad with zero
-    return `${year}-${String(month + 1).padStart(2, '0')}`;
+    // Fallback: return the anchor advanced until past the expense
+    return candidate.toISOString().split('T')[0];
   };
 
-  // Group expenses by period
+  // Determine the "current" period key — the first closing >= today
+  const today = new Date();
+  let currentClosing = anchor;
+  currentClosing = addMonths(anchor, -24);
+  for (let i = 0; i < 48; i++) {
+    if (currentClosing >= today) break;
+    currentClosing = addMonths(currentClosing, 1);
+  }
+  const currentPeriodKey = currentClosing.toISOString().split('T')[0];
+
+  // Group expenses by period (period key = closing date yyyy-MM-dd)
   const expensesByPeriod = {};
   const expensesByMonth = {};
 
@@ -471,13 +480,11 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     const amount = parseFloat(expense.amount);
     const currency = expense.original_currency === 'USD' ? 'USD' : 'ARS';
 
-    // Group by period and currency
     if (!expensesByPeriod[period]) {
       expensesByPeriod[period] = { ARS: 0, USD: 0 };
     }
     expensesByPeriod[period][currency] += amount;
 
-    // For monthly average (group by month)
     const monthKey = expense.date.substring(0, 7);
     if (!expensesByMonth[monthKey]) {
       expensesByMonth[monthKey] = 0;
@@ -490,18 +497,11 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
   const totalAllMonths = Object.values(expensesByMonth).reduce((sum, val) => sum + val, 0);
   const promedioMensual = months.length > 0 ? totalAllMonths / months.length : 0;
 
-  // Sort periods chronologically
-  const sortedPeriods = Object.keys(expensesByPeriod).sort((a, b) => {
-    const [yearA, monthA] = a.split('-').map(Number);
-    const [yearB, monthB] = b.split('-').map(Number);
-    if (yearA !== yearB) return yearA - yearB;
-    return monthA - monthB;
-  });
+  // Sort periods chronologically (period keys are yyyy-MM-dd so lexicographic = chronological)
+  const sortedPeriods = Object.keys(expensesByPeriod).sort();
 
-  // Find the last (most recent) unpaid CLOSED statement.
-  // Only look at periods that already closed (< currentPeriodKey) — not future installments.
+  // Find the most recent unpaid CLOSED statement (closing < today).
   // If all closed periods are paid, fall back to the current accumulating period.
-  const currentPeriodKey = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`;
   const closedPeriodsDesc = sortedPeriods.filter(p => p < currentPeriodKey).reverse();
 
   let duePeriod = null;
@@ -543,7 +543,6 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
     const arsPaid = paidSet.has(`${period}_ARS`);
     const usdPaid = paidSet.has(`${period}_USD`);
 
-    // If this period has any unpaid amount, use it
     const unpaidARS = arsPaid ? 0 : arsTotal;
     const unpaidUSD = usdPaid ? 0 : usdTotal;
 
@@ -557,11 +556,10 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
 
   // If no unpaid period found, use current period
   if (!statementPeriod) {
-    const currentPeriod = `${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`;
-    const currentExpenses = expensesByPeriod[currentPeriod] || { ARS: 0, USD: 0 };
+    const currentExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
     proximoResumenPesos = currentExpenses.ARS || 0;
     proximoResumenDolares = currentExpenses.USD || 0;
-    statementPeriod = currentPeriod;
+    statementPeriod = currentPeriodKey;
   }
 
   return {
@@ -577,7 +575,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDay, dueDay) =
   };
 };
 
-export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
+export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
   const userId = await getUserId();
 
   const { data, error } = await supabase
@@ -590,8 +588,6 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
       account_number: numeroCuenta || null,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
-      closing_day: diaCierre || null,
-      due_day: diaVencimiento || null,
       closing_date: fechaCierre || null,
       due_date: fechaVencimiento || null,
       icon: icon || null,
@@ -605,7 +601,7 @@ export const addAccount = async ({ nombre, balanceInicial, moneda, numeroCuenta,
   return { success: true, account: data };
 };
 
-export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, diaCierre, diaVencimiento, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
+export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, moneda, numeroCuenta, tipo, esTarjetaCredito, fechaCierre, fechaVencimiento, icon, ocultaDelBalance }) => {
   const accountId = id || rowIndex;
   if (!accountId) {
     throw new Error('No se encontró el id de la cuenta para actualizar.');
@@ -620,8 +616,6 @@ export const updateAccount = async ({ id, rowIndex, nombre, balanceInicial, mone
       account_number: numeroCuenta || null,
       account_type: accountTypeToDb(tipo),
       is_credit_card: esTarjetaCredito || false,
-      closing_day: diaCierre || null,
-      due_day: diaVencimiento || null,
       closing_date: fechaCierre || null,
       due_date: fechaVencimiento || null,
       icon: icon || null,

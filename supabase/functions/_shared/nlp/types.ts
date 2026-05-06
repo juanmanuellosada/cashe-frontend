@@ -161,7 +161,7 @@ export interface UserAccount {
   balance?: number;
   icon?: string;
   is_credit_card?: boolean;
-  closing_day?: number;
+  closing_date?: string | null;
   account_type?: string;
 }
 
