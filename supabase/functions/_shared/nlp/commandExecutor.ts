@@ -1261,8 +1261,21 @@ function getStatementPeriod(
   let closingISO: string;
 
   if (month === "actual") {
-    // Próximo cierre a partir de hoy (incluye hoy).
-    closingISO = nextOccurrenceOnOrAfter(card.closing_date, todayISO);
+    // Si la tarjeta tiene due_date, "actual" es el resumen que vence ahora
+    // (próximo o presente vencimiento). Eso mapea al cierre inmediatamente
+    // anterior a ese vencimiento — coincide con send-due-date-notifications
+    // y con la lógica de "Vence HOY" de la home.
+    if (card.due_date) {
+      const upcomingDueISO = nextOccurrenceOnOrAfter(card.due_date, todayISO);
+      const nextClosingOnOrAfterDue = nextOccurrenceOnOrAfter(card.closing_date, upcomingDueISO);
+      closingISO =
+        nextClosingOnOrAfterDue === upcomingDueISO
+          ? upcomingDueISO
+          : addMonthsClampedISO(nextClosingOnOrAfterDue, -1);
+    } else {
+      // Sin due_date: próximo cierre a partir de hoy (incluye hoy).
+      closingISO = nextOccurrenceOnOrAfter(card.closing_date, todayISO);
+    }
   } else {
     // Mes específico (en español): buscar el cierre cuyo mes calendario coincida.
     const monthNames: Record<string, number> = {

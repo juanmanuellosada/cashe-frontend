@@ -519,10 +519,18 @@ const calculateCreditCardNextStatement = async (accountId, closingDate) => {
     }
   }
 
-  // All closed periods are paid → show current accumulating period
+  // All closed periods are paid → keep showing the most recent closed
+  // statement (with resumenVencePagado=true) instead of jumping to the
+  // next accumulating period, which would surface a future amount under
+  // a "Vence HOY" alert.
   if (!duePeriod) {
-    duePeriod = currentPeriodKey;
-    dueExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
+    if (closedPeriodsDesc.length > 0) {
+      duePeriod = closedPeriodsDesc[0];
+      dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
+    } else {
+      duePeriod = currentPeriodKey;
+      dueExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
+    }
   }
 
   const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);

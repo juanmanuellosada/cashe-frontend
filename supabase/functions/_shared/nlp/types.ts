@@ -162,6 +162,7 @@ export interface UserAccount {
   icon?: string;
   is_credit_card?: boolean;
   closing_date?: string | null;
+  due_date?: string | null;
   account_type?: string;
 }
 

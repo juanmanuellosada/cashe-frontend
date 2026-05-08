@@ -307,7 +307,7 @@ export async function getUserContext(
   // Obtener cuentas con balance calculado
   const { data: accounts, error: accountsError } = await supabase
     .from("accounts")
-    .select("id, name, currency, icon, is_credit_card, closing_date, account_type, initial_balance")
+    .select("id, name, currency, icon, is_credit_card, closing_date, due_date, account_type, initial_balance")
     .eq("user_id", userId)
     .order("name");
 
