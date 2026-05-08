@@ -459,7 +459,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
 
   // Determine the "current" period key — the first closing >= today.
   // Uses anchor-indexed addMonths to avoid drift.
-  const today = new Date();
+  const today = parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
   let currentClosing = addMonths(anchor, -24);
   for (let n = -23; n <= 48; n++) {
     const candidate = addMonths(anchor, n);

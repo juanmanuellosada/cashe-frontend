@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { addMonths } from 'date-fns';
 import { formatNumberAR, parseLocalDate } from '../../utils/format';
 
 function CreditCardDueAlert({ accounts }) {
@@ -14,19 +15,26 @@ function CreditCardDueAlert({ accounts }) {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrowStart = new Date(todayStart.getTime() + 86400000);
 
+    const nextOccurrenceOnOrAfter = (anchorStr) => {
+      const anchor = parseLocalDate(anchorStr);
+      const anchorMidnight = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+      for (let n = -24; n <= 60; n++) {
+        const candidate = addMonths(anchorMidnight, n);
+        if (candidate.getTime() >= todayStart.getTime()) return candidate;
+      }
+      return anchorMidnight;
+    };
+
     return accounts
       .filter(account => {
         // Only credit cards with a due date anchor set
         if (!account.esTarjetaCredito || !account.fechaVencimiento) return false;
 
-        const dueDate = parseLocalDate(account.fechaVencimiento);
-        // Normalise to midnight
-        const dueMidnight = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        const dueMidnight = nextOccurrenceOnOrAfter(account.fechaVencimiento);
         return dueMidnight.getTime() === todayStart.getTime() || dueMidnight.getTime() === tomorrowStart.getTime();
       })
       .map(account => {
-        const dueDate = parseLocalDate(account.fechaVencimiento);
-        const dueMidnight = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        const dueMidnight = nextOccurrenceOnOrAfter(account.fechaVencimiento);
         const isDueToday = dueMidnight.getTime() === todayStart.getTime();
 
         return {
