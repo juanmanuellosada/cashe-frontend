@@ -201,7 +201,10 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
   // Establecer período por defecto: primer período no pagado (espera a que carguen pagos)
   useEffect(() => {
     if (esTarjetaCredito && periodosResumen.length > 0 && !periodoResumen && paymentsLoaded) {
-      if (primerPeriodoNoPagado) {
+      const prefillPeriodo = prefillData?.periodoResumen;
+      if (prefillPeriodo && periodosResumen.some(p => p.value === prefillPeriodo)) {
+        setPeriodoResumen(prefillPeriodo);
+      } else if (primerPeriodoNoPagado) {
         setPeriodoResumen(primerPeriodoNoPagado);
       } else {
         // Fallback: período calendario actual
@@ -211,7 +214,7 @@ function ExpenseForm({ accounts, categories, categoriesWithId, budgets, goals, o
         }
       }
     }
-  }, [esTarjetaCredito, periodosResumen, periodoResumen, primerPeriodoNoPagado, paymentsLoaded]);
+  }, [esTarjetaCredito, periodosResumen, periodoResumen, primerPeriodoNoPagado, paymentsLoaded, prefillData?.periodoResumen]);
 
   // Actualizar la fecha automáticamente cuando cambia el período
   useEffect(() => {

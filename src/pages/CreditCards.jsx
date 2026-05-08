@@ -705,10 +705,12 @@ function CreditCards() {
 
     const fecha = getDateForStatementPeriod(viewingStatement);
 
+    const periodoResumen = `${viewingStatement.year}-${String(viewingStatement.month + 1).padStart(2, '0')}`;
     setAddExpensePrefill({
       tipo: 'gasto',
       cuenta: selectedCard.nombre,
       fecha: fecha,
+      periodoResumen,
     });
     setShowAddExpenseModal(true);
   };
