@@ -329,7 +329,7 @@ export const getAccounts = (forceRefresh = false) => {
 
   if (creditCardAccounts.length > 0) {
     const creditCardPromises = creditCardAccounts.map(async (account) => {
-      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_date);
+      const nextStatement = await calculateCreditCardNextStatement(account.id, account.closing_date, account.due_date);
       return { accountId: account.id, data: nextStatement };
     });
     const creditCardResults = await Promise.all(creditCardPromises);
@@ -393,7 +393,7 @@ export const getAccounts = (forceRefresh = false) => {
 // - proximoResumenPesos/Dolares: first UNPAID statement amounts
 // - resumenVencePesos/Dolares: amounts for the statement that's due now (for due alerts)
 // - resumenVencePagado: whether the due statement is fully paid
-const calculateCreditCardNextStatement = async (accountId, closingDate) => {
+const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate = null) => {
   const userId = await getUserId();
 
   // If no closing date anchor, we can't group statements — return zeros gracefully.
@@ -499,37 +499,60 @@ const calculateCreditCardNextStatement = async (accountId, closingDate) => {
   // Sort periods chronologically (period keys are yyyy-MM-dd so lexicographic = chronological)
   const sortedPeriods = Object.keys(expensesByPeriod).sort();
 
-  // Find the most recent unpaid CLOSED statement (closing < today).
-  // If all closed periods are paid, fall back to the current accumulating period.
-  const closedPeriodsDesc = sortedPeriods.filter(p => p < currentPeriodKey).reverse();
+  // Walk from anchor monthly to find first occurrence >= reference date.
+  const nextOccurrenceOnOrAfter = (anchorDate, reference) => {
+    for (let n = -24; n <= 48; n++) {
+      const candidate = addMonths(anchorDate, n);
+      if (candidate >= reference) return candidate;
+    }
+    return addMonths(anchorDate, 48);
+  };
 
   let duePeriod = null;
   let dueExpenses = { ARS: 0, USD: 0 };
 
-  for (const period of closedPeriodsDesc) {
-    const periodExpenses = expensesByPeriod[period];
-    const arsTotal = periodExpenses.ARS || 0;
-    const usdTotal = periodExpenses.USD || 0;
-    const arsPaid = paidSet.has(`${period}_ARS`);
-    const usdPaid = paidSet.has(`${period}_USD`);
-    if ((arsTotal > 0 && !arsPaid) || (usdTotal > 0 && !usdPaid)) {
-      duePeriod = period;
-      dueExpenses = periodExpenses;
-      break;
-    }
-  }
+  if (dueDate) {
+    // Map the next-or-current vencimiento to the closing it represents
+    // (closing immediately at-or-before that due). Mirrors the logic in
+    // supabase/functions/send-due-date-notifications and the bot's
+    // getStatementPeriod, so all three places agree on which statement
+    // is "vence ahora".
+    const dueAnchor = parseLocalDate(dueDate);
+    const upcomingDue = nextOccurrenceOnOrAfter(dueAnchor, today);
+    const upcomingDueKey = format(upcomingDue, 'yyyy-MM-dd');
+    const nextClosingOnOrAfterDue = nextOccurrenceOnOrAfter(anchor, upcomingDue);
+    const targetClosing =
+      format(nextClosingOnOrAfterDue, 'yyyy-MM-dd') === upcomingDueKey
+        ? nextClosingOnOrAfterDue
+        : addMonths(nextClosingOnOrAfterDue, -1);
+    duePeriod = format(targetClosing, 'yyyy-MM-dd');
+    dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
+  } else {
+    // Sin due_date anchor: fallback heurístico — buscar el último cerrado
+    // con saldo sin pagar; si todos están pagados, usar el último cerrado.
+    const closedPeriodsDesc = sortedPeriods.filter(p => p < currentPeriodKey).reverse();
 
-  // All closed periods are paid → keep showing the most recent closed
-  // statement (with resumenVencePagado=true) instead of jumping to the
-  // next accumulating period, which would surface a future amount under
-  // a "Vence HOY" alert.
-  if (!duePeriod) {
-    if (closedPeriodsDesc.length > 0) {
-      duePeriod = closedPeriodsDesc[0];
-      dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
-    } else {
-      duePeriod = currentPeriodKey;
-      dueExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
+    for (const period of closedPeriodsDesc) {
+      const periodExpenses = expensesByPeriod[period];
+      const arsTotal = periodExpenses.ARS || 0;
+      const usdTotal = periodExpenses.USD || 0;
+      const arsPaid = paidSet.has(`${period}_ARS`);
+      const usdPaid = paidSet.has(`${period}_USD`);
+      if ((arsTotal > 0 && !arsPaid) || (usdTotal > 0 && !usdPaid)) {
+        duePeriod = period;
+        dueExpenses = periodExpenses;
+        break;
+      }
+    }
+
+    if (!duePeriod) {
+      if (closedPeriodsDesc.length > 0) {
+        duePeriod = closedPeriodsDesc[0];
+        dueExpenses = expensesByPeriod[duePeriod] || { ARS: 0, USD: 0 };
+      } else {
+        duePeriod = currentPeriodKey;
+        dueExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
+      }
     }
   }
 
