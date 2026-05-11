@@ -390,7 +390,9 @@ export const getAccounts = (forceRefresh = false) => {
 // Calculate next statement balance for credit cards (separated by currency)
 // Uses closingDate (yyyy-MM-dd anchor) + addMonths for period assignment.
 // Returns:
-// - proximoResumenPesos/Dolares: first UNPAID statement amounts
+// - proximoResumenPesos/Dolares: charges already booked into the billing
+//   period that starts AFTER the currently-open one closes (i.e. the one
+//   shown as the next future statement in the cards page).
 // - resumenVencePesos/Dolares: amounts for the statement that's due now (for due alerts)
 // - resumenVencePagado: whether the due statement is fully paid
 const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate = null) => {
@@ -458,17 +460,22 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
   };
 
   // Determine the "current" period key — the first closing >= today.
-  // Uses anchor-indexed addMonths to avoid drift.
+  // Uses anchor-indexed addMonths to avoid drift. Also derive the next
+  // period (one anchor-step ahead) so its key stays consistent with the
+  // keys produced by getStatementPeriod().
   const today = parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
   let currentClosing = addMonths(anchor, -24);
+  let currentClosingIdx = -24;
   for (let n = -23; n <= 48; n++) {
     const candidate = addMonths(anchor, n);
     if (candidate >= today) {
       currentClosing = candidate;
+      currentClosingIdx = n;
       break;
     }
   }
   const currentPeriodKey = format(currentClosing, 'yyyy-MM-dd');
+  const nextPeriodKey = format(addMonths(anchor, currentClosingIdx + 1), 'yyyy-MM-dd');
 
   // Group expenses by period (period key = closing date yyyy-MM-dd)
   const expensesByPeriod = {};
@@ -560,37 +567,14 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
   const dueUsdPaid = paidSet.has(`${duePeriod}_USD`);
   const resumenVencePagado = (dueExpenses.ARS === 0 || dueArsPaid) && (dueExpenses.USD === 0 || dueUsdPaid);
 
-  // Find first period that has unpaid amounts (for "próximo resumen" display)
-  let proximoResumenPesos = 0;
-  let proximoResumenDolares = 0;
-  let statementPeriod = null;
-
-  for (const period of sortedPeriods) {
-    const periodExpenses = expensesByPeriod[period];
-    const arsTotal = periodExpenses.ARS || 0;
-    const usdTotal = periodExpenses.USD || 0;
-
-    const arsPaid = paidSet.has(`${period}_ARS`);
-    const usdPaid = paidSet.has(`${period}_USD`);
-
-    const unpaidARS = arsPaid ? 0 : arsTotal;
-    const unpaidUSD = usdPaid ? 0 : usdTotal;
-
-    if (unpaidARS > 0 || unpaidUSD > 0) {
-      proximoResumenPesos = unpaidARS;
-      proximoResumenDolares = unpaidUSD;
-      statementPeriod = period;
-      break;
-    }
-  }
-
-  // If no unpaid period found, use current period
-  if (!statementPeriod) {
-    const currentExpenses = expensesByPeriod[currentPeriodKey] || { ARS: 0, USD: 0 };
-    proximoResumenPesos = currentExpenses.ARS || 0;
-    proximoResumenDolares = currentExpenses.USD || 0;
-    statementPeriod = currentPeriodKey;
-  }
+  // "Próximo resumen" = the billing period AFTER the one that's currently
+  // open (i.e. the next future statement, not the oldest unpaid one). Picks
+  // up future-dated charges like upcoming installments. The bill the user
+  // owes right now is exposed separately as resumenVence*.
+  const nextExpenses = expensesByPeriod[nextPeriodKey] || { ARS: 0, USD: 0 };
+  const proximoResumenPesos = nextExpenses.ARS || 0;
+  const proximoResumenDolares = nextExpenses.USD || 0;
+  const statementPeriod = nextPeriodKey;
 
   return {
     proximoResumenPesos,
