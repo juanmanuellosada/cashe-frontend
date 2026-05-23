@@ -92,11 +92,12 @@ function RecurringModal({
       if (type === 'expense') return c.tipo === 'Gasto' || c.type === 'expense';
       return true;
     })
-    .map(c => ({
-      value: c.id,
-      label: c.nombre || c.name,
-      icon: c.icon || null,
-    }));
+    .map(c => {
+      const rawLabel = c.nombre || c.name || '';
+      const icon = c.icon || null;
+      const label = icon ? rawLabel.replace(/^[\p{Emoji}‍]+\s*/u, '').trim() || rawLabel : rawLabel;
+      return { value: c.id, label, icon };
+    });
 
   // Build frequency object
   const buildFrequency = () => {
@@ -288,44 +289,51 @@ function RecurringModal({
                 />
               </div>
 
-              {/* Amount and Currency */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    Monto *
-                  </label>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="w-full px-4 py-3 rounded-xl text-sm transition-colors"
-                    style={{
-                      backgroundColor: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    Moneda
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-sm transition-colors"
-                    style={{
-                      backgroundColor: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <option value="ARS">ARS</option>
-                    <option value="USD">USD</option>
-                  </select>
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Monto *
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-colors"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                />
+              </div>
+
+              {/* Currency */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Moneda
+                </label>
+                <div className="flex w-full p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  {[
+                    { id: 'ARS', label: 'ARS', icon: `${import.meta.env.BASE_URL}icons/catalog/ARS.svg` },
+                    { id: 'USD', label: 'USD', icon: `${import.meta.env.BASE_URL}icons/catalog/USD.svg` },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCurrency(opt.id)}
+                      className="flex-1 py-2.5 min-h-[44px] rounded-md text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+                      style={{
+                        backgroundColor: currency === opt.id ? 'var(--bg-elevated)' : 'transparent',
+                        color: currency === opt.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      }}
+                    >
+                      <img src={opt.icon} alt={opt.label} className="w-4 h-4 rounded-sm" />
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -362,7 +370,7 @@ function RecurringModal({
                     <Combobox
                       options={accountOptions}
                       value={fromAccountId}
-                      onChange={setFromAccountId}
+                      onChange={(e) => setFromAccountId(e.target.value)}
                       placeholder="Seleccionar cuenta..."
                       defaultOptionIcon="💳"
                     />
@@ -374,7 +382,7 @@ function RecurringModal({
                     <Combobox
                       options={accountOptions.filter(a => a.value !== fromAccountId)}
                       value={toAccountId}
-                      onChange={setToAccountId}
+                      onChange={(e) => setToAccountId(e.target.value)}
                       placeholder="Seleccionar cuenta..."
                       defaultOptionIcon="💳"
                     />
@@ -409,7 +417,7 @@ function RecurringModal({
                     <Combobox
                       options={accountOptions}
                       value={accountId}
-                      onChange={setAccountId}
+                      onChange={(e) => setAccountId(e.target.value)}
                       placeholder="Seleccionar cuenta..."
                       defaultOptionIcon="💳"
                     />
@@ -453,7 +461,7 @@ function RecurringModal({
                     <Combobox
                       options={categoryOptions}
                       value={categoryId}
-                      onChange={setCategoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
                       placeholder="Seleccionar categoría..."
                     />
                   </div>

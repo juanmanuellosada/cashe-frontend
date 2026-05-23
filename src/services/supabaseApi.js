@@ -877,15 +877,23 @@ export const getCategoriesWithId = async () => {
   if (error) throw error;
 
   const result = {
-    categorias: categories.map(c => ({
-      id: c.id,
-      rowIndex: c.id, // compatibility
-      nombre: c.name,
-      tipo: c.type === 'income' ? 'Ingreso' : 'Gasto',
-      icon: c.icon || null,
-      icon_catalog_id: c.icon_catalog_id || null,
-      icon_catalog: (c.icon_catalog && c.icon_catalog.filename) ? c.icon_catalog : null,
-    }))
+    categorias: categories.map(c => {
+      const hasCatalogIcon = c.icon_catalog && c.icon_catalog.filename;
+      const customIcon = c.icon || null;
+      const emojiFromName = (!customIcon && !hasCatalogIcon) ? extractLeadingEmoji(c.name) : null;
+      const resolvedIcon = hasCatalogIcon
+        ? getIconCatalogUrl(c.icon_catalog.filename)
+        : (customIcon || emojiFromName);
+      return {
+        id: c.id,
+        rowIndex: c.id, // compatibility
+        nombre: c.name,
+        tipo: c.type === 'income' ? 'Ingreso' : 'Gasto',
+        icon: resolvedIcon,
+        icon_catalog_id: c.icon_catalog_id || null,
+        icon_catalog: hasCatalogIcon ? c.icon_catalog : null,
+      };
+    })
   };
   setCachedData(cacheKey, result);
   return result;

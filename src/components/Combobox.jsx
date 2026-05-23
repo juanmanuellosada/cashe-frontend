@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { isEmoji, resolveIconPath } from '../services/iconStorage';
 
 // Component to render an icon (emoji or image)
@@ -45,7 +46,9 @@ function Combobox({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [coords, setCoords] = useState(null);
   const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
   const inputRef = useRef(null);
   const optionsRef = useRef(null);
 
@@ -117,7 +120,10 @@ function Combobox({
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current && !containerRef.current.contains(event.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
         setSearch('');
       }
@@ -126,6 +132,24 @@ function Combobox({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Compute dropdown position when opened; recompute on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateCoords = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCoords({ top: rect.bottom, left: rect.left, width: rect.width });
+      }
+    };
+    updateCoords();
+    window.addEventListener('resize', updateCoords);
+    window.addEventListener('scroll', updateCoords, true);
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [isOpen]);
 
   // Focus input when opened
   useEffect(() => {
@@ -172,10 +196,14 @@ function Combobox({
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && coords && createPortal(
         <div
-          className="absolute z-50 mt-2 w-full rounded-xl shadow-xl overflow-hidden animate-scale-in max-h-[60vh]"
+          ref={dropdownRef}
+          className="fixed z-[200] rounded-xl shadow-xl overflow-hidden animate-scale-in max-h-[60vh]"
           style={{
+            top: coords.top + 8,
+            left: coords.left,
+            width: coords.width,
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)'
           }}
@@ -290,6 +318,7 @@ function Combobox({
             )}
           </div>
         </div>
+        , document.body
       )}
     </div>
   );
