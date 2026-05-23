@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Combobox from '../Combobox';
 import DatePicker from '../DatePicker';
 import { formatCurrency } from '../../utils/format';
@@ -78,7 +79,7 @@ function RecurringModal({
 
   // Filter accounts/categories for combobox
   const accountOptions = (accounts || [])
-    .filter(a => type === 'transfer' || !a.esTarjetaCredito || isCreditCardRecurring)
+    .filter(a => type !== 'income' || !a.esTarjetaCredito)
     .map(a => ({
       value: a.id,
       label: a.nombre || a.name,
@@ -178,8 +179,8 @@ function RecurringModal({
 
   const totalSteps = 5;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={onClose}
@@ -835,7 +836,8 @@ function RecurringModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
