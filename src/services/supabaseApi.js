@@ -4,6 +4,7 @@ import { uploadAttachment, uploadStatementAttachment, deleteAttachment } from '.
 import { getIconCatalogUrl } from '../hooks/useIconCatalog';
 import { emit, emitQuiet, DataEvents } from './dataEvents';
 import { parseLocalDate } from '../utils/format';
+import { statementMonthKey } from '../lib/utils';
 
 // ============================================
 // CACHE MANAGEMENT - Stale-While-Revalidate
@@ -439,7 +440,7 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
   // Create a set of paid period+currency combos for fast lookup
   const paidSet = new Set();
   (payments || []).forEach(p => {
-    paidSet.add(`${p.statement_period}_${p.currency}`);
+    paidSet.add(`${statementMonthKey(p.statement_period)}_${p.currency}`);
   });
 
   const anchor = parseLocalDate(closingDate);
@@ -543,8 +544,8 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
       const periodExpenses = expensesByPeriod[period];
       const arsTotal = periodExpenses.ARS || 0;
       const usdTotal = periodExpenses.USD || 0;
-      const arsPaid = paidSet.has(`${period}_ARS`);
-      const usdPaid = paidSet.has(`${period}_USD`);
+      const arsPaid = paidSet.has(`${statementMonthKey(period)}_ARS`);
+      const usdPaid = paidSet.has(`${statementMonthKey(period)}_USD`);
       if ((arsTotal > 0 && !arsPaid) || (usdTotal > 0 && !usdPaid)) {
         duePeriod = period;
         dueExpenses = periodExpenses;
@@ -563,8 +564,8 @@ const calculateCreditCardNextStatement = async (accountId, closingDate, dueDate 
     }
   }
 
-  const dueArsPaid = paidSet.has(`${duePeriod}_ARS`);
-  const dueUsdPaid = paidSet.has(`${duePeriod}_USD`);
+  const dueArsPaid = paidSet.has(`${statementMonthKey(duePeriod)}_ARS`);
+  const dueUsdPaid = paidSet.has(`${statementMonthKey(duePeriod)}_USD`);
   const resumenVencePagado = (dueExpenses.ARS === 0 || dueArsPaid) && (dueExpenses.USD === 0 || dueUsdPaid);
 
   // "Próximo resumen" = the billing period AFTER the one that's currently
@@ -2649,7 +2650,7 @@ export const getStatementPayments = async (accountId) => {
   // Key: "YYYY-MM_ARS" o "YYYY-MM_USD"
   const byPeriodCurrency = {};
   (data || []).forEach(row => {
-    const key = `${row.statement_period}_${row.currency}`;
+    const key = `${statementMonthKey(row.statement_period)}_${row.currency}`;
     byPeriodCurrency[key] = {
       id: row.id,
       amount: parseFloat(row.amount),

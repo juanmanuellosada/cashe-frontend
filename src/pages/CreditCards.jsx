@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, parseISO, parse } from 'date-fns';
+import { format, startOfMonth, addMonths, subMonths, isSameMonth, parseISO, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAccounts, getAllExpenses, addExpense, addTransfer, getCardStatementAttachments, saveCardStatementAttachments, deleteCardStatementAttachment, getCategories, updateMovement, updateMultipleMovements, deleteMovement, getStatementPayments, registerStatementPayment, cancelStatementPayment } from '../services/supabaseApi';
 import { formatCurrency, parseLocalDate } from '../utils/format';
+import { statementMonthKey } from '../lib/utils';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Combobox from '../components/Combobox';
 import { useError } from '../contexts/ErrorContext';
@@ -183,6 +184,20 @@ function CreditCards() {
     const result = [];
     const today = new Date();
 
+    // Anchor de vencimiento para calcular monthName por mes de vencimiento (convención argentina)
+    const dueAnchor = selectedCard.fechaVencimiento ? parseLocalDate(selectedCard.fechaVencimiento) : null;
+
+    // Para cada closeDate, devuelve la primera fecha de vencimiento >= closeDate
+    // caminando desde dueAnchor en pasos mensuales (mismo patrón que getStatementCloseDate).
+    const getDueDate = (closeDate) => {
+      if (!dueAnchor) return null;
+      for (let n = -24; n <= 48; n++) {
+        const candidate = addMonths(dueAnchor, n);
+        if (candidate >= closeDate) return candidate;
+      }
+      return addMonths(dueAnchor, 48);
+    };
+
     Object.entries(expensesByPeriod).forEach(([period, expenses]) => {
       const closeDate = closeDateByPeriod[period];
       const year = closeDate.getFullYear();
@@ -241,12 +256,18 @@ function CreditCards() {
         e.categoria && e.categoria.includes('Impuesto de sellos')
       );
       
+      const dueDate = getDueDate(closeDate);
+      const monthName = dueDate
+        ? format(dueDate, 'MMMM yyyy', { locale: es })
+        : format(closeDate, 'MMMM yyyy', { locale: es });
+
       result.push({
         id: period,
         year,
         month,
-        monthName: format(closeDate, 'MMMM yyyy', { locale: es }),
+        monthName,
         closeDate,
+        dueDate,
         totalPesos: totalPesosOriginal,      // Total de gastos en pesos
         totalDolares: totalDolaresOriginal,  // Total de gastos en dólares
         items: allItems,
@@ -257,12 +278,26 @@ function CreditCards() {
         taxAmount: taxExpense ? (taxExpense.montoPesos || taxExpense.monto || 0) : 0,
         isPast: closeDate < today,
         isCurrent: isSameMonth(closeDate, today),
-        isFuture: closeDate > endOfMonth(today),
+        isFuture: closeDate > today,
       });
     });
     
     // Ordenar por fecha de cierre (más antiguo primero - son los primeros a pagar)
-    return result.sort((a, b) => a.closeDate - b.closeDate);
+    const sorted = result.sort((a, b) => a.closeDate - b.closeDate);
+
+    // Calcular qué closeDate corresponde al "Actual": el máximo closeDate <= hoy.
+    // Si todos son futuros (edge case), usar el de closeDate más chico.
+    const closedStatements = sorted.filter(s => s.closeDate <= today);
+    const currentCloseTime = closedStatements.length > 0
+      ? closedStatements[closedStatements.length - 1].closeDate.getTime()
+      : sorted.length > 0 ? sorted[0].closeDate.getTime() : null;
+
+    // Marcar isActualCurrent basado en fecha (independiente del estado de pago)
+    sorted.forEach(s => {
+      s.isActualCurrent = currentCloseTime !== null && s.closeDate.getTime() === currentCloseTime;
+    });
+
+    return sorted;
   }, [selectedCard, allExpenses]);
 
   // Actualizar viewingStatement cuando hay un refresh pendiente
@@ -334,8 +369,8 @@ function CreditCards() {
     const hasBoth = hasPesos && hasDolares;
 
     // Verificar si ya está pagado
-    const isPesosPaid = statementPayments[`${selectedStatement.id}_ARS`];
-    const isDolaresPaid = statementPayments[`${selectedStatement.id}_USD`];
+    const isPesosPaid = statementPayments[`${statementMonthKey(selectedStatement.id)}_ARS`];
+    const isDolaresPaid = statementPayments[`${statementMonthKey(selectedStatement.id)}_USD`];
 
     // Solo pagar lo que no está pagado
     const needsPayPesos = hasPesos && !isPesosPaid;
@@ -432,7 +467,7 @@ function CreditCards() {
   const handleCancelPayment = async (statement, currency) => {
     if (!selectedCard) return;
 
-    const paymentKey = `${statement.id}_${currency}`;
+    const paymentKey = `${statementMonthKey(statement.id)}_${currency}`;
     const payment = statementPayments[paymentKey];
 
     if (!payment) return;
@@ -917,28 +952,20 @@ function CreditCards() {
             <p className="text-sm">No hay resúmenes con gastos</p>
           </div>
         ) : (
-          statements.map((statement, index) => {
+          statements.map((statement) => {
             const hasBothCurrencies = statement.totalPesos > 0 && statement.totalDolares > 0;
             const hasPesos = statement.totalPesos > 0;
             const hasDolares = statement.totalDolares > 0;
 
             // Verificar estado de pago
-            const isPesosPaid = !!statementPayments[`${statement.id}_ARS`];
-            const isDolaresPaid = !!statementPayments[`${statement.id}_USD`];
+            const isPesosPaid = !!statementPayments[`${statementMonthKey(statement.id)}_ARS`];
+            const isDolaresPaid = !!statementPayments[`${statementMonthKey(statement.id)}_USD`];
             const isFullyPaid = (!hasPesos || isPesosPaid) && (!hasDolares || isDolaresPaid);
             const isPartiallyPaid = (hasPesos && isPesosPaid && hasDolares && !isDolaresPaid) ||
                                      (hasDolares && isDolaresPaid && hasPesos && !isPesosPaid);
 
-            // El resumen "actual" es el primer resumen no completamente pagado
-            // (puede ser futuro por calendario si ya se pagaron los anteriores)
-            const isActualCurrent = !isFullyPaid &&
-              statements.slice(0, index).every(s => {
-                const sPesosPaid = !!statementPayments[`${s.id}_ARS`];
-                const sDolaresPaid = !!statementPayments[`${s.id}_USD`];
-                const sHasPesos = s.totalPesos > 0;
-                const sHasDolares = s.totalDolares > 0;
-                return (!sHasPesos || sPesosPaid) && (!sHasDolares || sDolaresPaid);
-              });
+            // El resumen "actual" se determina por fecha (calculado en el useMemo de statements)
+            const isActualCurrent = statement.isActualCurrent;
 
             return (
               <div
@@ -951,10 +978,10 @@ function CreditCards() {
                 <div
                   className="p-4 flex items-center justify-between"
                   style={{
-                    backgroundColor: isFullyPaid
-                      ? 'rgba(34, 197, 94, 0.1)'
-                      : isActualCurrent
-                        ? 'rgba(20, 184, 166, 0.15)'
+                    backgroundColor: isActualCurrent
+                      ? 'rgba(20, 184, 166, 0.15)'
+                      : isFullyPaid
+                        ? 'rgba(34, 197, 94, 0.1)'
                         : statement.isFuture
                           ? 'rgba(96, 165, 250, 0.1)'
                           : 'transparent',
@@ -964,10 +991,10 @@ function CreditCards() {
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{
-                        backgroundColor: isFullyPaid
-                          ? 'var(--accent-green)'
-                          : isActualCurrent
-                            ? 'var(--accent-primary)'
+                        backgroundColor: isActualCurrent
+                          ? 'var(--accent-primary)'
+                          : isFullyPaid
+                            ? 'var(--accent-green)'
                             : statement.isFuture
                               ? 'var(--accent-blue)'
                               : 'var(--bg-tertiary)',
@@ -994,6 +1021,14 @@ function CreditCards() {
                     <div>
                       <p className="font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
                         {statement.monthName}
+                        {isActualCurrent && (
+                          <span
+                            className="ml-2 px-2 py-0.5 rounded-full text-xs"
+                            style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
+                          >
+                            Actual
+                          </span>
+                        )}
                         {isFullyPaid && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
@@ -1002,15 +1037,7 @@ function CreditCards() {
                             Pagado
                           </span>
                         )}
-                        {isActualCurrent && !isFullyPaid && (
-                          <span
-                            className="ml-2 px-2 py-0.5 rounded-full text-xs"
-                            style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}
-                          >
-                            Actual
-                          </span>
-                        )}
-                        {statement.isFuture && !isFullyPaid && !isActualCurrent && (
+                        {statement.isFuture && !isActualCurrent && (
                           <span
                             className="ml-2 px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
@@ -1218,8 +1245,8 @@ function CreditCards() {
         const hasDolares = selectedStatement.totalDolares > 0;
 
         // Verificar estado de pago
-        const isPesosPaid = !!statementPayments[`${selectedStatement.id}_ARS`];
-        const isDolaresPaid = !!statementPayments[`${selectedStatement.id}_USD`];
+        const isPesosPaid = !!statementPayments[`${statementMonthKey(selectedStatement.id)}_ARS`];
+        const isDolaresPaid = !!statementPayments[`${statementMonthKey(selectedStatement.id)}_USD`];
         const isFullyPaid = (!hasPesos || isPesosPaid) && (!hasDolares || isDolaresPaid);
 
         // Solo mostrar selector para monedas no pagadas
@@ -1761,8 +1788,8 @@ function CreditCards() {
             // Calcular estado de pago del resumen actual
             const vHasPesos = viewingStatement.totalPesos > 0;
             const vHasDolares = viewingStatement.totalDolares > 0;
-            const vIsPesosPaid = !!statementPayments[`${viewingStatement.id}_ARS`];
-            const vIsDolaresPaid = !!statementPayments[`${viewingStatement.id}_USD`];
+            const vIsPesosPaid = !!statementPayments[`${statementMonthKey(viewingStatement.id)}_ARS`];
+            const vIsDolaresPaid = !!statementPayments[`${statementMonthKey(viewingStatement.id)}_USD`];
             const vIsFullyPaid = (!vHasPesos || vIsPesosPaid) && (!vHasDolares || vIsDolaresPaid);
 
             return (
